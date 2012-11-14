@@ -32,26 +32,17 @@ Prerequisites :
   * A File or some Files you want uploaded
 
 Installation :
-  ALl of the modules needed are part of the "standard" Library as of Python 2.6.  The setup file will install the two needed dependencies which may not have made it onto your system. Installation is simple::
+  Installation is simple::
 
     git clone git://github.com/cloudnull/turbolift.git
     cd turbolift
     python setup.py install
 
 
+
 Python Modules Needed, for full operation :
-  * argparse
-  * sys
-  * json
-  * httplib
-  * signal
-  * os
-  * multiprocessing
-  * errno
-  * hashlib
-  * tarfile
-  * datetime
-  * urllib
+  NOTE : All of the modules needed should be part of the "standard" Library as of Python 2.6.  The setup file will install the two needed dependencies which may not have made it onto your system. 
+  * argparse, sys, json, httplib, signal, os, multiprocessing, errno, hashlib, tarfile, datetime, urllib
 
 
 Application Usage
