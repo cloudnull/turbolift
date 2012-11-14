@@ -41,8 +41,9 @@ Installation :
 
 
 Python Modules Needed, for full operation :
-  NOTE : All of the modules needed should be part of the "standard" Library as of Python 2.6.  The setup file will install the two needed dependencies which may not have made it onto your system. 
-  * argparse, sys, json, httplib, signal, os, multiprocessing, errno, hashlib, tarfile, datetime, urllib
+  NOTE : All of the modules needed should be part of the "standard" Library as of Python 2.6.  The setup file will install the two needed dependencies which may not have made it onto your system. If you have difficulties with dependencies here is a complete list of used modules::
+  
+    argparse, sys, json, httplib, signal, os, multiprocessing, errno, hashlib, tarfile, datetime, urllib
 
 
 Application Usage
@@ -85,7 +86,7 @@ The Application can except Environment Variables for simpler authentication if y
 
 
 NOTE: that these variables are compatible with the Openstack NOVA compute project's NOVA client.
-You'll may want to read more about the `Rackspace's NOVA Client`_
+You'll may want to read more about the `Rackspace NOVA Client`_
 
 
 Systems Tested on
@@ -120,4 +121,4 @@ Using The Public Network :
 
 
 
-.. Rackspace's NOVA Client__ https://github.com/rackspace/rackspace-novaclient
+.. _Rackspace NOVA Client: https://github.com/rackspace/rackspace-novaclient
