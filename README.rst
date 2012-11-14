@@ -56,22 +56,22 @@ Here is the Basic Usage::
 Run ``turbolift -h`` for a full list of available flags and operations
 
 All Flags can be passed to the program on the command line:
-  :--help: Show helpful information on the script and its available functions
-  :--user: Username for the Cloud Account
-  :--apikey: APIKEY for the Cloud Account
-  :--password: Password for the Cloud Account
-  :--endpoint: Specify the Cloud Files Endpoint [ dfw, ord, lon ]
-  :--container: Cloud Files Container that we are uploading too. If the container is not already in your Cloud Files repository the container will be created.
-  :--upload: Upload a Local Directory to Cloud Files. 
-  :--file: A Local File to Upload to Cloud Files. This will ONLY upload a single file.
-  :--trsync: Sync a local Directory to Cloud Files. This function Operates Similar to RSYNC uploading files that are not found currently on Cloud Files. This function validates the md5 checksum on the local system against what is found in Cloud Files prior to upload and if the checksums are different the local file will be uploaded.
-  :--url: [OPTIONAL] Sets an Override for the Auth URL
-  :--cc: [OPTIONAL] File Upload Concurrency
-  :--internal: [OPTIONAL] Use ServiceNet Endpoint for Cloud Files
-  :--progress: [OPTIONAL] Shows Progress While Uploading
-  :--veryverbose: [OPTIONAL] Turn up verbosity to over 9000
-  :--compress: Compress a file or directory into a single archive
-  :--version: Gives Version Number
+  :help: Show helpful information on the script and its available functions
+  :user: Username for the Cloud Account
+  :apikey: APIKEY for the Cloud Account
+  :password: Password for the Cloud Account
+  :endpoint: Specify the Cloud Files Endpoint [ dfw, ord, lon ]
+  :container: Cloud Files Container that we are uploading too. If the container is not already in your Cloud Files repository the container will be created.
+  :upload: Upload a Local Directory to Cloud Files. 
+  :file: A Local File to Upload to Cloud Files. This will ONLY upload a single file.
+  :trsync: Sync a local Directory to Cloud Files. This function Operates Similar to RSYNC uploading files that are not found currently on Cloud Files. This function validates the md5 checksum on the local system against what is found in Cloud Files prior to upload and if the checksums are different the local file will be uploaded.
+  :url: [OPTIONAL] Sets an Override for the Auth URL
+  :cc: [OPTIONAL] File Upload Concurrency
+  :internal: [OPTIONAL] Use ServiceNet Endpoint for Cloud Files
+  :progress: [OPTIONAL] Shows Progress While Uploading
+  :veryverbose: [OPTIONAL] Turn up verbosity to over 9000
+  :compress: Compress a file or directory into a single archive
+  :version: Gives Version Number
 
 
 Environment Variables
