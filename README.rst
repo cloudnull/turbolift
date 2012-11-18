@@ -43,7 +43,7 @@ Installation :
 Python Modules Needed, for full operation :
   NOTE : All of the modules needed should be part of the "standard" Library as of Python 2.6.  The setup file will install the two needed dependencies which may not have made it onto your system. If you have difficulties with dependencies here is a complete list of used modules::
   
-    argparse, sys, json, httplib, signal, os, multiprocessing, errno, hashlib, tarfile, datetime, urllib
+    argparse, sys, json, httplib, signal, os, multiprocessing, errno, hashlib, tarfile, datetime, functools, urllib
 
 
 Application Usage
@@ -60,11 +60,11 @@ All Flags can be passed to the program on the command line:
   :user: Username for the Cloud Account
   :apikey: APIKEY for the Cloud Account
   :password: Password for the Cloud Account
-  :endpoint: Specify the Cloud Files Endpoint [ dfw, ord, lon ]
+  :region: Specify the Cloud Files Endpoint [ dfw, ord, lon ]
   :container: Cloud Files Container that we are uploading too. If the container is not already in your Cloud Files repository the container will be created.
   :upload: Upload a Local Directory to Cloud Files. 
   :file: A Local File to Upload to Cloud Files. This will ONLY upload a single file.
-  :trsync: Sync a local Directory to Cloud Files. This function Operates Similar to RSYNC uploading files that are not found currently on Cloud Files. This function validates the md5 checksum on the local system against what is found in Cloud Files prior to upload and if the checksums are different the local file will be uploaded.
+  :tsync: Sync a local Directory to Cloud Files. This function Operates Similar to RSYNC uploading files that are not found currently on Cloud Files. This function validates the md5 checksum on the local system against what is found in Cloud Files prior to upload and if the checksums are different the local file will be uploaded.
   :url: [OPTIONAL] Sets an Override for the Auth URL
   :cc: [OPTIONAL] File Upload Concurrency
   :internal: [OPTIONAL] Use ServiceNet Endpoint for Cloud Files
@@ -83,6 +83,7 @@ The Application can except Environment Variables for simpler authentication if y
     export OS_API_KEY=random-stuff
     export OS_PASSWORD=your-password
     export OS_AUTH_URL=optional.override.url.for.auth
+    export OS_REGION_NAME=the-region-for-your-repository
 
 
 NOTE: that these variables are compatible with the Openstack NOVA compute project's NOVA client.

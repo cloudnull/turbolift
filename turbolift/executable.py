@@ -1,450 +1,479 @@
-#!/usr/bin/env python
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
 
-# - title        : Upload for CloudFiles
-# - description  : Want to upload a bunch files to cloudfiles? This will do it. 
+# - title        : Upload for Swift(Rackspace Cloud Files)
+# - description  : Want to upload a bunch files to cloud files? This will do it.
 # - License      : GPLv3+
 # - author       : Kevin Carter
 # - date         : 2011-11-09
-# - usage        : python cfuploader.py
-# - notes        : This is a CloudFiles Upload Script
+# - usage        : python turbolift.local.py
+# - notes        : This is a Swift(Rackspace Cloud Files) Upload Script
 # - Python       : >= 2.6
 
-""" 
+"""
 License Inforamtion
 
 This software has no warranty, it is provided 'as is'. It is your responsibility
 to validate the behavior of the routines and its accuracy using the code provided.
 Consult the GNU General Public license for further details (see GNU General Public License).
-
+    
 http://www.gnu.org/licenses/gpl.html
 """
 
-import argparse, sys, json, httplib, signal, os, multiprocessing, errno, hashlib, tarfile, datetime
-
+import argparse
+import sys
+import json
+import httplib
+import signal
+import os
+import multiprocessing
+import errno
+import hashlib
+import tarfile
+import datetime
+import time
+import authentication
+from functools import partial
 from urllib import quote
 
-version = '0.1'
+version = '0.2'
 
 
-"""This is the Matt Thode Authentication System, Modified by Me"""
-def cfauth(user=None, apikey=None, region=None):
-    """Set the Authentication URL"""
-    if args.endpoint == 'LON':
-        if args.url:
-            print 'Using Override Auth URL to\t:', args.url
-            authurl = args.url
-        else:
-            authurl = 'lon.identity.api.rackspacecloud.com'
-
-    elif args.endpoint == 'DFW' or 'ORD':
-        if args.url:
-            print 'Using Override Auth URL to\t:', args.url
-            authurl = args.url
-        else:
-            authurl = 'identity.api.rackspacecloud.com'
-
-    if args.apikey:
-        jsonreq = json.dumps({'auth': {'RAX-KSKEY:apiKeyCredentials': {'username': args.user, 'apiKey': args.apikey}}})
-    elif args.password:
-        jsonreq = json.dumps({'auth': {'passwordCredentials': {'username': args.user, 'password': args.password}}})
-    else:
-        print 'ERROR\t: This should have not happened.\nThere was no way to proceed, so I quit.'
-        exit(1)
-
-    if args.veryverbose:
-        print 'JSON REQUEST: ' + jsonreq
-    
-    """make the request for authentication"""
-    conn = httplib.HTTPSConnection(authurl, 443)
-    if args.veryverbose:
-        conn.set_debuglevel(1)
-    headers = {'Content-type': 'application/json'}
-    conn.request('POST', '/v2.0/tokens', jsonreq, headers)
-    resp = conn.getresponse()
-    readresp = resp.read()
-    if resp.status >= 300:
-        print '\n', 'REQUEST\t:', jsonreq, headers, authurl
-        print '\n', 'ERROR\t:', resp.status, resp.reason, '\n'
-        exit(1)
-    json_response = json.loads(readresp)
-    conn.close()
-
-    if args.internal:
-        print 'MESSAGE\t: Using the Service Network in the', args.endpoint, 'DC for', authurl
-
-    """Process the Authentication Request"""
-    if args.veryverbose:
-        print '\nJSON decoded and pretty\n'
-        print json.dumps(json_response, indent=2)
-    cfdetails = {}
+def containercreate(ta, authdata):
     try:
-        catalogs = json_response['access']['serviceCatalog']
-        for service in catalogs:
-            if service['name'] == 'cloudFiles':
-                for endpoint in service['endpoints']:
-                    if endpoint['region'] == args.endpoint:
-                        if args.internal:
-                            cfdetails['endpoint'] = endpoint['internalURL']
-                        else:
-                            cfdetails['endpoint'] = endpoint['publicURL']
-                        cfdetails['tenantid'] = endpoint['tenantId']
-        cfdetails['token'] = json_response['access']['token']['id']
-        if args.veryverbose:
-            print 'Endpoint\t: ', cfdetails['endpoint']
-            print 'Tenant\t\t: ', cfdetails['tenantid']
-            print 'Token\t\t: ', cfdetails['token']
-    except(KeyError, IndexError):
-        print 'Error while getting answers from auth server.\nCheck the endpoint and auth credentials.'
-    return cfdetails
-
-
-def containercreate():
-    global authdata
-    try:
-        """Create a Container if needed"""
         endpoint = authdata['endpoint'].split('/')[2]
         headers = {'X-Auth-Token': authdata['token']}
-        filepath = '/v1/' + authdata['tenantid'] + '/' + quote(args.container)
+        filepath = '/v1/' + authdata['tenantid'] + '/' \
+            + quote(ta.container)
         conn = httplib.HTTPSConnection(endpoint, 443)
-        if args.veryverbose:
+        if ta.veryverbose:
             conn.set_debuglevel(1)
-        """Check to see if the Container is there"""
         conn.request('HEAD', filepath, headers=headers)
         resp = conn.getresponse()
         resp.read()
-        """If Container is not found Create a Container"""
         if resp.status == 404:
-            print '\n', 'MESSAGE\t:',resp.status, resp.reason, 'The Container', args.container, 'does not Exist'
+            print '\n', 'MESSAGE\t:', resp.status, resp.reason, \
+                'The Container', ta.container, 'does not Exist'
             conn.request('PUT', filepath, headers=headers)
             resp = conn.getresponse()
             resp.read()
             if resp.status >= 300:
-                print '\n', 'ERROR\t:',resp.status, resp.reason, args.container, '\n'
+                print '\n', 'ERROR\t:', resp.status, resp.reason, \
+                    ta.container, '\n'
                 exit(1)
-            print '\n', 'CREATING CONTAINER\t:', args.container, '\n', 'CONTAINER STATUS\t:', resp.status, resp.reason, '\n'
+            print '\n', 'CREATING CONTAINER\t:', ta.container, '\n', \
+                'CONTAINER STATUS\t:', resp.status, resp.reason, '\n'
         conn.close()
     except:
-        print 'ERROR\t: Shits broke son, here comes the stack trace:\n', sys.exc_info()[1]
+        print 'ERROR\t: Shits broke son, here comes the stack trace:\n', \
+            sys.exc_info()[1]
         raise
 
 
-def get_filenames():
-    if args.upload or args.tsync:
-        directorypath = args.upload or args.tsync
+def get_filenames(ta):
+    if ta.upload or ta.tsync:
+        directorypath = ta.upload or ta.tsync
         if os.path.isdir(directorypath) == True:
-            rootdir = os.path.normpath(directorypath) + os.sep
+            rootdir = os.path.realpath(directorypath) + os.sep
             target = os.path.realpath(rootdir)
-            """Get all of the files as they are found in the directory specified"""
-            fileList = []
-            if args.veryverbose:
-                print rootdir
+            filelist = []
+            if ta.veryverbose:
+                print '\n', rootdir, '\n'
+
             # Locate all of the files found in the given directory
-            for root, subFolders, files in os.walk(rootdir):
+
+            for (root, subFolders, files) in os.walk(rootdir):
                 for file in files:
-                    fileList.append(os.path.join(root,file))
-            if args.veryverbose:
-                print fileList
-            print 'MESSAGE\t: In', '"'+target+'"', len(fileList), 'files have been found.\n'
+                    filelist.append(os.path.join(root, file))
+            print '\n', 'MESSAGE\t: In', '"' + target + '"', \
+                len(filelist), 'files have been found.\n'
         else:
-            print 'ERROR\t: path %s does not exist, is not a directory, or is a broken symlink' % directorypath
+            print 'ERROR\t: path %s does not exist, is not a directory, or is a broken symlink' \
+                % directorypath
             print 'MESSAGE\t: Try Again but this time with a valid directory path'
             exit(1)
 
-    if args.file:
-        directorypath = args.file
+    if ta.file:
+        directorypath = ta.file
         if os.path.isfile(directorypath) == True:
-            fileList = []
-            fileList.append(os.path.realpath(directorypath))
-            if args.veryverbose:
-                print 'file name', fileList
+            filelist = []
+            filelist.append(os.path.realpath(directorypath))
+            if ta.veryverbose:
+                print 'File Name\t:', filelist
         else:
-            print 'ERROR\t: file %s does not exist, or is a broken symlink' % directorypath
+            print 'ERROR\t: file %s does not exist, or is a broken symlink' \
+                % directorypath
             print 'MESSAGE\t: Try Again but this time with a valid file path'
             exit(1)
+    return filelist
 
-    if args.compress:
-        format = "%a%b%d-%H.%M.%S.%Y."
-        today = datetime.datetime.today()
-        ts = today.strftime(format)
 
-        tarList = []
-        print 'MESSAGE\t: Creating a Compressed Archive, This may take a minute.'
-        global archivename
-        archivename = ts + args.container + '.tgz'
-        # create a tar archive
-        tar = tarfile.open(archivename,'w:gz')
-        for name in fileList:
-            tarname = os.path.realpath(name)
-            tar.add(tarname)
-        tar.close()
-        tarList.append(os.path.realpath(archivename))
-        if args.veryverbose:
-            print tarList
-        return tarList
-    else:
-        return fileList
+def compress_files(ta, gfn):
+    format = '%a%b%d-%H.%M.%S.%Y.'
+    today = datetime.datetime.today()
+    ts = today.strftime(format)
+    print 'MESSAGE\t: Creating a Compressed Archive, This may take a minute.'
+    archivename = ts + ta.container + '.tgz'
 
-def cfrsync(filename=None):
-    global authdata
-    """Put all of the files that were found into the container"""
+    # create a tar archive
+
+    tar = tarfile.open(archivename, 'w:gz')
+    for name in gfn:
+        tarname = os.path.realpath(name)
+        tar.add(tarname)
+    tar.close()
+    tarfile.path = os.path.realpath(archivename)
+
+    if ta.veryverbose:
+        print 'ARCHIVE\t:', tarfile.path
+    return tarfile.path
+
+
+def uploader(authdata, ta, filename):
     f = open(filename)
-    if args.veryverbose:
+    if ta.veryverbose:
         print f
     try:
-        """Put all of the files that were found into the container"""
-        rootdir = os.path.normpath(args.tsync) + os.sep
-        justfilename = filename.split(rootdir)[1]
-        
-        if args.veryverbose:
-            print justfilename
-        
+        if ta.compress or ta.file:
+            justfilename = filename.split(os.path.dirname(filename)
+                    + os.sep)[1]
+        else:
+            rootdir = os.path.realpath(ta.upload) + os.sep
+            justfilename = filename.split(rootdir)[1]
+
         retry = True
         while retry:
             retry = False
-            """Upload All files found in the spcified cfrsync to a given container"""
             endpoint = authdata['endpoint'].split('/')[2]
             headers = {'X-Auth-Token': authdata['token']}
-            filepath = '/v1/' + authdata['tenantid'] + '/' + quote(args.container + '/' + justfilename)
-            
+            filepath = '/v1/' + authdata['tenantid'] + '/' \
+                + quote(ta.container + '/' + justfilename)
+
             conn = httplib.HTTPSConnection(endpoint, 443)
-            
-            if args.veryverbose:
+
+            if ta.veryverbose:
                 conn.set_debuglevel(1)
-            
-            """Check to see if the Container is there"""
+
+            conn.request('PUT', filepath, body=f, headers=headers)
+            f.close()
+            resp = conn.getresponse()
+            resp.read()
+            if ta.progress:
+                print resp.status, resp.reason, justfilename
+
+            if resp.status == 401:
+                print 'MESSAGE\t: Token Seems to have expired, Forced Reauthentication is happening.'
+                authdata = cfauth()
+                retry = True
+                continue
+
+            if resp.status >= 300:
+                print 'ERROR\t:', resp.status, resp.reason, \
+                    justfilename, '\n', f, '\n'
+
+            conn.close()
+    except IOError, e:
+
+        if e.errno == errno.ENOENT:
+            print 'ERROR\t: path %s does not exist or is a broken symlink' \
+                % justfilename
+    except ValueError:
+        print 'ERROR\t: The data for %s got all jacked up, so it got skiped' \
+            % justfilename
+    except KeyboardInterrupt, e:
+        pass
+    except:
+        print 'ERROR\t: Shits broke son, here comes the stack trace:\n', \
+            sys.exc_info()[1]
+    raise
+
+
+def tsync(authdata, ta, filename):
+    """
+    Put all of the files that were found into the container
+    """
+
+    f = open(filename)
+    if ta.veryverbose:
+        print f
+    try:
+        rootdir = os.path.realpath(ta.tsync) + os.sep
+        justfilename = filename.split(rootdir)[1]
+
+        if ta.veryverbose:
+            print justfilename
+
+        retry = True
+        while retry:
+            retry = False
+            endpoint = authdata['endpoint'].split('/')[2]
+            headers = {'X-Auth-Token': authdata['token']}
+            filepath = '/v1/' + authdata['tenantid'] + '/' \
+                + quote(ta.container + '/' + justfilename)
+
+            conn = httplib.HTTPSConnection(endpoint, 443)
+
+            if ta.veryverbose:
+                conn.set_debuglevel(1)
+
             conn.request('HEAD', filepath, headers=headers)
             resp = conn.getresponse()
             resp.read()
             conn.close()
-            
+
             if resp.status == 404:
                 f = open(filename)
-                if args.veryverbose:
+                if ta.veryverbose:
                     print f
-                if args.veryverbose:
+                if ta.veryverbose:
                     conn.set_debuglevel(1)
-                """Put all of the files that were found into the container"""
                 conn.request('PUT', filepath, body=f, headers=headers)
                 f.close()
                 resp = conn.getresponse()
                 resp.read()
                 conn.close()
-                if args.progress:
+                if ta.progress:
                     print resp.status, resp.reason, justfilename
             else:
                 md5 = hashlib.md5()
                 with open(filename, 'rb') as f:
-                    for chunk in iter(lambda: f.read(128*md5.block_size), b''):
+                    for chunk in iter(lambda : f.read(128
+                            * md5.block_size), ''):
                         md5.update(chunk)
                 f.close()
                 localmd5sum = md5.hexdigest()
                 remotemd5sum = resp.getheader('etag')
-                
+
                 if remotemd5sum != localmd5sum:
-                    if args.veryverbose:
+                    if ta.veryverbose:
                         conn.set_debuglevel(1)
                     fupdate = open(filename)
-                    if args.veryverbose:
+                    if ta.veryverbose:
                         print f
-                    conn.request('PUT', filepath, body=fupdate, headers=headers)
+                    conn.request('PUT', filepath, body=fupdate,
+                                 headers=headers)
                     conn.close()
                     fupdate.close()
-                    if args.progress:
-                        print 'MESSAGE\t: CheckSumm Mis-Match', localmd5sum, '!=', remotemd5sum, '\n\t ', 'File Upload :', resp.status, resp.reason, justfilename
+                    if ta.progress:
+                        print 'MESSAGE\t: CheckSumm Mis-Match', \
+                            localmd5sum, '!=', remotemd5sum, '\n\t ', \
+                            'File Upload :', resp.status, resp.reason, \
+                            justfilename
                 else:
-                    if args.progress:
+                    if ta.progress:
                         print 'MESSAGE\t: CheckSumm Match', localmd5sum
-            
-            """Reauthenticate if 401"""
+
             if resp.status == 401:
                 print 'MESSAGE\t: Token Seems to have expired, Forced Reauthentication is happening.'
                 authdata = cfauth()
                 retry = True
                 continue
-            
-            """Highlight any errors that happen on Upload"""
+
             if resp.status >= 300:
-                print 'ERROR\t:',resp.status, resp.reason, justfilename, '\n', f, '\n'
+                print 'ERROR\t:', resp.status, resp.reason, \
+                    justfilename, '\n', f, '\n'
             conn.close()
-    
     except IOError, e:
+
         if e.errno == errno.ENOENT:
-            print 'ERROR\t: path %s does not exist or is a broken symlink' % justfilename
+            print 'ERROR\t: path %s does not exist or is a broken symlink' \
+                % justfilename
     except ValueError:
-        print 'ERROR\t: The data for %s got all jacked up, so it got skiped' % justfilename
+        print 'ERROR\t: The data for %s got all jacked up, so it got skiped' \
+            % justfilename
     except KeyboardInterrupt, e:
         pass
     except:
-        print 'ERROR\t: Shits broke son, here comes the stack trace:\n', sys.exc_info()[1]
+        print 'ERROR\t: Shits broke son, here comes the stack trace:\n', \
+            sys.exc_info()[1]
         raise
 
-
-def uploader(filename=None):
-    global authdata
-    f = open(filename)
-    if args.veryverbose:
-        print f
-    try:
-        """Put all of the files that were found into the container"""
-        if args.compress or args.file:
-            justfilename = filename.split(os.path.dirname(filename) + os.sep)[1]
-        else:
-            rootdir = os.path.normpath(args.upload) + os.sep
-            justfilename = filename.split(rootdir)[1]
-        
-        retry = True
-        while retry:
-            retry = False
-            """Upload All files found in the spcified directory to a given container"""
-            endpoint = authdata['endpoint'].split('/')[2]
-            headers = {'X-Auth-Token': authdata['token']}
-            filepath = '/v1/' + authdata['tenantid'] + '/' + quote(args.container + '/' + justfilename)
-            
-            conn = httplib.HTTPSConnection(endpoint, 443)
-            
-            if args.veryverbose:
-                conn.set_debuglevel(1)
-            
-            """Put all of the files that were found into the container"""
-            conn.request('PUT', filepath, body=f, headers=headers)
-            f.close()
-            resp = conn.getresponse()
-            resp.read()
-            if args.progress:
-                print resp.status, resp.reason, justfilename
-            
-            """Reauthenticate if 401"""
-            if resp.status == 401:
-                print 'MESSAGE\t: Token Seems to have expired, Forced Reauthentication is happening.'
-                authdata = cfauth()
-                retry = True
-                continue
-            
-            """Highlight any errors that happen on Upload"""
-            if resp.status >= 300:
-                print 'ERROR\t:',resp.status, resp.reason, justfilename, '\n', f, '\n'
-
-            conn.close()
-    
-    except IOError, e:
-        if e.errno == errno.ENOENT:
-            print 'ERROR\t: path %s does not exist or is a broken symlink' % justfilename
-    except ValueError:
-        print 'ERROR\t: The data for %s got all jacked up, so it got skiped' % justfilename
-    except KeyboardInterrupt, e:
-        pass
-    except:
-        print 'ERROR\t: Shits broke son, here comes the stack trace:\n', sys.exc_info()[1]
-        raise
 
 def init_worker():
-    """Watch for signals"""
+    """
+    Watch for signals
+    """
+
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 
-def run_turbolift():
-    global authdata
-    global args
-    """Look for flags"""
-    defaultcc = 10
-    parser = argparse.ArgumentParser(formatter_class=lambda prog: argparse.HelpFormatter(prog,max_help_position=50), usage='%(prog)s [-u] [-a | -p] [options]', description='Uploads lots of Files Quickly, Using the unpatented GPLv3 Cloud Files %(prog)s')
-    
-    parser.add_argument('-u', '--user', nargs='?', help='Defaults to env[OS_USERNAME]', default=os.environ.get('OS_USERNAME', None))
-    
+def get_values():
+    """
+    Look for flags
+    """
+
+    defaultcc = 20
+    parser = argparse.ArgumentParser(formatter_class=lambda prog: \
+            argparse.HelpFormatter(prog, max_help_position=50),
+            usage='%(prog)s [-u] [-a | -p] [options]',
+            description='Uploads lots of Files Quickly, Using the unpatented GPLv3 Cloud Files %(prog)s'
+            )
+
+    parser.add_argument('-u', '--user', nargs='?',
+                        help='Defaults to env[OS_USERNAME]',
+                        default=os.environ.get('OS_USERNAME', None))
+
     agroup = parser.add_mutually_exclusive_group()
-    agroup.add_argument('-a', '--apikey', nargs='?', help='Defaults to env[OS_API_KEY]', default=os.environ.get('OS_API_KEY', None))
-    agroup.add_argument('-p', '--password', nargs='?', help='Defaults to env[OS_PASSWORD]', default=os.environ.get('OS_PASSWORD', None))
-    
-    parser.add_argument('-e', '--endpoint', choices=['dfw', 'lon', 'ord'], required=True, help='Rackspace Specific Datacenter')
-    parser.add_argument('-c', '--container', nargs='?', required=True, help='Specifies the Container')
+    agroup.add_argument('-a', '--apikey', nargs='?',
+                        help='Defaults to env[OS_API_KEY]',
+                        default=os.environ.get('OS_API_KEY', None))
+    agroup.add_argument('-p', '--password', nargs='?',
+                        help='Defaults to env[OS_PASSWORD]',
+                        default=os.environ.get('OS_PASSWORD', None))
+
+    parser.add_argument(
+        '-r',
+        '--region',
+        nargs='?',
+        required=True,
+        help='Defaults to env[OS_REGION_NAME]',
+        default=os.environ.get('OS_REGION_NAME', None),
+        )
+    parser.add_argument('-c', '--container', nargs='?', required=True,
+                        help='Specifies the Container')
 
     bgroup = parser.add_mutually_exclusive_group(required=True)
-    bgroup.add_argument('-U', '--upload', nargs='?', help='A local Directory to Upload')
-    bgroup.add_argument('-F', '--file', nargs='?', help='A local File to Upload')
-    bgroup.add_argument('-T', '--tsync', nargs='?', help='Sync a local Directory to Cloud Files. Similar to RSYNC')
+    bgroup.add_argument('-U', '--upload', nargs='?',
+                        help='A local Directory to Upload')
+    bgroup.add_argument('-F', '--file', nargs='?',
+                        help='A local File to Upload')
+    bgroup.add_argument('-T', '--tsync', nargs='?',
+                        help='Sync a local Directory to Cloud Files. Similar to RSYNC'
+                        )
 
-    """Optional Arguments"""
-    parser.add_argument('-I', '--internal', action='store_true', help='Use Service Network')
-    parser.add_argument('-P', '--progress', action='store_true', help='Shows Progress While Uploading')
-    parser.add_argument('-V', '--veryverbose', action='store_true', help='Turn up verbosity to over 9000')
-    
+    parser.add_argument('-I', '--internal', action='store_true',
+                        help='Use Service Network')
+    parser.add_argument('-P', '--progress', action='store_true',
+                        help='Shows Progress While Uploading')
+    parser.add_argument('-V', '--veryverbose', action='store_true',
+                        help='Turn up verbosity to over 9000')
+
     cgroup = parser.add_mutually_exclusive_group()
-    cgroup.add_argument('--compress', action='store_true', help='Compress a file or directory into a single archive')
-    cgroup.add_argument('--cc', nargs='?', help='Container Upload Concurrency', type=int, default=defaultcc)
-    
-    parser.add_argument('--url', nargs='?', help='Defaults to env[OS_AUTH_URL]', default=os.environ.get('OS_AUTH_URL', None))
+    cgroup.add_argument('--compress', action='store_true',
+                        help='Compress a file or directory into a single archive'
+                        )
+    cgroup.add_argument('--cc', nargs='?',
+                        help='Container Upload Concurrency', type=int,
+                        default=defaultcc)
+
+    parser.add_argument('--url', nargs='?',
+                        help='Defaults to env[OS_AUTH_URL]',
+                        default=os.environ.get('OS_AUTH_URL', None))
     parser.add_argument('--version', action='version', version=version)
 
     args = parser.parse_args()
-    args.endpoint = args.endpoint.upper()
+    args.region = args.region.upper()
+    args.defaultcc = defaultcc
 
     if not args.user:
-        print '\nNo Username was provided\n'
+        print '''
+No Username was provided
+'''
         parser.print_help()
         exit(1)
 
     if not (args.apikey or args.password):
-        print '\nNo API Key or Password was provided\n'
+        print '''
+No API Key or Password was provided
+'''
         parser.print_help()
         exit(1)
 
     if args.tsync:
         if args.compress:
-            print 'ERROR\t: You can not use compression with this function.', '\n', 'MESSAGE\t: I have quit the application, please try again.'
+            print 'ERROR\t: You can not use compression with this function.', \
+                '\n', \
+                'MESSAGE\t: I have quit the application, please try again.'
             exit(1)
 
     if args.veryverbose:
         args.progress = True
 
-    try:
-        authdata = cfauth()
-        containercreate()
-        """Start Uploading"""
-        print 'Beginning the Upload Process'
-        """Uploads the contents of a directory"""
-        if (args.upload or args.tsync or args.file):
-            """From the amount of CORES create the max processes"""
-            if args.cc:
-                if args.cc > 150:
-                    print '\nMESSAGE\t: You have set the Concurency Override to', args.cc, '\n\t  This is a lot of Processes and could fork bomb your\n\t  system or cause other nastyness.'
-                    raw_input("\t  You have been warned, Press Enter to Continue\n")
-                
-                if not args.cc == defaultcc:
-                    print 'MESSAGE\t: Setting a Concurency Override of', args.cc
-            
-            if args.compress:
-                multipools = 1
-            else:
-                multipools = args.cc
-            
-            pool = multiprocessing.Pool(multipools, init_worker)
-            
-            if (args.veryverbose or args.progress):
-                print '\nWe are going to create Processes :', multipools, '\n'
-            
-            if args.upload or args.file:
-                p = pool.map(uploader, get_filenames())
-            
-            if args.tsync:
-                p = pool.map(cfrsync, get_filenames())
-            
-            pool.close()
-            pool.join()
-            
-            if args.compress:
-                os.remove(archivename)
-        
-        if not (args.upload or args.file or args.tsync):
-            print 'ERROR\t: Somehow I continuted but I dont know how to proceed. So I Quit.'
-            print 'MESSAGE\t: here comes the stack trace:\n', sys.exc_info()[1]
-            exit(1)
-        
-        print "Operation Completed, Quitting normallyy"
-        exit(0)
-    
-    except KeyboardInterrupt:
-        print "\nCaught KeyboardInterrupt, terminating workers\n"
-        pool.terminate()
+    if args.upload or args.tsync or args.file:
+        if args.cc:
+            if args.cc > 150:
+                print '\nMESSAGE\t: You have set the Concurency Override to', \
+                    args.cc, \
+                    '''
+\t  This is a lot of Processes and could fork bomb your
+\t  system or cause other nastyness.'''
+                raw_input('\t  You have been warned, Press Enter to Continue\n'
+                          )
+
+            if not args.cc == args.defaultcc:
+                print 'MESSAGE\t: Setting a Concurency Override of', \
+                    args.cc
+
         if args.compress:
-            os.remove(archivename)
+            args.multipools = 1
+        else:
+            args.multipools = args.cc
+    return args
+
+
+def run_turbolift():
+    ta = get_values()
+    au = authentication.NovaAuth()
+    authdata = au.osauth(ta)
+
+    try:
+        cnc = containercreate(ta, authdata)
+        gfn = get_filenames(ta)
+
+        if ta.progress:
+            print '\nARGS\t: ', ta, '\n', authdata
+
+        if ta.veryverbose:
+            print '\nFILELIST\t: ', gfn, '\n'
+
+        print 'Beginning the Upload Process'
+
+        manager = multiprocessing.Manager()
+        q = manager.Queue()
+        windeprs = multiprocessing.freeze_support()
+        pool = multiprocessing.Pool(processes=ta.multipools,
+                                    initargs=(manager, init_worker))
+
+        if ta.veryverbose or ta.progress:
+            print '\nWe are going to create Processes :', \
+                ta.multipools, '\n'
+
+        if ta.tsync:
+            partial_tsync = partial(tsync, authdata, ta)
+            result = pool.map_async(partial_tsync, gfn)
+
+        if (ta.upload or ta.file) and ta.compress:
+            partial_uploader = partial(uploader, authdata, ta)
+            cf = compress_files(ta, gfn)
+            cf_file = [cf]
+            result = pool.map_async(partial_uploader, cf_file)
+        elif ta.upload or ta.file:
+            partial_uploader = partial(uploader, authdata, ta)
+            result = pool.map_async(partial_uploader, gfn)
+
+        pool.close()
+        pool.join()
+
+        if ta.compress:
+            os.remove(cf)
+
+        if not (ta.upload or ta.file or ta.tsync):
+            print 'ERROR\t: Somehow I continuted but I dont know how to proceed. So I Quit.'
+            print 'MESSAGE\t: here comes the stack trace:\n', \
+                sys.exc_info()[1]
+            exit(1)
+
+        print 'Operation Completed, Quitting normally'
+        exit(0)
+    except KeyboardInterrupt:
+
+        print '''
+Caught KeyboardInterrupt, terminating workers
+'''
+        pool.close()
+        pool.terminate()
+        if ta.compress:
+            os.remove(cf)
         exit(1)
+
+

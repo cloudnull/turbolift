@@ -1,4 +1,5 @@
-#!/usr/bin/env python
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
 
 # - title        : Setup for Uploader using CloudFiles
 # - description  : Want to upload a bunch files to cloudfiles? This will do it.
@@ -10,23 +11,26 @@
 # - Python       : >= 2.6
 
 """
-    License Inforamtion
+License Inforamtion
     
-    This software has no warranty, it is provided 'as is'. It is your responsibility
-    to validate the behavior of the routines and its accuracy using the code provided.
-    Consult the GNU General Public license for further details (see GNU General Public License).
+This software has no warranty, it is provided 'as is'. It is your responsibility
+to validate the behavior of the routines and its accuracy using the code provided.
+Consult the GNU General Public license for further details (see GNU General Public License).
     
-    http://www.gnu.org/licenses/gpl.html
+http://www.gnu.org/licenses/gpl.html
 """
 
-import os, setuptools, sys
+import os
+import setuptools
+import sys
 from turbolift import executable
 
 turbolift_modules = ['argparse', 'datetime']
 
 
 def read_file(file_name):
-    return open(os.path.join(os.path.dirname(__file__), file_name)).read()
+    return open(os.path.join(os.path.dirname(__file__),
+                file_name)).read()
 
 
 setuptools.setup(
@@ -34,21 +38,22 @@ setuptools.setup(
     version=executable.version,
     author='Kevin Carter',
     author_email='kevin@bkintegration.com',
-    description='Metapackage to install python-novaclient and Rackspace',
+    description='Metapackage to install python-novaclient and Rackspace'
+        ,
     long_description=read_file('README.rst'),
     license='GPLv3',
     packages=['turbolift'],
     url='https://github.com/cloudnull/cfuploader.git',
     install_requires=turbolift_modules,
     classifiers=[
-        "Development Status :: Stable",
-        "Intended Audience :: Devlopers and Users",
-        "Intended Audience :: Information Technology",
-        "License :: GPLv3",
-        "Operating System :: OS Independent",
-        "Programming Language :: Python",
-    ],
-    entry_points={
-    "console_scripts": ["turbolift = turbolift.executable:run_turbolift"]
-    }
-)
+        'Development Status :: Stable',
+        'Intended Audience :: Devlopers and Users',
+        'Intended Audience :: Information Technology',
+        'License :: GPLv3',
+        'Operating System :: OS Independent',
+        'Programming Language :: Python',
+        ],
+    entry_points={'console_scripts': ['turbolift = turbolift.executable:run_turbolift'
+                  ]},
+    )
+

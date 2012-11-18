@@ -1,13 +1,5 @@
-#!/usr/bin/env python
-
-# - description  : Want to upload a bunch files to cloudfiles? This will do it.
-# - License      : GPLv3+
-# - author       : Kevin Carter
-# - date         : 2011-11-09
-# - usage        : python setup.py install
-# - notes        : This is a CloudFiles Upload Script
-# - Python       : >= 2.6
-
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
 """
     License Inforamtion
     
@@ -17,3 +9,12 @@
     
     http://www.gnu.org/licenses/gpl.html
 """
+
+# - description  : Want to upload a bunch files to cloudfiles? This will do it.
+# - License      : GPLv3+
+# - author       : Kevin Carter
+# - date         : 2011-11-09
+# - usage        : python setup.py install
+# - notes        : This is a CloudFiles Upload Script
+# - Python       : >= 2.6
+
