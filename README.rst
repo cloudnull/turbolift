@@ -31,6 +31,7 @@ Prerequisites :
   * Python => 2.7 but < 3.0
 
     - Currently looking at ways to back port the present multi-processing functions back to Python 2.6, An unresolved bug in 2.6.x is preventing full compatibility at this time : http://bugs.python.org/issue5228
+    - If compatibility is needed with Python 2.6 please use version .01 which can be downloaded using the tags : https://github.com/cloudnull/turbolift/archive/v0.1.zip
 
   * A File or some Files you want uploaded
 
