@@ -25,6 +25,13 @@ import setuptools
 import sys
 from turbolift import executable
 
+
+if sys.version_info < (2, 7, 0):
+    sys.stderr.write("Turbolift Presently requires Python 2.7.0 or greater \n")
+    print 'This is due to a bug in Python 2.6.x. You can read more about the bug here : http://bugs.python.org/issue5228'
+    sys.exit(-1)
+
+
 turbolift_modules = ['argparse', 'datetime']
 
 
@@ -46,7 +53,7 @@ setuptools.setup(
     url='https://github.com/cloudnull/cfuploader.git',
     install_requires=turbolift_modules,
     classifiers=[
-        'Development Status :: Stable',
+        'Development Status :: RC1',
         'Intended Audience :: Devlopers and Users',
         'Intended Audience :: Information Technology',
         'License :: GPLv3',
@@ -56,4 +63,3 @@ setuptools.setup(
     entry_points={'console_scripts': ['turbolift = turbolift.executable:run_turbolift'
                   ]},
     )
-
