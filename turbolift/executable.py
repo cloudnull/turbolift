@@ -32,8 +32,8 @@ import hashlib
 import tarfile
 import datetime
 import time
-import authentication
 import itertools
+import authentication
 from functools import partial
 from urllib import quote
 
@@ -72,38 +72,25 @@ def containercreate(ta, authdata):
 
 
 def get_filenames(ta):
-    if ta.upload or ta.tsync:
-        directorypath = ta.upload or ta.tsync
-        if os.path.isdir(directorypath) == True:
-            rootdir = os.path.realpath(directorypath) + os.sep
-            target = os.path.realpath(rootdir)
-            filelist = []
-            if ta.veryverbose:
-                print '\n', rootdir, '\n'
-
-            # Locate all of the files found in the given directory
-
-            for (root, subFolders, files) in os.walk(rootdir):
-                for file in files:
-                    filelist.append(os.path.join(root, file))
-        else:
-            print 'ERROR\t: path %s does not exist, is not a directory, or is a broken symlink' \
-                % directorypath
-            print 'MESSAGE\t: Try Again but this time with a valid directory path'
-            exit(1)
-
-    if ta.file:
-        directorypath = ta.file
-        if os.path.isfile(directorypath) == True:
-            filelist = []
-            filelist.append(os.path.realpath(directorypath))
-            if ta.veryverbose:
-                print 'File Name\t:', filelist
-        else:
-            print 'ERROR\t: file %s does not exist, or is a broken symlink' \
-                % directorypath
-            print 'MESSAGE\t: Try Again but this time with a valid file path'
-            exit(1)
+    directorypath = ta.source
+    if os.path.isdir(directorypath) == True:
+        rootdir = os.path.realpath(directorypath) + os.sep
+        filelist = []
+        for (root, subFolders, files) in os.walk(rootdir):
+            for file in files:
+                filelist.append(os.path.join(root, file))
+        if ta.veryverbose:
+            print '\n', rootdir, '\n'
+    elif os.path.isfile(directorypath) == True:
+        print 'file'
+        filelist = []
+        filelist.append(os.path.realpath(directorypath))
+        if ta.veryverbose:
+            print 'File Name\t:', filelist
+    else:
+        print 'ERROR\t: path %s does not exist, is not a directory, or is a broken symlink' % directorypath
+        print 'MESSAGE\t: Try Again but this time with a valid directory path'
+        exit(1)
     return filelist
 
 
@@ -130,22 +117,13 @@ def compress_files(ta, gfn):
 
 def uploader(authdata, ta, filename):
     """
-    Put all of the files that were found into the container
+    Put all of the  files that were found into the container
     """
-
-    if ta.tsync or ta.upload:
-        upo = ta.tsync or ta.upload
-        rootdir = os.path.realpath(upo) + os.sep
-    if ta.file:
-        upo = ta.file
-        rootdir = os.path.realpath(upo)
-
-    f = open(filename, 'rb')
-    justfilename = filename.split(rootdir)[1]
-
-    if ta.veryverbose:
-        print '\n', f, '\n', rootdir, '\n', justfilename, '\n'
-
+    if ta.compress or os.path.isdir(ta.source) == False:
+        justfilename = filename.split(os.path.dirname(filename) + os.sep)[1]
+    elif os.path.isdir(ta.source) == True:
+        rootdir = os.path.realpath(ta.source) + os.sep
+        justfilename = filename.split(rootdir)[1]
     try:
         retry = True
         while retry:
@@ -154,19 +132,14 @@ def uploader(authdata, ta, filename):
             headers = {'X-Auth-Token': authdata['token']}
             filepath = '/v1/' + authdata['tenantid'] + '/' \
                 + quote(ta.container + '/' + justfilename)
-
             conn = httplib.HTTPSConnection(endpoint, 443)
-            if ta.veryverbose:
-                conn.set_debuglevel(1)
-
-            if ta.upload or ta.file:
+            if ta.upload:
+                f = open(filename)
                 if ta.veryverbose:
                     conn.set_debuglevel(1)
                 conn.request('PUT', filepath, body=f, headers=headers)
                 resp = conn.getresponse()
                 resp.read()
-                conn.close()
-                f.close()
                 if ta.progress:
                     print resp.status, resp.reason, justfilename
                 if resp.status == 401:
@@ -175,57 +148,65 @@ def uploader(authdata, ta, filename):
                     authdata = au.osauth(ta)
                     retry = True
                     continue
-
-            if ta.tsync:
+                if resp.status >= 300:
+                    print 'ERROR\t:', resp.status, resp.reason, justfilename, '\n', f, '\n'
+                conn.close()
+                f.close()
+            elif ta.tsync:
+                f = open(filename)
+                if ta.veryverbose:
+                    conn.set_debuglevel(1)
                 conn.request('HEAD', filepath, headers=headers)
                 resp = conn.getresponse()
                 resp.read()
-                conn.close()
-
                 if resp.status == 404:
-                    if ta.veryverbose:
-                        conn.set_debuglevel(1)
-                    conn.request('PUT', filepath, body=f,
-                                 headers=headers)
+                    conn.request('PUT', filepath, body=f, headers=headers)
                     resp = conn.getresponse()
                     resp.read()
-                    conn.close()
-                    f.close()
+                    
                     if ta.progress:
                         print resp.status, resp.reason, justfilename
+                    if resp.status == 401:
+                        print 'MESSAGE\t: Token Seems to have expired, Forced Reauthentication is happening.'
+                        au = authentication.NovaAuth()
+                        authdata = au.osauth(ta)
+                        retry = True
+                        continue
+                    if resp.status >= 300:
+                        print 'ERROR\t:', resp.status, resp.reason, justfilename, '\n', f, '\n'
+                    conn.close()
+                    f.close()
                 else:
+                    remotemd5sum = resp.getheader('etag')
                     md5 = hashlib.md5()
                     with f as fmd5:
                         for chunk in iter(lambda : fmd5.read(128
                                 * md5.block_size), ''):
                             md5.update(chunk)
-                        localmd5sum = md5.hexdigest()
-                        remotemd5sum = resp.getheader('etag')
-                        if remotemd5sum != localmd5sum:
-                            if ta.veryverbose:
-                                conn.set_debuglevel(1)
-                            conn.request('PUT', filepath, body=fmd5,
-                                    headers=headers)
-                            resp = conn.getresponse()
-                            resp.read()
-                            conn.close()
-                            fmd5.close()
-
-                            if ta.progress:
-                                print 'MESSAGE\t: CheckSumm Mis-Match', \
-                                    localmd5sum, '!=', remotemd5sum, \
-                                    '\n\t ', 'File Upload :', \
-                                    resp.status, resp.reason, \
-                                    justfilename
-                        else:
-                            if ta.progress:
-                                print 'MESSAGE\t: CheckSumm Match', \
-                                    localmd5sum
-
-                if resp.status >= 300:
-                    print 'ERROR\t:', resp.status, resp.reason, \
-                        justfilename, '\n', f, '\n'
-                conn.close()
+                        fmd5.close()
+                    localmd5sum = md5.hexdigest()
+                    if remotemd5sum != localmd5sum:
+                        f = open(filename)
+                        if ta.veryverbose:
+                            conn.set_debuglevel(1)
+                        conn.request('PUT', filepath, body=f, headers=headers)
+                        resp = conn.getresponse()
+                        resp.read()
+                        if ta.progress:
+                            print 'MESSAGE\t: CheckSumm Mis-Match', localmd5sum, '!=', remotemd5sum, '\n\t ', 'File Upload :', resp.status, resp.reason, justfilename
+                        if resp.status == 401:
+                            print 'MESSAGE\t: Token Seems to have expired, Forced Reauthentication is happening.'
+                            au = authentication.NovaAuth()
+                            authdata = au.osauth(ta)
+                            retry = True
+                            continue
+                        if resp.status >= 300:
+                            print 'ERROR\t:', resp.status, resp.reason, justfilename, '\n', f, '\n'
+                        conn.close()
+                        f.close()
+                    else:
+                        if ta.progress:
+                            print 'MESSAGE\t: CheckSumm Match', localmd5sum
     except IOError, e:
         if e.errno == errno.ENOENT:
             print 'ERROR\t: path "%s" does not exist or is a broken symlink' \
@@ -254,7 +235,7 @@ def get_values():
     Look for flags
     """
 
-    defaultcc = 20
+    defaultcc = 50
     parser = argparse.ArgumentParser(formatter_class=lambda prog: \
             argparse.HelpFormatter(prog, max_help_position=50),
             usage='%(prog)s [-u] [-a | -p] [options]',
@@ -272,26 +253,19 @@ def get_values():
     agroup.add_argument('-p', '--password', nargs='?',
                         help='Defaults to env[OS_PASSWORD]',
                         default=os.environ.get('OS_PASSWORD', None))
-
-    parser.add_argument(
-        '-r',
-        '--region',
-        nargs='?',
-        required=True,
-        help='Defaults to env[OS_REGION_NAME]',
-        default=os.environ.get('OS_REGION_NAME', None),
-        )
+    parser.add_argument('-r', '--region', nargs='?', required=True,
+                        help='Defaults to env[OS_REGION_NAME]',
+                        default=os.environ.get('OS_REGION_NAME', None))
     parser.add_argument('-c', '--container', nargs='?', required=True,
                         help='Specifies the Container')
+    parser.add_argument('-s', '--source', nargs='?', required=True,
+                        help='Local content to be uploaded')
 
     bgroup = parser.add_mutually_exclusive_group(required=True)
-    bgroup.add_argument('-U', '--upload', nargs='?',
-                        help='A local Directory to Upload')
-    bgroup.add_argument('-F', '--file', nargs='?',
-                        help='A local File to Upload')
-    bgroup.add_argument('-T', '--tsync', nargs='?',
-                        help='Sync a local Directory to Cloud Files. Similar to RSYNC'
-                        )
+    bgroup.add_argument('-U', '--upload', action='store_true',
+                        help='Upload a local Directory or File to Cloud Files')
+    bgroup.add_argument('-T', '--tsync', action='store_true',
+                        help='Sync a local Directory to Cloud Files. Similar to RSYNC')
 
     parser.add_argument('-I', '--internal', action='store_true',
                         help='Use Service Network')
@@ -302,8 +276,7 @@ def get_values():
 
     cgroup = parser.add_mutually_exclusive_group()
     cgroup.add_argument('--compress', action='store_true',
-                        help='Compress a file or directory into a single archive'
-                        )
+                        help='Compress a file or directory into a single archive')
     cgroup.add_argument('--cc', nargs='?',
                         help='Container Upload Concurrency', type=int,
                         default=defaultcc)
@@ -341,7 +314,7 @@ No API Key or Password was provided
     if args.veryverbose:
         args.progress = True
 
-    if args.upload or args.tsync or args.file:
+    if args.upload or args.tsync:
         if args.cc:
             if args.cc > 150:
                 print '\nMESSAGE\t: You have set the Concurency Override to', \
@@ -379,7 +352,7 @@ def run_turbolift():
             print '\nARGS\t: ', ta, '\n', authdata
 
         print 'Beginning the Upload Process'
-        if ta.cc > gfn_count:
+        if ta.multipools > gfn_count:
             print 'MESSAGE\t: There are less things to do than the number of concurent'
             print '\t  processes specified by either an orveride or the system defaults.'
             print '\t  I am leveling the number of concurent processes to the number of'
@@ -388,34 +361,31 @@ def run_turbolift():
         else:
             multipools = ta.multipools
 
-        manager = multiprocessing.Manager()
-        q = manager.Queue()
         windeprs = multiprocessing.freeze_support()
-        pool = multiprocessing.Pool(processes=multipools,
-                                    initargs=(manager, init_worker))
-
+        pool = multiprocessing.Pool(processes=multipools, initargs=init_worker)
         if ta.veryverbose or ta.progress:
             print 'MESSAGE\t: We are going to create Processes :', \
-                multipools, '\n'
+                multipools
 
-        if (ta.upload or ta.file) and ta.compress:
+        if ta.upload and ta.compress:
             partial_uploader = partial(uploader, authdata, ta)
             cf = compress_files(ta, gfn)
             cf_file = [cf]
-            result = pool.map_async(partial_uploader, cf_file)
-        elif ta.upload or ta.file or ta.tsync:
+            result = pool.imap_unordered(partial_uploader, cf_file)
+        elif ta.upload or ta.tsync:
             partial_uploader = partial(uploader, authdata, ta)
-            result = pool.map_async(partial_uploader, gfn)
+            result = pool.imap_unordered(partial_uploader, gfn)
         else:
             print 'FAIL\t: Some how the Application attempted to continue without the needed arguments.'
             exit(2)
+
         pool.close()
         pool.join()
 
         if ta.compress:
             os.remove(cf)
 
-        if not (ta.upload or ta.file or ta.tsync):
+        if not (ta.upload or ta.tsync):
             print 'ERROR\t: Somehow I continuted but I dont know how to proceed. So I Quit.'
             print 'MESSAGE\t: here comes the stack trace:\n', \
                 sys.exc_info()[1]

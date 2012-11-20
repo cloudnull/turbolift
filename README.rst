@@ -66,9 +66,9 @@ All Flags can be passed to the program on the command line:
   :password: Password for the Cloud Account
   :region: Specify the Cloud Files Endpoint [ dfw, ord, lon ]
   :container: Cloud Files Container that we are uploading too. If the container is not already in your Cloud Files repository the container will be created.
-  :upload: Upload a Local Directory to Cloud Files. 
-  :file: A Local File to Upload to Cloud Files. This will ONLY upload a single file.
-  :tsync: Sync a local Directory to Cloud Files. This function Operates Similar to RSYNC uploading files that are not found currently on Cloud Files. This function validates the md5 checksum on the local system against what is found in Cloud Files prior to upload and if the checksums are different the local file will be uploaded.
+  :source: Specify the Local Content to be uploaded.
+  :upload: Use the Upload Function for a provided Source. 
+  :tsync: Use the TSync function for a local source to Cloud Files. This function Operates Similar to RSYNC uploading files that are not found currently on Cloud Files. This function validates the md5 checksum on the local system against what is found in Cloud Files prior to upload and if the checksums are different the local file will be uploaded.
   :url: [OPTIONAL] Sets an Override for the Auth URL
   :cc: [OPTIONAL] File Upload Concurrency
   :internal: [OPTIONAL] Use ServiceNet Endpoint for Cloud Files
