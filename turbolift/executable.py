@@ -38,7 +38,7 @@ from urllib import quote
 import authentication
 import arguments
 
-def container_create():
+def container_create(ta):
     try:
         endpoint = authdata['endpoint'].split('/')[2]
         headers = {'X-Auth-Token': authdata['token']}
@@ -69,7 +69,7 @@ def container_create():
         raise
 
 
-def get_filenames():
+def get_filenames(ta):
     directorypath = ta.source
     if os.path.isdir(directorypath) == True:
         rootdir = os.path.realpath(directorypath) + os.sep
@@ -228,13 +228,14 @@ def init_worker():
 
 def run_turbolift():
     global authdata
+    global ta
     args = arguments.GetArguments()
     ta = args.get_values()
     au = authentication.NovaAuth()
     authdata = au.osauth(ta)
     try:
-        cnc = container_create()
-        gfn = get_filenames()
+        cnc = container_create(ta)
+        gfn = get_filenames(ta)
         gfn_count = len(gfn)
         print '\n', 'MESSAGE\t: "%s" files have been found.\n' \
             % gfn_count
