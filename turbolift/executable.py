@@ -38,6 +38,7 @@ from urllib import quote
 import authentication
 import arguments
 
+
 def container_create(ta):
     try:
         endpoint = authdata['endpoint'].split('/')[2]
@@ -112,7 +113,8 @@ def compress_files(gfn):
 
 
 def uploader(filename=None):
-    global authdata
+    if sys.version_info > (2, 7, 0):
+        global authdata
     """
         Put all of the  files that were found into the container
         """
@@ -227,8 +229,9 @@ def init_worker():
 
 
 def run_turbolift():
-    global authdata
-    global ta
+    if sys.version_info > (2, 7, 0):
+        global authdata
+        global ta
     args = arguments.GetArguments()
     ta = args.get_values()
     au = authentication.NovaAuth()
@@ -261,9 +264,17 @@ def run_turbolift():
         if ta.upload and ta.compress:
             cf = compress_files(gfn)
             cf_file = [cf]
-            result = pool.imap_unordered(uploader, cf_file)
+            if sys.version_info > (2, 7, 0):
+                result = pool.imap_unordered(uploader, cf_file)
+            else:
+                partial_uploader = partial(uploader, authdata, ta)
+                result = pool.map_async(partial_uploader, gfn)
         elif ta.upload or ta.tsync:
-            result = pool.imap_unordered(uploader, gfn)
+            if sys.version_info > (2, 7, 0):
+                result = pool.imap_unordered(uploader, gfn)
+            else:
+                partial_uploader = partial(uploader, authdata, ta)
+                result = pool.map_async(partial_uploader, gfn)
         else:
             print 'FAIL\t: Some how the Application attempted to continue without the needed arguments.'
             exit(2)
