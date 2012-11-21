@@ -38,11 +38,6 @@ from urllib import quote
 import authentication
 import arguments
 
-args = arguments.GetArguments()
-ta = args.get_values()
-au = authentication.NovaAuth()
-authdata = au.osauth(ta)
-
 def container_create():
     try:
         endpoint = authdata['endpoint'].split('/')[2]
@@ -232,6 +227,11 @@ def init_worker():
 
 
 def run_turbolift():
+    global authdata
+    args = arguments.GetArguments()
+    ta = args.get_values()
+    au = authentication.NovaAuth()
+    authdata = au.osauth(ta)
     try:
         cnc = container_create()
         gfn = get_filenames()
@@ -288,6 +288,3 @@ def run_turbolift():
         if ta.compress:
             os.remove(cf)
         exit(1)
-
-if __name__=="__main__":
-    run_turbolift()

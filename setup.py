@@ -44,7 +44,7 @@ setuptools.setup(
     version=executable.arguments.version,
     author='Kevin Carter',
     author_email='kevin@bkintegration.com',
-    description='OpenStack Swift (Cloud Files) Uploader'
+    description='OpenStack Swift -Cloud Files- Uploader'
         ,
     long_description=read_file('README.rst'),
     license='GPLv3',
@@ -52,13 +52,14 @@ setuptools.setup(
     url='https://github.com/cloudnull/cfuploader.git',
     install_requires=turbolift_modules,
     classifiers=[
-        'Development Status :: RC3',
-        'Intended Audience :: Devlopers and Users',
-        'Intended Audience :: Information Technology',
-        'License :: GPLv3',
-        'Operating System :: OS Independent',
-        'Programming Language :: Python',
-        ],
-    entry_points={'console_scripts': ['turbolift = turbolift.executable:run_turbolift'
-                  ]},
-    )
+              "Development Status :: RC4",
+              "Intended Audience :: Devlopers and Users",
+              "Intended Audience :: Information Technology",
+              "License :: GPLv3",
+              "Operating System :: OS Independent",
+              "Programming Language :: Python",
+              ],
+    entry_points={
+    "console_scripts": ["turbolift = turbolift.executable:run_turbolift"]
+    }
+)

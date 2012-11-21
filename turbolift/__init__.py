@@ -17,4 +17,3 @@
 # - usage        : python setup.py install
 # - notes        : This is a CloudFiles Upload Script
 # - Python       : >= 2.6
-
