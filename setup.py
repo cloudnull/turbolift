@@ -26,9 +26,8 @@ import sys
 from turbolift import executable
 
 
-if sys.version_info < (2, 7, 0):
-    sys.stderr.write("Turbolift Presently requires Python 2.7.0 or greater \n")
-    print 'This is due to a bug in Python 2.6.x. You can read more about the bug here : http://bugs.python.org/issue5228'
+if sys.version_info < (2, 6, 0):
+    sys.stderr.write("Turbolift Presently requires Python 2.6.0 or greater \n")
     sys.exit(-1)
 
 
@@ -42,10 +41,10 @@ def read_file(file_name):
 
 setuptools.setup(
     name='turbolift',
-    version=executable.version,
+    version=executable.arguments.version,
     author='Kevin Carter',
     author_email='kevin@bkintegration.com',
-    description='Metapackage to install python-novaclient and Rackspace'
+    description='OpenStack Swift (Cloud Files) Uploader'
         ,
     long_description=read_file('README.rst'),
     license='GPLv3',
@@ -53,7 +52,7 @@ setuptools.setup(
     url='https://github.com/cloudnull/cfuploader.git',
     install_requires=turbolift_modules,
     classifiers=[
-        'Development Status :: RC1',
+        'Development Status :: RC3',
         'Intended Audience :: Devlopers and Users',
         'Intended Audience :: Information Technology',
         'License :: GPLv3',

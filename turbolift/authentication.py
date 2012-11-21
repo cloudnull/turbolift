@@ -39,7 +39,6 @@ class NovaAuth:
             else:
                 authurl = 'lon.identity.api.rackspacecloud.com'
         elif self.region == 'DFW' or 'ORD':
-
             if self.url:
                 print 'Using Override Auth URL to\t:', self.url
                 authurl = self.url
