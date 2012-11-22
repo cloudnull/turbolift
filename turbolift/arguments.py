@@ -24,7 +24,7 @@ import sys
 import os
 
 # The Version Of the Application
-version = '0.4'
+version = '0.5'
 
 
 class GetArguments:
@@ -40,52 +40,68 @@ class GetArguments:
                                          description='Uploads lots of Files Quickly, Using the unpatented GPLv3 Cloud Files %(prog)s'
                                          )
         
-        parser.add_argument('-u', '--user', nargs='?',
+        authgroup = parser.add_argument_group('Authentication', 'Authentication against the OpenStack API')
+        upaction = parser.add_argument_group('Upload Action', 'Type of upload to be performed as well as Source and Destination')
+        optionals = parser.add_argument_group('Additional Options', 'Things you might want to add to your operation')
+        
+        agroup = authgroup.add_mutually_exclusive_group()
+        bgroup = upaction.add_mutually_exclusive_group(required=True)
+        cgroup = optionals.add_mutually_exclusive_group()
+        dgroup = authgroup.add_mutually_exclusive_group()
+        
+        authgroup.add_argument('-u', '--user', nargs='?',
                             help='Defaults to env[OS_USERNAME]',
                             default=os.environ.get('OS_USERNAME', None))
         
-        agroup = parser.add_mutually_exclusive_group()
+
         agroup.add_argument('-a', '--apikey', nargs='?',
                             help='Defaults to env[OS_API_KEY]',
                             default=os.environ.get('OS_API_KEY', None))
         agroup.add_argument('-p', '--password', nargs='?',
                             help='Defaults to env[OS_PASSWORD]',
                             default=os.environ.get('OS_PASSWORD', None))
-        parser.add_argument('-r', '--region', nargs='?', required=True,
+
+        dgroup.add_argument('-r', '--region', nargs='?',
                             help='Defaults to env[OS_REGION_NAME]',
                             default=os.environ.get('OS_REGION_NAME', None))
-        parser.add_argument('-c', '--container', nargs='?', required=True,
+        upaction.add_argument('-c', '--container', nargs='?', required=True,
                             help='Specifies the Container')
-        parser.add_argument('-s', '--source', nargs='?', required=True,
+        upaction.add_argument('-s', '--source', nargs='?', required=True,
                             help='Local content to be uploaded')
         
-        bgroup = parser.add_mutually_exclusive_group(required=True)
+
         bgroup.add_argument('-U', '--upload', action='store_true',
                             help='Upload a local Directory or File to Cloud Files')
         bgroup.add_argument('-T', '--tsync', action='store_true',
                             help='Sync a local Directory to Cloud Files. Similar to RSYNC')
         
-        parser.add_argument('-I', '--internal', action='store_true',
+        upaction.add_argument('-I', '--internal', action='store_true',
                             help='Use Service Network')
-        parser.add_argument('-P', '--progress', action='store_true',
+        optionals.add_argument('-P', '--progress', action='store_true',
                             help='Shows Progress While Uploading')
-        parser.add_argument('-V', '--veryverbose', action='store_true',
+        optionals.add_argument('-V', '--veryverbose', action='store_true',
                             help='Turn up verbosity to over 9000')
         
-        cgroup = parser.add_mutually_exclusive_group()
         cgroup.add_argument('--compress', action='store_true',
                             help='Compress a file or directory into a single archive')
         cgroup.add_argument('--cc', nargs='?',
-                            help='Container Upload Concurrency', type=int,
+                            help='Upload Concurrency', type=int,
                             default=defaultcc)
-        
-        parser.add_argument('--url', nargs='?',
+
+        dgroup.add_argument('--raxauth', choices=['dfw', 'ord', 'lon'],
+                            help='Rackspace Cloud Authentication')
+
+        authgroup.add_argument('--url', nargs='?',
                             help='Defaults to env[OS_AUTH_URL]',
                             default=os.environ.get('OS_AUTH_URL', None))
-        parser.add_argument('--version', action='version', version=version)
+        optionals.add_argument('--version', action='version', version=version)
         
         args = parser.parse_args()
-        args.region = args.region.upper()
+        if args.region:
+            args.region = args.region.upper()
+        if args.raxauth:
+            args.raxauth = args.raxauth.upper()
+
         args.defaultcc = defaultcc
         
         if not args.user:

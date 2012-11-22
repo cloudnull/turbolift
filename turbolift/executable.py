@@ -111,10 +111,8 @@ def compress_files(gfn):
         print 'ARCHIVE\t:', tarfile.path
     return tarfile.path
 
-
 def uploader(filename=None):
-    if sys.version_info < (2, 7, 0):
-        global authdata
+    global authdata
     """
         Put all of the  files that were found into the container
         """
@@ -229,9 +227,8 @@ def init_worker():
 
 
 def run_turbolift():
-    if sys.version_info < (2, 7, 0):
-        global authdata
-        global ta
+    global authdata
+    global ta
     args = arguments.GetArguments()
     ta = args.get_values()
     au = authentication.NovaAuth()
@@ -264,17 +261,9 @@ def run_turbolift():
         if ta.upload and ta.compress:
             cf = compress_files(gfn)
             cf_file = [cf]
-            if sys.version_info < (2, 7, 0):
-                result = pool.imap_unordered(uploader, cf_file)
-            else:
-                partial_uploader = partial(uploader, authdata, ta)
-                result = pool.map_async(partial_uploader, gfn)
+            result = pool.imap_unordered(uploader, cf_file)
         elif ta.upload or ta.tsync:
-            if sys.version_info < (2, 7, 0):
-                result = pool.imap_unordered(uploader, gfn)
-            else:
-                partial_uploader = partial(uploader, authdata, ta)
-                result = pool.map_async(partial_uploader, gfn)
+            result = pool.imap_unordered(uploader, gfn)
         else:
             print 'FAIL\t: Some how the Application attempted to continue without the needed arguments.'
             exit(2)

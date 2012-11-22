@@ -32,80 +32,89 @@ class NovaAuth:
 
     def osauth(self, ta):
         self = ta
-        if self.region == 'LON':
+        
+        if self.raxauth == 'LON':
+            self.region = self.raxauth
             if self.url:
                 print 'Using Override Auth URL to\t:', self.url
                 authurl = self.url
             else:
                 authurl = 'lon.identity.api.rackspacecloud.com'
-        elif self.region == 'DFW' or 'ORD':
+        elif self.raxauth == 'DFW' or self.raxauth == 'ORD':
+            self.region = self.raxauth
             if self.url:
                 print 'Using Override Auth URL to\t:', self.url
                 authurl = self.url
             else:
                 authurl = 'identity.api.rackspacecloud.com'
-
-            if self.apikey:
-                jsonreq = \
-                    json.dumps({'auth': {'RAX-KSKEY:apiKeyCredentials': {'username': self.user,
-                               'apiKey': self.apikey}}})
-            elif self.password:
-                jsonreq = \
-                    json.dumps({'auth': {'passwordCredentials': {'username': self.user,
-                               'password': self.password}}})
+        elif not self.raxauth:
+            if self.url:
+                print 'Using Region\t:', self.region
+                print 'Using Auth URL\t:', self.url
+                authurl = self.url
             else:
-                print 'ERROR\t: This should have not happened.\nThere was no way to proceed, so I quit.'
+                print 'FAIL'
                 exit(1)
 
-            if self.veryverbose:
-                print '\n', self, '\n'
-                print 'JSON REQUEST: ' + jsonreq
+        if self.apikey:
+            jsonreq = \
+                json.dumps({'auth': {'RAX-KSKEY:apiKeyCredentials': {'username': self.user,
+                           'apiKey': self.apikey}}})
+        elif self.password:
+            jsonreq = \
+                json.dumps({'auth': {'passwordCredentials': {'username': self.user,
+                           'password': self.password}}})
+        else:
+            print 'ERROR\t: This should have not happened.\nThere was no way to proceed, so I quit.'
+            exit(1)
 
-            conn = httplib.HTTPSConnection(authurl, 443)
-            if self.veryverbose:
-                conn.set_debuglevel(1)
-            headers = {'Content-type': 'application/json'}
-            conn.request('POST', '/v2.0/tokens', jsonreq, headers)
-            resp = conn.getresponse()
-            readresp = resp.read()
-            if resp.status >= 300:
-                print '\n', 'REQUEST\t:', jsonreq, headers, authurl
-                print '\n', 'ERROR\t:', resp.status, resp.reason, '\n'
-                exit(1)
-            json_response = json.loads(readresp)
-            conn.close()
+        if self.veryverbose:
+            print '\n', self, '\n'
+            print 'JSON REQUEST: ' + jsonreq
 
-            if self.internal:
-                print 'MESSAGE\t: Using the Service Network in the', \
-                    self.region, 'DC for', authurl
+        conn = httplib.HTTPSConnection(authurl, 443)
+        if self.veryverbose:
+            conn.set_debuglevel(1)
+        headers = {'Content-type': 'application/json'}
+        conn.request('POST', '/v2.0/tokens', jsonreq, headers)
+        resp = conn.getresponse()
+        readresp = resp.read()
+        if resp.status >= 300:
+            print '\n', 'REQUEST\t:', jsonreq, headers, authurl
+            print '\n', 'ERROR\t:', resp.status, resp.reason, '\n'
+            exit(1)
+        json_response = json.loads(readresp)
+        conn.close()
 
+        if self.internal:
+            print 'MESSAGE\t: Using the Service Network in the', \
+                self.region, 'DC for', authurl
+
+        if self.veryverbose:
+            print 'JSON decoded and pretty'
+            print json.dumps(json_response, indent=2)
+        details = {}
+        try:
+            catalogs = json_response['access']['serviceCatalog']
+            for service in catalogs:
+                if service['name'] == 'cloudFiles':
+                    for endpoint in service['endpoints']:
+                        if endpoint['region'] == self.region:
+                            if self.internal:
+                                details['endpoint'] = endpoint['internalURL']
+                            else:
+                                details['endpoint'] = endpoint['publicURL']
+                            details['tenantid'] = \
+                                endpoint['tenantId']
+            details['token'] = json_response['access']['token']['id'
+                    ]
             if self.veryverbose:
-                print 'JSON decoded and pretty'
-                print json.dumps(json_response, indent=2)
-            details = {}
-            try:
-                catalogs = json_response['access']['serviceCatalog']
-                for service in catalogs:
-                    if service['name'] == 'cloudFiles':
-                        for endpoint in service['endpoints']:
-                            if endpoint['region'] == self.region:
-                                if self.internal:
-                                    details['endpoint'] = \
-    endpoint['internalURL']
-                                else:
-                                    details['endpoint'] = \
-    endpoint['publicURL']
-                                details['tenantid'] = \
-                                    endpoint['tenantId']
-                details['token'] = json_response['access']['token']['id'
-                        ]
-                if self.veryverbose:
-                    print '\n', details, '\n'
-                    print 'Endpoint\t: ', details['endpoint']
-                    print 'Tenant\t\t: ', details['tenantid']
-                    print 'Token\t\t: ', details['token']
-            except (KeyError, IndexError):
-                print 'Error while getting answers from auth server.\nCheck the endpoint and auth credentials.'
+                print '\n', details, '\n'
+                print 'Endpoint\t: ', details['endpoint']
+                print 'Tenant\t\t: ', details['tenantid']
+                print 'Token\t\t: ', details['token']
+        except (KeyError, IndexError):
+            print 'Error while getting answers from auth server.\nCheck the endpoint and auth credentials.'
         return details
 
 
