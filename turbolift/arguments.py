@@ -24,7 +24,7 @@ import sys
 import os
 
 # The Version Of the Application
-version = '0.6'
+version = '0.6a'
 
 
 class GetArguments:
@@ -108,33 +108,37 @@ class GetArguments:
 
         if not args.user:
             parser.print_help()
-            print '\nNo Username was provided\n'
-            exit(1)
-
+            sys.exit('\nNo Username was provided, please use [--username]\n')
+                
         if not (args.apikey or args.password):
             parser.print_help()
-            print '\nNo API Key or Password was provided\n'
-            exit(1)
-
+            sys.exit('\nNo API Key or Password was provided, please use [--apikey]\n')
+        
+        
+        if not (args.upload or args.tsync):
+            parser.print_help()
+            sys.exit('\nNo method of uploading was provided, please choose either [--upload] or [--tsync]\n')
+        
+        
         if args.tsync and args.compress:
             parser.print_help()
-            print '\nYou can not use compression with the [--tsync] function.\n'
-            exit(1)
-
+            sys.exit('\nYou can not use compression with the [--tsync] function.\n')
+        
+        
         if args.password and args.apikey:
             parser.print_help()
-            print '\nYou cant use both [--apikey] and [--password] in the same command, so I quit...\n'
-            exit(1)
-
+            sys.exit('\nYou cant use both [--apikey] and [--password] in the same command, so I quit...\n')
+        
+        
         if args.rax_auth and args.region:
             parser.print_help()
-            print '\nYou cant use both [--rax-auth] and [--region] in the same command, so I quit...\n'
-            exit(1)
-
+            sys.exit('\nYou cant use both [--rax-auth] and [--region] in the same command, so I quit...\n')
+        
+        
         if args.upload and args.tsync:
             parser.print_help()
-            print '\nYou cant use both [--upload] and [--tsync] in the same command, so I quit...\n'
-            exit(1)
+            sys.exit('\nYou cant use both [--upload] and [--tsync] in the same command, so I quit...\n')
+        
 
         if args.upload or args.tsync:
             if args.cc:

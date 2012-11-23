@@ -58,9 +58,8 @@ def container_create(ta):
             resp = conn.getresponse()
             resp.read()
             if resp.status >= 300:
-                print '\n', 'ERROR\t:', resp.status, resp.reason, \
-                    ta.container, '\n'
-                exit(1)
+                sys.exit('\n', 'ERROR\t:', resp.status, resp.reason, \
+                    ta.container, '\n')
             print '\n', 'CREATING CONTAINER\t:', ta.container, '\n', \
                 'CONTAINER STATUS\t:', resp.status, resp.reason, '\n'
         conn.close()
@@ -88,8 +87,7 @@ def get_filenames(ta):
             print 'File Name\t:', filelist
     else:
         print 'ERROR\t: path %s does not exist, is not a directory, or is a broken symlink' % directorypath
-        print 'MESSAGE\t: Try Again but this time with a valid directory path'
-        exit(1)
+        sys.exit('MESSAGE\t: Try Again but this time with a valid directory path')
     return filelist
 
 
@@ -277,9 +275,8 @@ def run_turbolift():
         
         if not (ta.upload or ta.tsync):
             print 'ERROR\t: Somehow I continued but I do nOt know how to proceed. So I Quit.'
-            print 'MESSAGE\t: here comes the stack trace:\n', \
-                sys.exc_info()[1]
-            exit(1)
+            sys.exit('MESSAGE\t: here comes the stack trace:\n', \
+                sys.exc_info()[1])
         
         print 'Operation Completed, Quitting normally'
         exit(0)
@@ -290,4 +287,4 @@ def run_turbolift():
         pool.terminate()
         if ta.compress:
             os.remove(cf)
-        exit(1)
+        sys.exit('\nI have stopped at your command\n')

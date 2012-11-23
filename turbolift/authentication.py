@@ -49,16 +49,13 @@ class NovaAuth:
                 authurl = 'identity.api.rackspacecloud.com'
         elif not self.rax_auth:
             if not self.region:
-                print 'FAIL\t: You have to specify a Region along with an Auth URL'
-                exit(1)
+                sys.exit('FAIL\t: You have to specify a Region along with an Auth URL')
             if self.auth_url:
                 print 'Using Region\t:', self.region
                 print 'Using Auth URL\t:', self.auth_url
                 authurl = self.auth_url
             else:
-                print 'FAIL\t: You have to specify an Auth URL along with the Region'
-                exit(1)
-
+                sys.exit('FAIL\t: You have to specify an Auth URL along with the Region')
         if self.apikey:
             jsonreq = \
                 json.dumps({'auth': {'RAX-KSKEY:apiKeyCredentials': {'username': self.user,
@@ -68,8 +65,7 @@ class NovaAuth:
                 json.dumps({'auth': {'passwordCredentials': {'username': self.user,
                            'password': self.password}}})
         else:
-            print 'ERROR\t: This should have not happened.\nThere was no way to proceed, so I quit.'
-            exit(1)
+            sys.exit('ERROR\t: This should have not happened.\nThere was no way to proceed, so I quit.')
 
         if self.veryverbose:
             print '\n', self, '\n'
@@ -84,8 +80,7 @@ class NovaAuth:
         readresp = resp.read()
         if resp.status >= 300:
             print '\n', 'REQUEST\t:', jsonreq, headers, authurl
-            print '\n', 'ERROR\t:', resp.status, resp.reason, '\n'
-            exit(1)
+            sys.exit('\n', 'ERROR\t:', resp.status, resp.reason, '\n')
         json_response = json.loads(readresp)
         conn.close()
 

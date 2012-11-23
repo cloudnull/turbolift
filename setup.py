@@ -28,7 +28,7 @@ from turbolift import executable
 
 if sys.version_info < (2, 6, 0):
     sys.stderr.write("Turbolift Presently requires Python 2.6.0 or greater \n")
-    sys.exit(-1)
+    sys.exit('\nYou should upgrade because you version of python is VERY deprecated\n')
 
 
 turbolift_modules = ['argparse', 'datetime']
@@ -52,7 +52,7 @@ setuptools.setup(
     url='https://github.com/cloudnull/turbolift.git',
     install_requires=turbolift_modules,
     classifiers=[
-              "Development Status :: RC4",
+              "Development Status :: RC6a",
               "Intended Audience :: Devlopers and Users",
               "Intended Audience :: Information Technology",
               "License :: GPLv3",
