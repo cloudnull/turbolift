@@ -33,27 +33,30 @@ class NovaAuth:
     def osauth(self, ta):
         self = ta
         
-        if self.raxauth == 'LON':
-            self.region = self.raxauth
-            if self.url:
-                print 'Using Override Auth URL to\t:', self.url
-                authurl = self.url
+        if self.rax_auth == 'LON':
+            self.region = self.rax_auth
+            if self.auth_url:
+                print 'Using Override Auth URL to\t:', self.auth_url
+                authurl = self.auth_url
             else:
                 authurl = 'lon.identity.api.rackspacecloud.com'
-        elif self.raxauth == 'DFW' or self.raxauth == 'ORD':
-            self.region = self.raxauth
-            if self.url:
-                print 'Using Override Auth URL to\t:', self.url
-                authurl = self.url
+        elif self.rax_auth == 'DFW' or self.rax_auth == 'ORD':
+            self.region = self.rax_auth
+            if self.auth_url:
+                print 'Using Override Auth URL to\t:', self.auth_url
+                authurl = self.auth_url
             else:
                 authurl = 'identity.api.rackspacecloud.com'
-        elif not self.raxauth:
-            if self.url:
+        elif not self.rax_auth:
+            if not self.region:
+                print 'FAIL\t: You have to specify a Region along with an Auth URL'
+                exit(1)
+            if self.auth_url:
                 print 'Using Region\t:', self.region
-                print 'Using Auth URL\t:', self.url
-                authurl = self.url
+                print 'Using Auth URL\t:', self.auth_url
+                authurl = self.auth_url
             else:
-                print 'FAIL'
+                print 'FAIL\t: You have to specify an Auth URL along with the Region'
                 exit(1)
 
         if self.apikey:

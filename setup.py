@@ -49,7 +49,7 @@ setuptools.setup(
     long_description=read_file('README.rst'),
     license='GPLv3',
     packages=['turbolift'],
-    url='https://github.com/cloudnull/cfuploader.git',
+    url='https://github.com/cloudnull/turbolift.git',
     install_requires=turbolift_modules,
     classifiers=[
               "Development Status :: RC4",

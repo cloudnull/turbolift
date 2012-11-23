@@ -94,28 +94,32 @@ def get_filenames(ta):
 
 
 def compress_files(gfn):
+    # create a tar archive
+    print 'MESSAGE\t: Creating a Compressed Archive, This may take a minute.'
+    home_dir = os.getenv('HOME') + os.sep
     format = '%a%b%d-%H.%M.%S.%Y.'
     today = datetime.datetime.today()
     ts = today.strftime(format)
-    print 'MESSAGE\t: Creating a Compressed Archive, This may take a minute.'
-    archivename = ts + ta.container + '.tgz'
-    # create a tar archive
-    tar = tarfile.open(archivename, 'w:gz')
+    file_name = ts + ta.container + '.tgz'
+    tmpfile = home_dir + file_name
+    tar = tarfile.open(tmpfile, 'w:gz')
     for name in gfn:
-        tarname = os.path.realpath(name)
-        tar.add(tarname)
+        tar.add(name)
     tar.close()
-    tarfile.path = os.path.realpath(archivename)
-    
-    if ta.veryverbose:
+    tarfile.path = tmpfile
+    if ta.progress:
         print 'ARCHIVE\t:', tarfile.path
+    tar_len = tarfile.open(tarfile.path, 'r')
+    ver_array = []
+    for member_info in tar_len.getmembers():
+        ver_array.append(member_info.name)
+    print 'ARCHIVE CONTENTS : %s files' % len(ver_array)
     return tarfile.path
+
 
 def uploader(filename=None):
     global authdata
-    """
-        Put all of the  files that were found into the container
-        """
+    # Put all of the  files that were found into the container
     if ta.compress or os.path.isdir(ta.source) == False:
         justfilename = filename.split(os.path.dirname(filename) + os.sep)[1]
     elif os.path.isdir(ta.source) == True:
@@ -220,9 +224,7 @@ def uploader(filename=None):
 
 
 def init_worker():
-    """
-        Watch for signals
-        """
+    # Watch for signals
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 
@@ -245,14 +247,14 @@ def run_turbolift():
             print '\nARGS\t: ', ta, '\n', authdata
         
         print 'Beginning the Upload Process'
-        if ta.multipools > gfn_count:
+        if ta.cc > gfn_count:
             print 'MESSAGE\t: There are less things to do than the number of concurrent'
             print '\t  processes specified by either an override or the system defaults.'
             print '\t  I am leveling the number of concurrent processes to the number of'
             print '\t  jobs to perform.'
             multipools = gfn_count
         else:
-            multipools = ta.multipools
+            multipools = ta.cc
         
         windeprs = multiprocessing.freeze_support()
         pool = multiprocessing.Pool(processes=multipools, initargs=init_worker)
