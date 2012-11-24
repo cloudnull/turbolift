@@ -46,8 +46,6 @@ def container_create(ta):
         filepath = '/v1/' + authdata['tenantid'] + '/' \
             + quote(ta.container)
         conn = httplib.HTTPSConnection(endpoint, 443)
-        if ta.veryverbose:
-            conn.set_debuglevel(1)
         conn.request('HEAD', filepath, headers=headers)
         resp = conn.getresponse()
         resp.read()
@@ -115,7 +113,7 @@ def compress_files(gfn):
     return tarfile.path
 
 
-def uploader(filename=None):
+def uploader(filename):
     global authdata
     # Put all of the  files that were found into the container
     if ta.compress or os.path.isdir(ta.source) == False:
@@ -129,8 +127,7 @@ def uploader(filename=None):
             retry = False
             endpoint = authdata['endpoint'].split('/')[2]
             headers = {'X-Auth-Token': authdata['token']}
-            filepath = '/v1/' + authdata['tenantid'] + '/' \
-                + quote(ta.container + '/' + justfilename)
+            filepath = '/v1/' + authdata['tenantid'] + '/' + quote(ta.container + '/' + justfilename)
             conn = httplib.HTTPSConnection(endpoint, 443)
             if ta.upload:
                 f = open(filename)
@@ -209,10 +206,10 @@ def uploader(filename=None):
     except IOError, e:
         if e.errno == errno.ENOENT:
             print 'ERROR\t: path "%s" does not exist or is a broken symlink' \
-                % justfilename
+                % filename
     except ValueError:
         print 'ERROR\t: The data for "%s" got all jacked up, so it got skipped' \
-            % justfilename
+            % filename
     except KeyboardInterrupt, e:
         pass
     except:
@@ -234,11 +231,17 @@ def run_turbolift():
     au = authentication.NovaAuth()
     authdata = au.osauth(ta)
     try:
-        cnc = container_create(ta)
+        if ta.rax_auth == 'MULTI':
+            for region in ta.region_multi:
+                print 'MESSAGE\t: Checking for Container in %s' % region
+                authdata['endpoint'] = authdata[region]
+                cnc = container_create(ta)
+        else:
+            cnc = container_create(ta)
+
         gfn = get_filenames(ta)
         gfn_count = len(gfn)
-        print '\n', 'MESSAGE\t: "%s" files have been found.\n' \
-            % gfn_count
+        print '\n', 'MESSAGE\t: "%s" files have been found.\n' % gfn_count
         
         if ta.veryverbose:
             print '\nFILELIST\t: ', gfn, '\n'
@@ -259,29 +262,45 @@ def run_turbolift():
         if ta.veryverbose or ta.progress:
             print 'MESSAGE\t: We are going to create Processes :', multipools
         if ta.upload and ta.compress:
-            cf = compress_files(gfn)
-            cf_file = [cf]
-            result = pool.imap_unordered(uploader, cf_file)
+            if ta.rax_auth == 'MULTI':
+                cf = compress_files(gfn)
+                for region in ta.region_multi:
+                    print 'MESSAGE\t: Uploading to %s' % region
+                    authdata['endpoint'] = authdata[region]
+                    cf_file = [cf]
+                    result = pool.imap_unordered(uploader, cf_file)
+            else:
+                pool = multiprocessing.Pool(processes=multipools, initargs=init_worker)
+                cf = compress_files(gfn)
+                cf_file = [cf]
+                result = pool.imap_unordered(uploader, cf_file)
         elif ta.upload or ta.tsync:
-            result = pool.imap_unordered(uploader, gfn)
+            if ta.rax_auth == 'MULTI':
+                for region in ta.region_multi:
+                    pool = multiprocessing.Pool(processes=multipools, initargs=init_worker)
+                    print 'MESSAGE\t: Checking for Container in %s' % region
+                    authdata[region] = authdata[region]
+                    result = pool.imap_unordered(uploader, gfn)
+            else:
+                pool = multiprocessing.Pool(processes=multipools, initargs=init_worker)
+                result = pool.imap_unordered(uploader, gfn)
         else:
-            print 'FAIL\t: Some how the Application attempted to continue without the needed arguments.'
-            exit(2)
+            sys.exit('FAIL\t: Some how the Application attempted to continue without the needed arguments.')
         pool.close()
         pool.join()
-        
-        if ta.compress:
-            os.remove(cf)
-        
+
         if not (ta.upload or ta.tsync):
-            print 'ERROR\t: Somehow I continued but I do nOt know how to proceed. So I Quit.'
+            print 'ERROR\t: Somehow I continued but I do not know how to proceed. So I Quit.'
             sys.exit('MESSAGE\t: here comes the stack trace:\n', \
                 sys.exc_info()[1])
         
-        print 'Operation Completed, Quitting normally'
-        exit(0)
+        print 'FINISH\t: Operation Completed, Quitting normally'
+            
+        if ta.compress:
+            print 'MESSAGE\t: Removing Local Copy of the Archive'
+            os.remove(cf)
+
     except KeyboardInterrupt:
-        
         print 'Caught KeyboardInterrupt, terminating workers'
         pool.close()
         pool.terminate()

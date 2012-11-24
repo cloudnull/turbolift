@@ -32,7 +32,6 @@ class NovaAuth:
 
     def osauth(self, ta):
         self = ta
-        
         if self.rax_auth == 'LON':
             self.region = self.rax_auth
             if self.auth_url:
@@ -42,6 +41,13 @@ class NovaAuth:
                 authurl = 'lon.identity.api.rackspacecloud.com'
         elif self.rax_auth == 'DFW' or self.rax_auth == 'ORD':
             self.region = self.rax_auth
+            if self.auth_url:
+                print 'Using Override Auth URL to\t:', self.auth_url
+                authurl = self.auth_url
+            else:
+                authurl = 'identity.api.rackspacecloud.com'
+        elif self.rax_auth == 'MULTI':
+            self.region_multi = ['DFW', 'ORD']
             if self.auth_url:
                 print 'Using Override Auth URL to\t:', self.auth_url
                 authurl = self.auth_url
@@ -94,23 +100,35 @@ class NovaAuth:
         details = {}
         try:
             catalogs = json_response['access']['serviceCatalog']
+            #print catalogs
             for service in catalogs:
                 if service['name'] == 'cloudFiles':
                     for endpoint in service['endpoints']:
-                        if endpoint['region'] == self.region:
-                            if self.internal:
-                                details['endpoint'] = endpoint['internalURL']
-                            else:
-                                details['endpoint'] = endpoint['publicURL']
-                            details['tenantid'] = \
-                                endpoint['tenantId']
-            details['token'] = json_response['access']['token']['id'
-                    ]
+                        if self.rax_auth == 'MULTI':
+                            regions = self.region_multi
+                            for region in regions:
+                                if endpoint['region'] == region:
+                                    if self.internal:
+                                        details[region] = endpoint['internalURL']
+                                    else:
+                                        details[region] = endpoint['publicURL']
+                        else:
+                            if endpoint['region'] == self.region:
+                                if self.internal:
+                                    details['endpoint'] = endpoint['internalURL']
+                                else:
+                                    details['endpoint'] = endpoint['publicURL']
+                        details['tenantid'] = endpoint['tenantId']
+            details['token'] = json_response['access']['token']['id']
             if self.veryverbose:
                 print '\n', details, '\n'
-                print 'Endpoint\t: ', details['endpoint']
                 print 'Tenant\t\t: ', details['tenantid']
                 print 'Token\t\t: ', details['token']
+                if self.rax_auth == 'MULTI':
+                    print 'Endpoint\t: ', details['DFW']
+                    print 'Endpoint\t: ', details['ORD']
+                else:
+                    print 'Endpoint\t: ', details['endpoint']
         except (KeyError, IndexError):
             print 'Error while getting answers from auth server.\nCheck the endpoint and auth credentials.'
         return details

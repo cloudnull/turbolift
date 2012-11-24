@@ -24,7 +24,7 @@ import sys
 import os
 
 # The Version Of the Application
-version = '0.6a'
+version = '0.7'
 
 
 class GetArguments:
@@ -64,7 +64,7 @@ class GetArguments:
                                help='Defaults to env[OS_AUTH_URL]',
                                default=os.environ.get('OS_AUTH_URL', None))
 
-        authgroup.add_argument('--rax-auth', choices=['dfw','ord','lon'],
+        authgroup.add_argument('--rax-auth', choices=['dfw','ord','lon', 'multi'],
                             help='Rackspace Cloud Authentication')
 
         upaction.add_argument('-c', '--container', nargs='?', required=True,
