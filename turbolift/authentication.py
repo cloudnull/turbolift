@@ -1,5 +1,4 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python
 
 # - title        : NovaAuth Method
 # - description  : Authenticate using the Nova API
