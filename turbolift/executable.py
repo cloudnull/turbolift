@@ -270,19 +270,16 @@ def run_turbolift():
                     cf_file = [cf]
                     result = pool.imap_unordered(uploader, cf_file)
             else:
-                pool = multiprocessing.Pool(processes=multipools, initargs=init_worker)
                 cf = compress_files(gfn)
                 cf_file = [cf]
                 result = pool.imap_unordered(uploader, cf_file)
         elif ta.upload or ta.tsync:
             if ta.rax_auth == 'MULTI':
                 for region in ta.region_multi:
-                    pool = multiprocessing.Pool(processes=multipools, initargs=init_worker)
-                    print 'MESSAGE\t: Checking for Container in %s' % region
+                    print 'MESSAGE\t: Uploading to %s' % region
                     authdata[region] = authdata[region]
                     result = pool.imap_unordered(uploader, gfn)
             else:
-                pool = multiprocessing.Pool(processes=multipools, initargs=init_worker)
                 result = pool.imap_unordered(uploader, gfn)
         else:
             sys.exit('FAIL\t: Some how the Application attempted to continue without the needed arguments.')

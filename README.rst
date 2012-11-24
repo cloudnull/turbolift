@@ -61,7 +61,7 @@ All Flags can be passed to the program on the command line:
   :apikey: APIKEY for the Cloud Account
   :password: Password for the Cloud Account
   :region: Specify the Swift Endpoint 
-  :raxauth: Specify the Rackspace Cloud Endpoint [ dfw, ord, lon ]
+  :rax-auth: Specify the Rackspace Cloud Endpoint [ dfw, ord, lon, multi ].  Please Note that the "multi" option will upload to both the DFW and ORD data center. At this time their is no ability for accounts to uploaded to both US and UK data centers. 
   :container: Cloud Files Container that we are uploading too. If the container is not already in your Cloud Files repository the container will be created.
   :source: Specify the Local Content to be uploaded.
   :upload: Use the Upload Function for a provided Source. 

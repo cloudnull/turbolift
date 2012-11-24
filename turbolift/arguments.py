@@ -24,7 +24,7 @@ import sys
 import os
 
 # The Version Of the Application
-version = '0.7'
+version = '0.8'
 
 
 class GetArguments:
