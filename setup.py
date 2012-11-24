@@ -1,6 +1,4 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-
+#!/usr/bin/env python
 # - title        : Setup for Uploader using CloudFiles
 # - description  : Want to upload a bunch files to cloudfiles? This will do it.
 # - License      : GPLv3+
@@ -23,7 +21,7 @@ http://www.gnu.org/licenses/gpl.html
 import os
 import setuptools
 import sys
-from turbolift import executable
+import turbolift
 
 
 if sys.version_info < (2, 6, 0):
@@ -41,7 +39,7 @@ def read_file(file_name):
 
 setuptools.setup(
     name='turbolift',
-    version=executable.arguments.version,
+    version='0.8',
     author='Kevin Carter',
     author_email='kevin@bkintegration.com',
     description='OpenStack Swift -Cloud Files- Uploader'
