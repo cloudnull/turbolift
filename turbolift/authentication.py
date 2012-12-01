@@ -21,6 +21,7 @@ http://www.gnu.org/licenses/gpl.html
 
 import json
 import httplib
+import sys
 from urllib import quote
 
 

@@ -39,7 +39,7 @@ def read_file(file_name):
 
 setuptools.setup(
     name='turbolift',
-    version='0.8',
+    version='0.9',
     author='Kevin Carter',
     author_email='kevin@bkintegration.com',
     description='OpenStack Swift -Cloud Files- Uploader'
