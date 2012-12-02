@@ -18,3 +18,7 @@ license for further details (see GNU General Public License).
 
 http://www.gnu.org/licenses/gpl.html
 """
+
+# The Version Of the Application
+VN = '1.0'
+VNI = 'GNU Turbolift %s' % VN

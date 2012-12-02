@@ -1,22 +1,23 @@
 #!/usr/bin/env python
+
 # - title        : Upload for Swift(Rackspace Cloud Files)
 # - description  : Want to upload a bunch files to cloud files? This will do it.
 # - License      : GPLv3+
 # - author       : Kevin Carter
 # - date         : 2011-11-09
-# - usage        : python turbolift.local.py
 # - notes        : This is a Swift(Rackspace Cloud Files) Upload Script
 # - Python       : >= 2.6
 
 """
-    License Information
-    
-    This software has no warranty, it is provided 'as is'. It is your responsibility
-    to validate the behavior of the routines and its accuracy using the code provided.
-    Consult the GNU General Public license for further details (see GNU General Public License).
-    
-    http://www.gnu.org/licenses/gpl.html
-    """
+License Inforamtion
+
+This software has no warranty, it is provided 'as is'. It is your
+responsibility to validate the behavior of the routines and its
+accuracy using the code provided. Consult the GNU General Public
+license for further details (see GNU General Public License).
+
+http://www.gnu.org/licenses/gpl.html
+"""
 
 import sys
 import httplib
@@ -27,9 +28,6 @@ import errno
 import hashlib
 import tarfile
 import datetime
-import time
-import itertools
-from functools import partial
 from urllib import quote
 
 # Local Files to Import
@@ -37,26 +35,32 @@ import authentication
 import arguments
 
 
-def container_create(ta):
+args = arguments.GetArguments()
+tur_arg = args.get_values()
+au = authentication.NovaAuth()
+authdata = au.osauth(tur_arg)
+
+
+def container_create(tur_arg=None):
     try:
         endpoint = authdata['endpoint'].split('/')[2]
         headers = {'X-Auth-Token': authdata['token']}
         filepath = '/v1/' + authdata['tenantid'] + '/' \
-            + quote(ta.container)
+            + quote(tur_arg.container)
         conn = httplib.HTTPSConnection(endpoint, 443)
         conn.request('HEAD', filepath, headers=headers)
         resp = conn.getresponse()
         resp.read()
         if resp.status == 404:
             print '\n', 'MESSAGE\t:', resp.status, resp.reason, \
-                'The Container', ta.container, 'does not Exist'
+                'The Container', tur_arg.container, 'does not Exist'
             conn.request('PUT', filepath, headers=headers)
             resp = conn.getresponse()
             resp.read()
             if resp.status >= 300:
                 sys.exit('\n', 'ERROR\t:', resp.status, resp.reason, \
-                    ta.container, '\n')
-            print '\n', 'CREATING CONTAINER\t:', ta.container, '\n', \
+                    tur_arg.container, '\n')
+            print '\n', 'CREATING CONTAINER\t:', tur_arg.container, '\n', \
                 'CONTAINER STATUS\t:', resp.status, resp.reason, '\n'
         conn.close()
     except:
@@ -65,21 +69,21 @@ def container_create(ta):
         raise
 
 
-def get_filenames(ta):
-    directorypath = ta.source
+def get_filenames(tur_arg=None):
+    directorypath = tur_arg.source
     if os.path.isdir(directorypath) == True:
         rootdir = os.path.realpath(directorypath) + os.sep
         filelist = []
-        for (root, subFolders, files) in os.walk(rootdir):
+        for (root, subfolders, files) in os.walk(rootdir.encode('utf-8')):
             for file in files:
-                filelist.append(os.path.join(root, file))
-        if ta.veryverbose:
+                filelist.append(os.path.join(root.encode('utf-8'), file.encode('utf-8')))
+        if tur_arg.veryverbose:
             print '\n', rootdir, '\n'
     elif os.path.isfile(directorypath) == True:
         print 'file'
         filelist = []
-        filelist.append(os.path.realpath(directorypath))
-        if ta.veryverbose:
+        filelist.append(os.path.realpath(directorypath.encode('utf-8')))
+        if tur_arg.veryverbose:
             print 'File Name\t:', filelist
     else:
         print 'ERROR\t: path %s does not exist, is not a directory, or is a broken symlink' % directorypath
@@ -87,21 +91,21 @@ def get_filenames(ta):
     return filelist
 
 
-def compress_files(gfn):
+def compress_files(gfn=None):
     # create a tar archive
     print 'MESSAGE\t: Creating a Compressed Archive, This may take a minute.'
     home_dir = os.getenv('HOME') + os.sep
     format = '%a%b%d-%H.%M.%S.%Y.'
     today = datetime.datetime.today()
     ts = today.strftime(format)
-    file_name = ts + ta.container + '.tgz'
+    file_name = ts + tur_arg.container + '.tgz'
     tmpfile = home_dir + file_name
     tar = tarfile.open(tmpfile, 'w:gz')
     for name in gfn:
         tar.add(name)
     tar.close()
     tarfile.path = tmpfile
-    if ta.progress:
+    if tur_arg.progress:
         print 'ARCHIVE\t:', tarfile.path
     tar_len = tarfile.open(tarfile.path, 'r')
     ver_array = []
@@ -111,13 +115,13 @@ def compress_files(gfn):
     return tarfile.path
 
 
-def uploader(filename):
+def uploader(filename=None):
     global authdata
     # Put all of the  files that were found into the container
-    if ta.compress or os.path.isdir(ta.source) == False:
+    if tur_arg.compress or os.path.isdir(tur_arg.source) == False:
         justfilename = filename.split(os.path.dirname(filename) + os.sep)[1]
-    elif os.path.isdir(ta.source) == True:
-        rootdir = os.path.realpath(ta.source) + os.sep
+    elif os.path.isdir(tur_arg.source) == True:
+        rootdir = os.path.realpath(tur_arg.source) + os.sep
         justfilename = filename.split(rootdir)[1]
     try:
         retry = True
@@ -125,30 +129,30 @@ def uploader(filename):
             retry = False
             endpoint = authdata['endpoint'].split('/')[2]
             headers = {'X-Auth-Token': authdata['token']}
-            filepath = '/v1/' + authdata['tenantid'] + '/' + quote(ta.container + '/' + justfilename)
+            filepath = '/v1/' + authdata['tenantid'] + '/' + quote(tur_arg.container + '/' + justfilename)
             conn = httplib.HTTPSConnection(endpoint, 443)
-            if ta.upload:
+            if tur_arg.upload:
                 f = open(filename)
-                if ta.veryverbose:
+                if tur_arg.veryverbose:
                     conn.set_debuglevel(1)
                 conn.request('PUT', filepath, body=f, headers=headers)
                 resp = conn.getresponse()
                 resp.read()
-                if ta.progress:
+                if tur_arg.progress:
                     print resp.status, resp.reason, justfilename
                 if resp.status == 401:
                     print 'MESSAGE\t: Token Seems to have expired, Forced Re-authentication is happening.'
                     au = authentication.NovaAuth()
-                    authdata = au.osauth(ta)
+                    authdata = au.osauth(tur_arg)
                     retry = True
                     continue
                 if resp.status >= 300:
                     print 'ERROR\t:', resp.status, resp.reason, justfilename, '\n', f, '\n'
                 conn.close()
                 f.close()
-            elif ta.tsync:
+            elif tur_arg.tsync:
                 f = open(filename)
-                if ta.veryverbose:
+                if tur_arg.veryverbose:
                     conn.set_debuglevel(1)
                 conn.request('HEAD', filepath, headers=headers)
                 resp = conn.getresponse()
@@ -158,12 +162,12 @@ def uploader(filename):
                     resp = conn.getresponse()
                     resp.read()
                     
-                    if ta.progress:
+                    if tur_arg.progress:
                         print resp.status, resp.reason, justfilename
                     if resp.status == 401:
                         print 'MESSAGE\t: Token Seems to have expired, Forced Re-authentication is happening.'
                         au = authentication.NovaAuth()
-                        authdata = au.osauth(ta)
+                        authdata = au.osauth(tur_arg)
                         retry = True
                         continue
                     if resp.status >= 300:
@@ -181,17 +185,17 @@ def uploader(filename):
                     localmd5sum = md5.hexdigest()
                     if remotemd5sum != localmd5sum:
                         f = open(filename)
-                        if ta.veryverbose:
+                        if tur_arg.veryverbose:
                             conn.set_debuglevel(1)
                         conn.request('PUT', filepath, body=f, headers=headers)
                         resp = conn.getresponse()
                         resp.read()
-                        if ta.progress:
+                        if tur_arg.progress:
                             print 'MESSAGE\t: CheckSumm Mis-Match', localmd5sum, '!=', remotemd5sum, '\n\t ', 'File Upload :', resp.status, resp.reason, justfilename
                         if resp.status == 401:
                             print 'MESSAGE\t: Token Seems to have expired, Forced Reauthentication is happening.'
                             au = authentication.NovaAuth()
-                            authdata = au.osauth(ta)
+                            authdata = au.osauth(tur_arg)
                             retry = True
                             continue
                         if resp.status >= 300:
@@ -199,7 +203,7 @@ def uploader(filename):
                         conn.close()
                         f.close()
                     else:
-                        if ta.progress:
+                        if tur_arg.progress:
                             print 'MESSAGE\t: CheckSumm Match', localmd5sum
     except IOError, e:
         if e.errno == errno.ENOENT:
@@ -222,76 +226,70 @@ def init_worker():
 
 
 def run_turbolift():
-    global authdata
-    global ta
-    args = arguments.GetArguments()
-    ta = args.get_values()
-    au = authentication.NovaAuth()
-    authdata = au.osauth(ta)
     try:
-        if ta.rax_auth == 'MULTI':
-            for region in ta.region_multi:
+        if tur_arg.rax_auth == 'MULTI':
+            for region in tur_arg.region_multi:
                 print 'MESSAGE\t: Checking for Container in %s' % region
                 authdata['endpoint'] = authdata[region]
-                cnc = container_create(ta)
+                container_create(tur_arg)
         else:
-            cnc = container_create(ta)
+            container_create(tur_arg)
 
-        gfn = get_filenames(ta)
+        gfn = get_filenames(tur_arg)
         gfn_count = len(gfn)
         print '\n', 'MESSAGE\t: "%s" files have been found.\n' % gfn_count
         
-        if ta.veryverbose:
+        if tur_arg.veryverbose:
             print '\nFILELIST\t: ', gfn, '\n'
-            print '\nARGS\t: ', ta, '\n', authdata
+            print '\nARGS\t: ', tur_arg, '\n', authdata
         
         print 'Beginning the Upload Process'
-        if ta.cc > gfn_count:
+        if tur_arg.cc > gfn_count:
             print 'MESSAGE\t: There are less things to do than the number of concurrent'
             print '\t  processes specified by either an override or the system defaults.'
             print '\t  I am leveling the number of concurrent processes to the number of'
             print '\t  jobs to perform.'
             multipools = gfn_count
         else:
-            multipools = ta.cc
+            multipools = tur_arg.cc
         
-        windeprs = multiprocessing.freeze_support()
+        multiprocessing.freeze_support()
         pool = multiprocessing.Pool(processes=multipools, initargs=init_worker)
-        if ta.veryverbose or ta.progress:
+        if tur_arg.veryverbose or tur_arg.progress:
             print 'MESSAGE\t: We are going to create Processes :', multipools
-        if ta.upload and ta.compress:
-            if ta.rax_auth == 'MULTI':
+        if tur_arg.upload and tur_arg.compress:
+            if tur_arg.rax_auth == 'MULTI':
                 cf = compress_files(gfn)
-                for region in ta.region_multi:
+                for region in tur_arg.region_multi:
                     print 'MESSAGE\t: Uploading to %s' % region
                     authdata['endpoint'] = authdata[region]
                     cf_file = [cf]
-                    result = pool.imap_unordered(uploader, cf_file)
+                    pool.imap_unordered(uploader, cf_file)
             else:
                 cf = compress_files(gfn)
                 cf_file = [cf]
-                result = pool.imap_unordered(uploader, cf_file)
-        elif ta.upload or ta.tsync:
-            if ta.rax_auth == 'MULTI':
-                for region in ta.region_multi:
+                pool.imap_unordered(uploader, cf_file)
+        elif tur_arg.upload or tur_arg.tsync:
+            if tur_arg.rax_auth == 'MULTI':
+                for region in tur_arg.region_multi:
                     print 'MESSAGE\t: Uploading to %s' % region
                     authdata[region] = authdata[region]
-                    result = pool.imap_unordered(uploader, gfn)
+                    pool.imap_unordered(uploader, gfn)
             else:
-                result = pool.imap_unordered(uploader, gfn)
+                pool.imap_unordered(uploader, gfn)
         else:
             sys.exit('FAIL\t: Some how the Application attempted to continue without the needed arguments.')
         pool.close()
         pool.join()
 
-        if not (ta.upload or ta.tsync):
+        if not (tur_arg.upload or tur_arg.tsync):
             print 'ERROR\t: Somehow I continued but I do not know how to proceed. So I Quit.'
             sys.exit('MESSAGE\t: here comes the stack trace:\n', \
                 sys.exc_info()[1])
         
         print 'FINISH\t: Operation Completed, Quitting normally'
             
-        if ta.compress:
+        if tur_arg.compress:
             print 'MESSAGE\t: Removing Local Copy of the Archive'
             os.remove(cf)
 
@@ -299,6 +297,6 @@ def run_turbolift():
         print 'Caught KeyboardInterrupt, terminating workers'
         pool.close()
         pool.terminate()
-        if ta.compress:
+        if tur_arg.compress:
             os.remove(cf)
         sys.exit('\nI have stopped at your command\n')
