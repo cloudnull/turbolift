@@ -30,6 +30,9 @@ if sys.version_info < (2, 6, 0):
     sys.stderr.write("Turbolift Presently requires Python 2.6.0 or greater \n")
     sys.exit('\nUpgrade python because you version of it is VERY deprecated\n')
 
+with open('README') as file:
+    long_description = file.read()
+
 
 TM = ['argparse', 'datetime']
 
@@ -39,20 +42,23 @@ setuptools.setup(
     version=turbolift.info.VN,
     author='Kevin Carter',
     author_email='kevin@bkintegration.com',
-    description='OpenStack Swift -Cloud Files- Uploader'
-        ,
-    long_description=open(os.path.realpath('README.rst')).read(),
-    license='GPLv3',
+    description='OpenStack Swift -Cloud Files- Uploader',
+    long_description=long_description,
+    license='GNU General Public License v3 or later (GPLv3+)',
     packages=['turbolift'],
     url='https://github.com/cloudnull/turbolift.git',
     install_requires=TM,
     classifiers=[
-              "Development Status :: Stable",
-              "Intended Audience :: Devlopers and Users",
-              "Intended Audience :: Information Technology",
-              "License :: GPLv3",
-              "Operating System :: OS Independent",
-              "Programming Language :: Python",
+              'Development Status :: 5 - Production/Stable',
+              'Intended Audience :: Information Technology',
+              'Intended Audience :: System Administrators',
+              'Intended Audience :: Developers',
+              'Operating System :: OS Independent',
+              'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
+              'Programming Language :: Python :: 2.6',
+              'Programming Language :: Python :: 2.7',
+              'Topic :: Utilities',
+              'Topic :: Software Development :: Libraries :: Python Modules',
               ],
     entry_points={
                  "console_scripts" :
