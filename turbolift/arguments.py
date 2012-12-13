@@ -43,14 +43,27 @@ class GetArguments:
         defaultcc = 50
         parser = argparse.ArgumentParser(formatter_class=lambda prog: \
                                          argparse.HelpFormatter(prog, max_help_position=50),
-                                         usage='%(prog)s [-u] [-a | -p] [options]',
+                                         usage='%(prog)s',
                                          description='Uploads lots of Files Quickly, Using the unpatented GPLv3 Cloud Files %(prog)s'
                                          )
-        
+        subparser = parser.add_subparsers(title='Infrastructure Spawner', metavar='<Commands>')
+
         authgroup = parser.add_argument_group('Authentication', 'Authentication against the OpenStack API')
-        upaction = parser.add_argument_group('Upload Action', 'Type of upload to be performed as well as Source and Destination')
         optionals = parser.add_argument_group('Additional Options', 'Things you might want to add to your operation')
+
+
+
+        upaction = subparser.add_parser('upload',
+                                        help='Upload Action, Type of upload to be performed as well as Source and Destination')
+        upaction.set_defaults(upload='True', tsync=None, compress=None)
+
         
+        taction = subparser.add_parser('tsync',
+                                       help='T-Sync Action, Type of upload to be performed as well as Source and Destination')
+        taction.set_defaults(upload=None, tsync='True', compress=None)
+
+
+
         authgroup.add_argument('-u',
                                '--user',
                                nargs='?',
@@ -80,46 +93,46 @@ class GetArguments:
                                default=os.environ.get('OS_AUTH_URL', None))
 
         authgroup.add_argument('--rax-auth',
-                               choices=['dfw', 'ord', 'lon', 'multi'],
+                               choices=['dfw', 'ord', 'lon'],
                                help='Rackspace Cloud Authentication')
+        
+        taction.add_argument('--container',
+                             metavar='<name>',
+                             required=True,
+                             help='Specifies the Container')
+        
+        taction.add_argument('--source',
+                             metavar='<local>',
+                             required=True,
+                             help='Local content to be uploaded')
+        
 
-        upaction.add_argument('-c',
-                              '--container',
-                              nargs='?',
+        upaction.add_argument('--container',
+                              metavar='<name>',
                               required=True,
                               help='Specifies the Container')
         
-        upaction.add_argument('-s',
-                              '--source',
-                              nargs='?',
+        upaction.add_argument('--source',
+                              metavar='<local>',
                               required=True,
                               help='Local content to be uploaded')
 
-        upaction.add_argument('-U', '--upload',
+        upaction.add_argument('--compress',
                               action='store_true',
-                              help='Upload a local Directory or File to Cloud Files')
-
-        upaction.add_argument('-T',
-                              '--tsync',
-                              action='store_true',
-                              help='Sync a local Directory to Cloud Files. Similar to RSYNC')
-
-        upaction.add_argument('-I',
+                              default=None,
+                              help='Compress a file or directory into a single archive')
+        
+        optionals.add_argument('-I',
                               '--internal',
                               action='store_true',
                               help='Use Service Network')
-
-        upaction.add_argument('--compress',
-                              action='store_true',
-                              help='Compress a file or directory into a single archive')
 
         optionals.add_argument('-P',
                                '--progress',
                                action='store_true',
                                help='Shows Progress While Uploading')
 
-        optionals.add_argument('-V',
-                               '--veryverbose',
+        optionals.add_argument('--debug',
                                action='store_true',
                                help='Turn up verbosity to over 9000')
 
@@ -134,7 +147,7 @@ class GetArguments:
                                version=info.VNI)
 
         args = parser.parse_args()
-        
+
         if args.region:
             args.region = args.region.upper()
 
@@ -151,17 +164,6 @@ class GetArguments:
             parser.print_help()
             sys.exit('\nNo API Key or Password was provided, use [--apikey]\n')
         
-        
-        if not (args.upload or args.tsync):
-            parser.print_help()
-            sys.exit('\nNo method of uploading was provided, choose either [--upload] or [--tsync]\n')
-        
-        
-        if args.tsync and args.compress:
-            parser.print_help()
-            sys.exit('\nYou can\'t use compression with the [--tsync] function.\n')
-        
-        
         if args.password and args.apikey:
             parser.print_help()
             sys.exit('\nYou can\'t use both [--apikey] and [--password] in the same command, so I quit...\n')
@@ -170,26 +172,19 @@ class GetArguments:
         if args.rax_auth and args.region:
             parser.print_help()
             sys.exit('\nYou can\'t use both [--rax-auth] and [--region] in the same command, so I quit...\n')
-        
-        
-        if args.upload and args.tsync:
-            parser.print_help()
-            sys.exit('\nYou can\'t use both [--upload] and [--tsync] in the same command, so I quit...\n')
-        
 
-        if args.upload or args.tsync:
-            if args.cc > 150:
-                print '\nMESSAGE\t: You have set the Concurency Override to', args.cc
-                print '\t  This is a lot of Processes and could fork bomb your'
-                print '\t  system or cause other nastyness.'
-                raw_input('\t  You have been warned, Press Enter to Continue\n')
-            elif args.cc != defaultcc:
-                print 'MESSAGE\t: Setting a Concurency Override of', args.cc
+        if args.cc > 150:
+            print '\nMESSAGE\t: You have set the Concurency Override to', args.cc
+            print '\t  This is a lot of Processes and could fork bomb your'
+            print '\t  system or cause other nastyness.'
+            raw_input('\t  You have been warned, Press Enter to Continue\n')
+        elif args.cc != defaultcc:
+            print 'MESSAGE\t: Setting a Concurency Override of', args.cc
 
             if args.compress:
                 args.cc = 1
 
-        if args.veryverbose:
+        if args.debug:
             args.progress = True
 
         return args

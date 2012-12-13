@@ -26,8 +26,9 @@ import sys
 
 class NovaAuth:
 
-    def __init__(self):
-        self = None
+    def __init__(self, tur_arg=None):
+        self.osauth(tur_arg)
+
 
     def osauth(self, tur_arg):
         if tur_arg.rax_auth == 'LON':
@@ -39,13 +40,6 @@ class NovaAuth:
                 authurl = 'lon.identity.api.rackspacecloud.com'
         elif tur_arg.rax_auth == 'DFW' or tur_arg.rax_auth == 'ORD':
             tur_arg.region = tur_arg.rax_auth
-            if tur_arg.auth_url:
-                print 'Using Override Auth URL to\t:', tur_arg.auth_url
-                authurl = tur_arg.auth_url
-            else:
-                authurl = 'identity.api.rackspacecloud.com'
-        elif tur_arg.rax_auth == 'MULTI':
-            tur_arg.region_multi = ['DFW', 'ORD']
             if tur_arg.auth_url:
                 print 'Using Override Auth URL to\t:', tur_arg.auth_url
                 authurl = tur_arg.auth_url
@@ -71,12 +65,12 @@ class NovaAuth:
         else:
             sys.exit('ERROR\t: This should have not happened.\nThere was no way to proceed, so I quit.')
 
-        if tur_arg.veryverbose:
+        if tur_arg.debug:
             print '\n', self, '\n'
             print 'JSON REQUEST: ' + jsonreq
 
         conn = httplib.HTTPSConnection(authurl, 443)
-        if tur_arg.veryverbose:
+        if tur_arg.debug:
             conn.set_debuglevel(1)
         headers = {'Content-type': 'application/json'}
         conn.request('POST', '/v2.0/tokens', jsonreq, headers)
@@ -92,7 +86,7 @@ class NovaAuth:
             print 'MESSAGE\t: Using the Service Network in the', \
                 tur_arg.region, 'DC for', authurl
 
-        if tur_arg.veryverbose:
+        if tur_arg.debug:
             print 'JSON decoded and pretty'
             print json.dumps(json_response, indent=2)
         details = {}
@@ -118,17 +112,12 @@ class NovaAuth:
                                     details['endpoint'] = endpoint['publicURL']
                         details['tenantid'] = endpoint['tenantId']
             details['token'] = json_response['access']['token']['id']
-            if tur_arg.veryverbose:
+            if tur_arg.debug:
                 print '\n', details, '\n'
                 print 'Tenant\t\t: ', details['tenantid']
                 print 'Token\t\t: ', details['token']
-                if tur_arg.rax_auth == 'MULTI':
-                    print 'Endpoint\t: ', details['DFW']
-                    print 'Endpoint\t: ', details['ORD']
-                else:
-                    print 'Endpoint\t: ', details['endpoint']
+                print 'Endpoint\t: ', details['endpoint']
+            return details
+                        
         except (KeyError, IndexError):
             print 'Error while getting answers from auth server.\nCheck the endpoint and auth credentials.'
-        return details
-
-
