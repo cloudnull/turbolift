@@ -20,5 +20,5 @@ http://www.gnu.org/licenses/gpl.html
 """
 
 # The Version Of the Application
-VN = '2.0 - DEVELOPMENT'
+VN = '1.1-DEVELOPMENT'
 VNI = 'GNU Turbolift %s' % VN
