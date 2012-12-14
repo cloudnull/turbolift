@@ -50,7 +50,8 @@ class UploadAction:
             while True:
                 try:
                     item = filename.get()
-                    if item is 'STOP':
+                    if item is ('STOP' or None):
+                        time.sleep(.01)
                         break
                     self.just_filename = item.split(os.path.realpath(self.args.source) + os.sep)[1]
                     if self.args.upload:
@@ -59,6 +60,7 @@ class UploadAction:
                         self.sync_uploader(item)
                     else:
                         print 'ERROR\t: Shits broke son, here comes the stack trace:\n', sys.exc_info()[1]
+                    time.sleep(.01)
                 except:
                     break
         self.conn.close()
@@ -116,8 +118,6 @@ class UploadAction:
 
                 if resp.status >= 300:
                     print 'ERROR\t:', resp.status, resp.reason, self.just_filename, '\n', f, '\n'
-
-                time.sleep(.5)
 
         except IOError, e:
             if e.errno == errno.ENOENT:

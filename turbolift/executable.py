@@ -112,7 +112,7 @@ def compress_files(tur_arg, gfn=None):
                 busy_char = c
                 sys.stdout.write("\rCompressing - [ %s ] " % c)
                 sys.stdout.flush()
-                time.sleep(.0001)
+                time.sleep(.001)
         
         tar.close()
 
@@ -156,7 +156,7 @@ def worker_proc(tur_arg=None, authdata=None, iters=None, multipools=None, gfn_co
                 busy_char = c
                 sys.stdout.write("\rCleaning up My threaded Mess - [ %s ] " % c)
                 sys.stdout.flush()
-                time.sleep(.5)
+                time.sleep(.05)
 
     work.close()
     work.join_thread()
@@ -217,8 +217,6 @@ def run_turbolift():
 
     except KeyboardInterrupt:
         print 'Caught KeyboardInterrupt, terminating workers'
-    except:
-        print '\nI have stopped at your command\n', sys.exc_info()[1]
 
 if __name__ == '__main__':
     run_turbolift()
