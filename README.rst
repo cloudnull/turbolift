@@ -112,24 +112,34 @@ The application has been tested on :
 Bench Marks
 -----------
 
-To show the speed of the application here are some benchmarks on uploading 15,000 64K files to a single container.
+To show the speed of the application here are some benchmarks on uploading 30,000 64K files to a single container.
 
-Definitions:
+
+Definitions and Information:
   * ``ServiceNet`` - is the internal network found on all Rackspace Cloud Servers. When Using ServiceNet Uploads are sent over the internal network interface to the Cloud Files repository found in the same Data Center. `You can NOT use ServiceNet to upload to a different Data Center.`
   * ``Public Network`` - Uploads sent over the general internet to a Cloud Files repository 
+  * Total Size of all 30,000 files ``1875M``
 
-Total Size of all 30,000 files ``1875M``
 
-Using ServiceNet :
+Command Used For Tests::
+
+    time turbolift --cc 150 --rax-auth ord upload --source /tmp/uptest/ --container $location-Test-$num
+
+**Note that the username and api authentication key have been exported into local environment variables**
+
+
+Test Results Using ServiceNet :
   :Test 1:  7m25.459s
   :Test 2:  7m25.459s
   :Test 3:  7m26.990s
   :Avg Time: 7 Minutes, 25.9 Seconds
 
-Using The Public Network :
+
+Test Results Using The Public Network :
   :Test 1: 14m43.879s
   :Test 2: 14m1.751s
   :Test 3: 13m37.173s
   :Avg Time: 13 Minutes, 9.95 Seconds
+
 
 .. _Rackspace NOVA Client: https://github.com/rackspace/rackspace-novaclient
