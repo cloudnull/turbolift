@@ -60,7 +60,7 @@ Authentication Arguments:
   :password: Password for the Cloud Account
   :region: Specify an Endpoint
   :auth-url: Specify the Auth URL
-  :rax-auth: Specify the Rackspace Cloud Endpoint [ dfw, ord, lon ].  At this time their is no ability for accounts to uploaded to both US and UK data centers.
+  :rax-auth: Specify a Rackspace Cloud Auth-URL and Endpoint [ dfw, ord, lon ].  At this time their is no ability for accounts to uploaded to both US and UK data centers.
 
 
 Positional Arguments:
