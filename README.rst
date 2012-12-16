@@ -1,6 +1,6 @@
 Turbolift, the Cloud Files Uploader
 ###################################
-:date: 2012-11-09 05:54
+:date: 2012-12-16 16:22
 :tags: rackspace, upload, mass, Cloud Files, files, api
 :category: linux 
 
@@ -65,8 +65,7 @@ Authentication Arguments:
 
 Positional Arguments:
   :upload: Use the Upload Function for a provided Source.
-  :tsync: Use the TSync function for a local source to Cloud Files. This function Operates Similar to RSYNC uploading files that are not found currently on Cloud Files. This function validates t
-he md5 checksum on the local system against what is found in Cloud Files prior to upload and if the checksums are different the local file will be uploaded.
+  :tsync: Use the TSync function for a local source to Cloud Files. This function Operates Similar to RSYNC uploading files that are not found currently on Cloud Files. This function validates the md5 checksum on the local system against what is found in Cloud Files prior to upload and if the checksums are different the local file will be uploaded.
 
 
 Appliction Flags can be passed to the program on the command line:
