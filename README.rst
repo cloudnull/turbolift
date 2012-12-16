@@ -41,9 +41,7 @@ Installation :
 
 
 Python Modules Needed, for full operation :
-  NOTE : All of the modules needed should be part of the "standard" Library as of Python 2.6.  The setup file will install the two needed dependencies which may not have made it onto your system. If you have difficulties with dependencies here is a complete list of used modules::
-  
-    argparse, sys, json, httplib, signal, os, multiprocessing, errno, hashlib, tarfile, datetime, functools, urllib
+  NOTE : All of the modules needed should be part of the "standard" Library as of Python 2.6.  The setup file will install the two needed dependencies which may not have made it onto your system.
 
 
 Application Usage
@@ -51,7 +49,7 @@ Application Usage
 
 Here is the Basic Usage::
 
-    turbolift -u [CLOUD-USERNAME] -a [CLOUD-API-KEY] -c [CONTAINER-NAME] -e [DATACENTER-ENDPOINT] -U [PATH-TO-DIRECTORY]
+    turbolift -u [CLOUD-USERNAME] -a [CLOUD-API-KEY] -e [DATACENTER-ENDPOINT] [POSITIONAL-ARGUMENT] -s [PATH-TO-DIRECTORY] -c [CONTAINER-NAME]
 
 Run ``turbolift -h`` for a full list of available flags and operations
 
@@ -61,7 +59,7 @@ All Flags can be passed to the program on the command line:
   :apikey: APIKEY for the Cloud Account
   :password: Password for the Cloud Account
   :region: Specify the Swift Endpoint 
-  :rax-auth: Specify the Rackspace Cloud Endpoint [ dfw, ord, lon, multi ].  Please Note that the "multi" option will upload to both the DFW and ORD data center. At this time their is no ability for accounts to uploaded to both US and UK data centers. 
+  :rax-auth: Specify the Rackspace Cloud Endpoint [ dfw, ord, lon ].  At this time their is no ability for accounts to uploaded to both US and UK data centers. 
   :container: Cloud Files Container that we are uploading too. If the container is not already in your Cloud Files repository the container will be created.
   :source: Specify the Local Content to be uploaded.
   :upload: Use the Upload Function for a provided Source. 
@@ -70,7 +68,7 @@ All Flags can be passed to the program on the command line:
   :cc: [OPTIONAL] File Upload Concurrency
   :internal: [OPTIONAL] Use ServiceNet Endpoint for Cloud Files
   :progress: [OPTIONAL] Shows Progress While Uploading
-  :veryverbose: [OPTIONAL] Turn up verbosity to over 9000
+  :debug: [OPTIONAL] Turn up verbosity to over 9000
   :compress: Compress a file or directory into a single archive
   :version: Gives Version Number
 
