@@ -58,20 +58,20 @@ Authentication Arguments:
   :user: Username for the Cloud Account
   :apikey: APIKEY for the Cloud Account
   :password: Password for the Cloud Account
-  :region: Specify the Swift Endpoint
-  :url: [OPTIONAL] Sets an Override for the Auth URL
+  :region: Specify an Endpoint
+  :auth-url: Specify the Auth URL
   :rax-auth: Specify the Rackspace Cloud Endpoint [ dfw, ord, lon ].  At this time their is no ability for accounts to uploaded to both US and UK data centers.
 
 
 Positional Arguments:
-  :upload: Use the Upload Function for a provided Source.
-  :tsync: Use the TSync function for a local source to Cloud Files. This function Operates Similar to RSYNC uploading files that are not found currently on Cloud Files. This function validates the md5 checksum on the local system against what is found in Cloud Files prior to upload and if the checksums are different the local file will be uploaded.
+  :upload: Use the Upload Function for a local Source.
+  :tsync: Use the TSync function for a local Source. This function Operates Similar to RSYNC; uploading files that are not found currently on Cloud Files. This function validates the md5 checksum on the local system against what is found in Cloud Files prior to upload and if the checksums are different the local file will be uploaded.
 
 
 Appliction Flags can be passed to the program on the command line:
   :container: Cloud Files Container that we are uploading too. If the container is not already in your Cloud Files repository the container will be created.
   :source: Specify the Local Content to be uploaded.
-  :compress: [OPTIONAL] Compress a file or directory into a single archive
+  :compress: [OPTIONAL] [UPLOAD ONLY] Compress a file or directory into a single archive
 
 
 Optional Arguments:
@@ -123,7 +123,7 @@ Definitions and Information:
 
 Command Used For Tests::
 
-    time turbolift --cc 150 --rax-auth ord upload --source /tmp/uptest/ --container $location-Test-$num
+    time turbolift --cc 150 --rax-auth $location upload --source /tmp/uptest/ --container $location-Test-$num
 
 **Note that the username and api authentication key have been exported into local environment variables**
 
