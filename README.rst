@@ -53,24 +53,36 @@ Here is the Basic Usage::
 
 Run ``turbolift -h`` for a full list of available flags and operations
 
-All Flags can be passed to the program on the command line:
-  :help: Show helpful information on the script and its available functions
+
+Authentication Arguments:
   :user: Username for the Cloud Account
   :apikey: APIKEY for the Cloud Account
   :password: Password for the Cloud Account
-  :region: Specify the Swift Endpoint 
-  :rax-auth: Specify the Rackspace Cloud Endpoint [ dfw, ord, lon ].  At this time their is no ability for accounts to uploaded to both US and UK data centers. 
+  :region: Specify the Swift Endpoint
+  :url: [OPTIONAL] Sets an Override for the Auth URL
+  :rax-auth: Specify the Rackspace Cloud Endpoint [ dfw, ord, lon ].  At this time their is no ability for accounts to uploaded to both US and UK data centers.
+
+
+Positional Arguments:
+  :upload: Use the Upload Function for a provided Source.
+  :tsync: Use the TSync function for a local source to Cloud Files. This function Operates Similar to RSYNC uploading files that are not found currently on Cloud Files. This function validates t
+he md5 checksum on the local system against what is found in Cloud Files prior to upload and if the checksums are different the local file will be uploaded.
+
+
+Appliction Flags can be passed to the program on the command line:
   :container: Cloud Files Container that we are uploading too. If the container is not already in your Cloud Files repository the container will be created.
   :source: Specify the Local Content to be uploaded.
-  :upload: Use the Upload Function for a provided Source. 
-  :tsync: Use the TSync function for a local source to Cloud Files. This function Operates Similar to RSYNC uploading files that are not found currently on Cloud Files. This function validates the md5 checksum on the local system against what is found in Cloud Files prior to upload and if the checksums are different the local file will be uploaded.
-  :url: [OPTIONAL] Sets an Override for the Auth URL
+  :compress: [OPTIONAL] Compress a file or directory into a single archive
+
+
+Optional Arguments:
   :cc: [OPTIONAL] File Upload Concurrency
   :internal: [OPTIONAL] Use ServiceNet Endpoint for Cloud Files
   :progress: [OPTIONAL] Shows Progress While Uploading
   :debug: [OPTIONAL] Turn up verbosity to over 9000
-  :compress: Compress a file or directory into a single archive
+  :help: Show helpful information on the script and its available functions
   :version: Gives Version Number
+
 
 
 Environment Variables
@@ -107,18 +119,18 @@ Definitions:
   * ``ServiceNet`` - is the internal network found on all Rackspace Cloud Servers. When Using ServiceNet Uploads are sent over the internal network interface to the Cloud Files repository found in the same Data Center. `You can NOT use ServiceNet to upload to a different Data Center.`
   * ``Public Network`` - Uploads sent over the general internet to a Cloud Files repository 
 
-Total Size of all 15,000 files ``997M``
+Total Size of all 30,000 files ``1875M``
 
 Using ServiceNet :
-   :real: 4m42.417s
-   :user: 0m44.727s
-   :sys: 0m14.197s
+  :Test 1:  7m25.459s
+  :Test 2:  7m25.459s
+  :Test 3:  7m26.990s
+  :Avg Time: 7 Minutes, 25.9 Seconds
 
 Using The Public Network :
-   :real: 6m57.283s
-   :user: 0m47.779s
-   :sys: 0m18.153s
-
-
+  :Test 1: 14m43.879s
+  :Test 2: 14m1.751s
+  :Test 3: 13m37.173s
+  :Avg Time: 13 Minutes, 9.95 Seconds
 
 .. _Rackspace NOVA Client: https://github.com/rackspace/rackspace-novaclient
