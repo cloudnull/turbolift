@@ -29,7 +29,7 @@ import tarfile
 import datetime
 import time
 import itertools
-from multiprocessing import Process, freeze_support, Queue
+from multiprocessing import Process, freeze_support, JoinableQueue
 from urllib import quote
 
 # Local Files to Import
@@ -48,49 +48,57 @@ def container_create(tur_arg=None, authdata=None):
         conn.request('HEAD', filepath, headers=headers)
         resp = conn.getresponse()
         resp.read()
+
         if resp.status == 404:
             print '\n', 'MESSAGE\t:', resp.status, resp.reason, \
                 'The Container', tur_arg.container, 'does not Exist'
             conn.request('PUT', filepath, headers=headers)
             resp = conn.getresponse()
             resp.read()
+
             if resp.status >= 300:
                 sys.exit('\n', 'ERROR\t:', resp.status, resp.reason, \
                     tur_arg.container, '\n')
             print '\n', 'CREATING CONTAINER\t:', tur_arg.container, '\n', \
                 'CONTAINER STATUS\t:', resp.status, resp.reason, '\n'
         conn.close()
+
     except:
         print 'ERROR\t: Shits broke son, here comes the stack trace:\n', sys.exc_info()[1]
-        raise
 
 
 def get_filenames(tur_arg=None):
     filelist = []
     directorypath = tur_arg.source
+
     if os.path.isdir(directorypath) == True:
         rootdir = os.path.realpath(directorypath) + os.sep
         for (root, subfolders, files) in os.walk(rootdir.encode('utf-8')):
             for file in files:
                 filelist.append(os.path.join(root.encode('utf-8'), file.encode('utf-8')))
+
         if tur_arg.debug:
             print '\n', rootdir, '\n'
-    elif os.path.isfile(directorypath) == True:
+        get_file_size = [ [files, os.path.getsize(files)] for files in filelist ]
+        sort_size = sorted(get_file_size, key=operator.itemgetter(1))
+        files = []
+
+        for file_name, size in reversed(sort_size):
+            files.append(file_name)
+        return files
+
+    elif os.path.isdir(directorypath) == False:
         filelist.append(os.path.realpath(directorypath.encode('utf-8')))
+
         if tur_arg.debug:
             print 'File Name\t:', filelist
+        return filelist
     else:
         print 'ERROR\t: path %s does not exist, is not a directory, or is a broken symlink' % directorypath
         sys.exit('MESSAGE\t: Try Again but this time with a valid directory path')
-    get_file_size = [ [files, os.path.getsize(files)] for files in filelist ]
-    sort_size = sorted(get_file_size, key=operator.itemgetter(1))
-    files = []
-    for file_name, size in reversed(sort_size):
-        files.append(file_name)
-    return files
 
 
-def compress_files(tur_arg, gfn=None):
+def compress_files(tur_arg, gfn=None, sleeper=None):
     try:
         # create a tar archive
         print 'MESSAGE\t: Creating a Compressed Archive, This may take a minute.'
@@ -112,7 +120,7 @@ def compress_files(tur_arg, gfn=None):
                 busy_char = c
                 sys.stdout.write("\rCompressing - [ %s ] " % c)
                 sys.stdout.flush()
-                time.sleep(.001)
+                time.sleep(sleeper * .01)
         
         tar.close()
 
@@ -130,42 +138,36 @@ def compress_files(tur_arg, gfn=None):
         print 'ERROR\t: Removing Local Copy of the Archive'
         if os.path.exists(tmp_file):
             os.remove(tmp_file)
+            print 'I am sorry i just dont know what got into me', sys.exc_info()[1]
         else:
             print 'File "%tmpfile" Did not exist yet so there was nothing to delete.' % tmpfile
+            print 'here some data you should read', sys.exc_info()[1]
         sys.exit('\nI have stopped at your command\n')
 
 
-def worker_proc(tur_arg=None, authdata=None, iters=None, multipools=None, gfn_count=None):
-    jobs = []
-    work = Queue(multipools,)
+def queue_info(iters=None,):
+    work = JoinableQueue()
 
-    for wp in range(multipools,):
-        j = Process(target=uploader.UploadAction, args=(tur_arg, authdata, work, gfn_count,))
-        j.start()
-    
     for filename in iters:
         work.put(obj=filename,)
+    time.sleep(1)
+    return work
 
-    for wq in range(multipools,):
-        work.put(obj='STOP',)
 
-    while work.empty() == False:
-        if not tur_arg.progress:
-            busy_chars = ['|','/','-','\\']
-            for c in busy_chars:
-                busy_char = c
-                sys.stdout.write("\rCleaning up My threaded Mess - [ %s ] " % c)
-                sys.stdout.flush()
-                time.sleep(.05)
+def worker_proc(tur_arg=None, authdata=None, sleeper=None, multipools=None, work=None):
+    for wp in range(multipools,):
+        j = Process(target=uploader.UploadAction, args=(tur_arg, authdata, work,))
+        j.deamon = True
+        j.start()
 
-    work.close()
-    work.join_thread()
+    for i in xrange(multipools,):
+        work.put(None)
 
 def run_turbolift():
     try:
         args = arguments.GetArguments()
         tur_arg = args.get_values()
-        au = authentication.NovaAuth(tur_arg)
+        au = authentication.NovaAuth()
         authdata = au.osauth(tur_arg)
     
         gfn = get_filenames(tur_arg)
@@ -186,23 +188,22 @@ def run_turbolift():
             multipools = gfn_count
         else:
             multipools = tur_arg.cc
-    
+
+        sleeper = float(0.01)
         container_create(tur_arg, authdata)
 
         if tur_arg.debug or tur_arg.progress:
             print 'MESSAGE\t: We are going to create Processes :', multipools
 
         if tur_arg.compress:
-            cf = compress_files(tur_arg, gfn)
-            uploader.UploadAction(tur_arg, authdata, cf)
+            cf = compress_files(tur_arg, gfn, sleeper)
+            uploader.UploadAction(tur_arg, authdata, cf,)
 
-        elif tur_arg.upload or tur_arg.tsync:
-            worker_proc(tur_arg, authdata, iters, multipools, gfn_count)
-
+        elif (tur_arg.upload or tur_arg.tsync):
+            work = queue_info(iters,)
+            worker_proc(tur_arg, authdata, sleeper, multipools, work)
         else:
             sys.exit('FAIL\t: Some how the Application attempted to continue without the needed arguments.')
-
-        print '\n\nFINISH\t: Operation Completed, Quitting normally'
 
         if not (tur_arg.upload or tur_arg.tsync):
             print 'ERROR\t: Somehow I continued but I do not know how to proceed. So I Quit.'
@@ -218,5 +219,5 @@ def run_turbolift():
     except KeyboardInterrupt:
         print 'Caught KeyboardInterrupt, terminating workers'
 
-if __name__ == '__main__':
-    run_turbolift()
+    except:
+        print 'Shits Broken Son...', sys.exc_info()[1]

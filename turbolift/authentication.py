@@ -27,8 +27,7 @@ import sys
 class NovaAuth:
 
     def __init__(self, tur_arg=None):
-        self.osauth(tur_arg)
-
+        self=None
 
     def osauth(self, tur_arg):
         if tur_arg.rax_auth == 'LON':
