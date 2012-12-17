@@ -46,7 +46,7 @@ class GetArguments:
                                          usage='%(prog)s',
                                          description='Uploads lots of Files Quickly, Using the unpatented GPLv3 Cloud Files %(prog)s'
                                          )
-        subparser = parser.add_subparsers(title='Infrastructure Spawner', metavar='<Commands>')
+        subparser = parser.add_subparsers(title='Infrastructure Spawner', metavar='<Commands>\n')
 
         authgroup = parser.add_argument_group('Authentication', 'Authentication against the OpenStack API')
         optionals = parser.add_argument_group('Additional Options', 'Things you might want to add to your operation')
@@ -55,40 +55,45 @@ class GetArguments:
 
         upaction = subparser.add_parser('upload',
                                         help='Upload Action, Type of upload to be performed as well as Source and Destination')
-        upaction.set_defaults(upload='True', tsync=None, compress=None)
+        upaction.set_defaults(tsync=None, archive=None, upload=True)
 
         
         taction = subparser.add_parser('tsync',
                                        help='T-Sync Action, Type of upload to be performed as well as Source and Destination')
-        taction.set_defaults(upload=None, tsync='True', compress=None)
+        taction.set_defaults(upload=None, archive=None, tsync=True)
 
+
+        archaction = subparser.add_parser('archive',
+                                          help='Compress files or directories into a single archive')
+        archaction.set_defaults(upload=None, tsync=None, archive=True)
 
 
         authgroup.add_argument('-u',
                                '--user',
-                               nargs='?',
+                               metavar='[USERNAME]',
                                help='Defaults to env[OS_USERNAME]',
                                default=os.environ.get('OS_USERNAME', None))
 
         authgroup.add_argument('-a',
                                '--apikey',
-                               nargs='?',
+                               metavar='[API_KEY]',
                                help='Defaults to env[OS_API_KEY]',
                                default=os.environ.get('OS_API_KEY', None))
 
         authgroup.add_argument('-p',
                                '--password',
-                               nargs='?',
+                               metavar='[PASSWORD]',
                                help='Defaults to env[OS_PASSWORD]',
                                default=os.environ.get('OS_PASSWORD', None))
 
         authgroup.add_argument('-r',
                                '--region',
-                               nargs='?',
+                               metavar='[REGION]',
                                help='Defaults to env[OS_REGION_NAME]',
                                default=os.environ.get('OS_REGION_NAME', None))
 
-        authgroup.add_argument('--auth-url', nargs='?',
+        authgroup.add_argument('--auth-url', 
+                               metavar='[AUTH_URL]',
                                help='Defaults to env[OS_AUTH_URL]',
                                default=os.environ.get('OS_AUTH_URL', None))
 
@@ -105,7 +110,6 @@ class GetArguments:
                              metavar='<local>',
                              required=True,
                              help='Local content to be uploaded')
-        
 
         upaction.add_argument('--container',
                               metavar='<name>',
@@ -117,30 +121,40 @@ class GetArguments:
                               required=True,
                               help='Local content to be uploaded')
 
-        upaction.add_argument('--compress',
-                              action='store_true',
-                              default=None,
-                              help='Compress a file or directory into a single archive')
-        
+        archaction.add_argument('--container',
+                                metavar='<name>',
+                                required=True,
+                                help='Specifies the Container')
+
+        archaction.add_argument('--source',
+                                metavar='<locals>',
+                                default=[], 
+                                action='append',
+                                required=True,
+                                help='Local content to be uploaded, this can be specified as many times as need be.')
+
+        archaction.add_argument('--no-cleanup',
+                                action='store_true',
+                                help='Used to keep the compressed Archive. The archive will be left in the Users Home Folder')
+
         optionals.add_argument('-I',
                               '--internal',
                               action='store_true',
                               help='Use Service Network')
 
-        optionals.add_argument('-P',
-                               '--progress',
+        optionals.add_argument('--cc',
+                               metavar='[CONCURRENCY]',
+                               type=int,
+                               default=defaultcc,
+                               help='Upload Concurrency')
+
+        optionals.add_argument('--verbose',
                                action='store_true',
-                               help='Shows Progress While Uploading')
+                               help='Be verbose While Uploading')
 
         optionals.add_argument('--debug',
                                action='store_true',
                                help='Turn up verbosity to over 9000')
-
-        optionals.add_argument('--cc',
-                               nargs='?',
-                               type=int,
-                               default=defaultcc,
-                               help='Upload Concurrency')
 
         optionals.add_argument('--version',
                                action='version',
@@ -173,7 +187,10 @@ class GetArguments:
             parser.print_help()
             sys.exit('\nYou can\'t use both [--rax-auth] and [--region] in the same command, so I quit...\n')
 
-        if args.cc > 150:
+        if args.archive:
+            args.cc = 1
+            print '\nMESSAGE\t: Because I have not figured out how to multi-thread Archiving, the max Concurrency is 1'
+        elif args.cc > 150:
             print '\nMESSAGE\t: You have set the Concurency Override to', args.cc
             print '\t  This is a lot of Processes and could fork bomb your'
             print '\t  system or cause other nastyness.'
@@ -181,10 +198,8 @@ class GetArguments:
         elif args.cc != defaultcc:
             print 'MESSAGE\t: Setting a Concurency Override of', args.cc
 
-            if args.compress:
-                args.cc = 1
-
         if args.debug:
-            args.progress = True
+            args.verbose = True
+            print args
 
         return args

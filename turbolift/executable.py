@@ -98,8 +98,29 @@ def get_filenames(tur_arg=None):
         sys.exit('MESSAGE\t: Try Again but this time with a valid directory path')
 
 
-def compress_files(tur_arg, gfn=None, sleeper=None):
+def compress_files(tur_arg, sleeper=None):
     try:
+        filelist = []
+
+        for long_file_list in tur_arg.source:
+            directorypath = long_file_list
+
+            if os.path.isdir(directorypath) == True:
+                rootdir = os.path.realpath(directorypath) + os.sep
+                for (root, subfolders, files) in os.walk(rootdir.encode('utf-8')):
+                    for file in files:
+                        filelist.append(os.path.join(root.encode('utf-8'), file.encode('utf-8')))
+
+            elif os.path.isdir(directorypath) == False:
+                filelist.append(os.path.realpath(directorypath.encode('utf-8')))
+
+            else:
+                print 'ERROR\t: path %s does not exist, is not a directory, or is a broken symlink' % directorypath
+                sys.exit('MESSAGE\t: Try Again but this time with a valid directory path')
+
+        if tur_arg.debug:
+            print '\n', filelist, '\n', tur_arg.source, '\n'
+
         # create a tar archive
         print 'MESSAGE\t: Creating a Compressed Archive, This may take a minute.'
         home_dir = os.getenv('HOME') + os.sep
@@ -113,7 +134,7 @@ def compress_files(tur_arg, gfn=None, sleeper=None):
         tar = tarfile.open(tmp_file, 'w:gz')
 
         busy_chars = ['|','/','-','\\']
-        for name in gfn:
+        for name in filelist:
             tar.add(name)
 
             for c in busy_chars:
@@ -125,7 +146,7 @@ def compress_files(tur_arg, gfn=None, sleeper=None):
         tar.close()
 
         tarfile.path = tmp_file
-        if tur_arg.progress:
+        if tur_arg.verbose:
             print 'ARCHIVE\t:', tarfile.path
         tar_len = tarfile.open(tarfile.path, 'r')
         ver_array = []
@@ -134,15 +155,20 @@ def compress_files(tur_arg, gfn=None, sleeper=None):
         print 'ARCHIVE CONTENTS : %s files' % len(ver_array)
         return tarfile.path
 
+    except KeyboardInterrupt:
+        print 'Caught KeyboardInterrupt, terminating workers'
+        print 'MESSAGE\t: Removing Local Copy of the Archive'
+        if os.path.exists(tmp_file):
+            os.remove(tmp_file)
+        sys.exit('\nI have stopped at your command\n')
     except:
         print 'ERROR\t: Removing Local Copy of the Archive'
         if os.path.exists(tmp_file):
             os.remove(tmp_file)
-            print 'I am sorry i just dont know what got into me', sys.exc_info()[1]
+            print 'I am sorry i just dont know what got into me\nMaybe this : ', sys.exc_info()[1]
         else:
             print 'File "%tmpfile" Did not exist yet so there was nothing to delete.' % tmpfile
             print 'here some data you should read', sys.exc_info()[1]
-        sys.exit('\nI have stopped at your command\n')
 
 
 def queue_info(iters=None,):
@@ -170,54 +196,62 @@ def run_turbolift():
         au = authentication.NovaAuth()
         authdata = au.osauth(tur_arg)
     
-        gfn = get_filenames(tur_arg)
-        gfn_count = len(gfn)
-        iters = itertools.chain(gfn)
-        print '\n', 'MESSAGE\t: "%s" files have been found.\n' % gfn_count
-        
-        if tur_arg.debug:
-            print '\nFILELIST\t: ', gfn, '\n'
-            print '\nARGS\t: ', tur_arg, '\n', authdata
-        
-        print 'Beginning the Upload Process'
-        if tur_arg.cc > gfn_count:
-            print 'MESSAGE\t: There are less things to do than the number of concurrent'
-            print '\t  processes specified by either an override or the system defaults.'
-            print '\t  I am leveling the number of concurrent processes to the number of'
-            print '\t  jobs to perform.'
-            multipools = gfn_count
-        else:
-            multipools = tur_arg.cc
-
         sleeper = float(0.01)
         container_create(tur_arg, authdata)
 
-        if tur_arg.debug or tur_arg.progress:
-            print 'MESSAGE\t: We are going to create Processes :', multipools
-
-        if tur_arg.compress:
-            cf = compress_files(tur_arg, gfn, sleeper)
+        if tur_arg.archive:     
+            cf = compress_files(tur_arg, sleeper)
+            cfs = os.path.getsize(cf)
+            print 'MESSAGE\t: Uploading... %s bytes' % cfs
             uploader.UploadAction(tur_arg, authdata, cf,)
 
+            if tur_arg.no_cleanup == True:
+                print 'MESSAGE\t: Archive Location =', cf
+            else:
+                print 'MESSAGE\t: Removing Local Copy of the Archive'
+                if os.path.exists(cf):
+                    os.remove(cf)
+                else:
+                    print 'File "%s" Did not exist so there was nothing to delete.' % cf
+
         elif (tur_arg.upload or tur_arg.tsync):
+            gfn = get_filenames(tur_arg)
+            gfn_count = len(gfn)
+            iters = itertools.chain(gfn)
+            print '\n', 'MESSAGE\t: "%s" files have been found.\n' % gfn_count
+
+            if tur_arg.debug:
+                print '\nFILELIST\t: ', gfn, '\n'
+                print '\nARGS\t: ', tur_arg, '\n', authdata
+
+            print 'Beginning the Upload Process'
+            if tur_arg.cc > gfn_count:
+                print 'MESSAGE\t: There are less things to do than the number of concurrent'
+                print '\t  processes specified by either an override or the system defaults.'
+                print '\t  I am leveling the number of concurrent processes to the number of'
+                print '\t  jobs to perform.'
+                multipools = gfn_count
+            else:
+                multipools = tur_arg.cc
+
+            if (tur_arg.debug or tur_arg.verbose):
+                print 'MESSAGE\t: We are going to create Processes :', multipools
+
             work = queue_info(iters,)
             worker_proc(tur_arg, authdata, sleeper, multipools, work)
+
         else:
             sys.exit('FAIL\t: Some how the Application attempted to continue without the needed arguments.')
 
-        if not (tur_arg.upload or tur_arg.tsync):
+        if not (tur_arg.upload or tur_arg.tsync or tur_arg.archive):
             print 'ERROR\t: Somehow I continued but I do not know how to proceed. So I Quit.'
             sys.exit('MESSAGE\t: here comes the stack trace:\n', sys.exc_info()[1])
             
-        if tur_arg.compress:
-            print 'MESSAGE\t: Removing Local Copy of the Archive'
-            if os.path.exists(cf):
-                os.remove(cf)
-            else:
-                print 'File "cf" Did not exist so there was nothing to delete.' % cf
-
     except KeyboardInterrupt:
         print 'Caught KeyboardInterrupt, terminating workers'
 
     except:
-        print 'Shits Broken Son...', sys.exc_info()[1]
+        print ''
+
+if __name__ == "__main__":
+    run_turbolift()

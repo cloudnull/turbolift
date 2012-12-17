@@ -42,10 +42,11 @@ class UploadAction:
         self.filename = filename
 
 
-        if (self.args.compress or os.path.isfile(self.args.source) == True):
+        if (self.args.archive or os.path.isfile(self.args.source) == True):
             self.just_filename = os.path.basename(self.filename)
             self.put_uploader(self.filename)
-            print 'filename =', self.filename
+            if self.args.debug:
+                print 'filename =', self.filename
         
         else:
             while True:
@@ -65,7 +66,7 @@ class UploadAction:
                     else:
                         print 'ERROR\t: Shits broke son, here comes the stack trace:\n', sys.exc_info()[1]
 
-                    if not (tur_arg.progress or tur_arg.debug):
+                    if not (tur_arg.verbose or tur_arg.debug):
                         busy_chars = ['|','/','-','\\']
                         for c in busy_chars:
                             sys.stdout.write("\rUploading Files - [ %(spin)s ] - Work Load %(qsize)s " % {"qsize" : self.filename.qsize(), "spin" : c})
@@ -118,7 +119,7 @@ class UploadAction:
                 resp.read()
                 f.close()
 
-                if (self.args.progress or self.args.debug):
+                if (self.args.verbose or self.args.debug):
                     print 'info', resp.status, resp.reason, self.just_filename
                  
                 if resp.status == None:
@@ -174,7 +175,7 @@ class UploadAction:
                     resp = self.conn.getresponse()
                     resp.read()
                     
-                    if self.args.progress:
+                    if self.args.verbose:
                         print resp.status, resp.reason, self.just_filename
             
                     if resp.status == 401:
@@ -212,7 +213,7 @@ class UploadAction:
                         resp = self.conn.getresponse()
                         resp.read()
                         
-                        if self.args.progress:
+                        if self.args.verbose:
                             print 'MESSAGE\t: CheckSumm Mis-Match', localmd5sum, '!=', remotemd5sum, '\n\t ', 'File Upload :', resp.status, resp.reason, self.just_filename
                         
                         if resp.status == 401:
@@ -231,7 +232,7 @@ class UploadAction:
                             print 'ERROR\t:', resp.status, resp.reason, self.just_filename, '\n', f, '\n'
                         
                     else:
-                        if self.args.progress:
+                        if self.args.verbose:
                             print 'MESSAGE\t: CheckSumm Match', localmd5sum
         except IOError, e:
             if e.errno == errno.ENOENT:
