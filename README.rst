@@ -66,12 +66,13 @@ Authentication Arguments:
 Positional Arguments:
   :upload: Use the Upload Function for a local Source.
   :tsync: Use the TSync function for a local Source. This function Operates Similar to RSYNC; uploading files that are not found currently on Cloud Files. This function validates the md5 checksum on the local system against what is found in Cloud Files prior to upload and if the checksums are different the local file will be uploaded.
+  :archive: Compress files or directories into a single archive. Multiple Source Directories can be added to a single Archive.
 
 
 Appliction Flags can be passed to the program on the command line:
   :container: Cloud Files Container that we are uploading too. If the container is not already in your Cloud Files repository the container will be created.
   :source: Specify the Local Content to be uploaded.
-  :compress: [OPTIONAL] [UPLOAD ONLY] Compress a file or directory into a single archive
+  :no-cleanup: [OPTIONAL] [ARCHIVE ONLY] Used to keep the compressed Archive after Upload. The archive will be left in the Users Home Folder
 
 
 Optional Arguments:
