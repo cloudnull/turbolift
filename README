@@ -83,13 +83,14 @@ Appliction Flags can be passed to the program on the command line:
   :container: Cloud Files Container that we are uploading too. If the container is not already in your Cloud Files repository the container will be created.
   :source: Specify the Local Content to be uploaded.
   :no-cleanup: [OPTIONAL] [ARCHIVE ONLY] Used to keep the compressed Archive after Upload. The archive will be left in the Users Home Folder
+  :tar-name: [OPTIONAL] [ARCHIVE ONLY] Name To Use for the Archive
 
 
 Optional Arguments:
-  :cc: [OPTIONAL] File Upload Concurrency
-  :internal: [OPTIONAL] Use ServiceNet Endpoint for Cloud Files
-  :verbose: [OPTIONAL] Shows Progress While Uploading
-  :debug: [OPTIONAL] Turn up verbosity to over 9000
+  :cc: File Upload Concurrency
+  :internal: Use ServiceNet Endpoint for Cloud Files
+  :verbose: Shows Progress While Uploading
+  :debug: Turn up verbosity to over 9000
   :help: Show helpful information on the script and its available functions
   :version: Gives Version Number
 
