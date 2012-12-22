@@ -9,7 +9,7 @@
 # - Python       : >= 2.6
 
 """
-License Inforamtion
+License Information
 
 This software has no warranty, it is provided 'as is'. It is your
 responsibility to validate the behavior of the routines and its
@@ -23,8 +23,6 @@ import sys
 import httplib
 import os
 import operator
-import errno
-import hashlib
 import tarfile
 import datetime
 import time
@@ -38,6 +36,7 @@ import arguments
 import uploader
 
 
+#noinspection PyBroadException
 def container_create(tur_arg=None, authdata=None):
     try:
         endpoint = authdata['endpoint'].split('/')[2]
@@ -57,8 +56,8 @@ def container_create(tur_arg=None, authdata=None):
             resp.read()
 
             if resp.status >= 300:
-                sys.exit('\n', 'ERROR\t:', resp.status, resp.reason, \
-                    tur_arg.container, '\n')
+                print 'ERROR\t:', resp.status, resp.reason, tur_arg.container, '\n'
+                sys.exc_info()
             print '\n', 'CREATING CONTAINER\t:', tur_arg.container, '\n', \
                 'CONTAINER STATUS\t:', resp.status, resp.reason, '\n'
         conn.close()
@@ -71,7 +70,7 @@ def get_filenames(tur_arg=None):
     filelist = []
     directorypath = tur_arg.source
 
-    if os.path.isdir(directorypath) == True:
+    if os.path.isdir(directorypath):
         rootdir = os.path.realpath(directorypath) + os.sep
         for (root, subfolders, files) in os.walk(rootdir.encode('utf-8')):
             for file in files:
@@ -87,7 +86,7 @@ def get_filenames(tur_arg=None):
             files.append(file_name)
         return files
 
-    elif os.path.isdir(directorypath) == False:
+    elif not os.path.isdir(directorypath):
         filelist.append(os.path.realpath(directorypath.encode('utf-8')))
 
         if tur_arg.debug:
@@ -98,20 +97,20 @@ def get_filenames(tur_arg=None):
         sys.exit('MESSAGE\t: Try Again but this time with a valid directory path')
 
 
+#noinspection PyBroadException
 def compress_files(tur_arg, sleeper=None):
+    filelist = []
     try:
-        filelist = []
-
         for long_file_list in tur_arg.source:
             directorypath = long_file_list
 
-            if os.path.isdir(directorypath) == True:
+            if os.path.isdir(directorypath):
                 rootdir = os.path.realpath(directorypath) + os.sep
                 for (root, subfolders, files) in os.walk(rootdir.encode('utf-8')):
                     for file in files:
                         filelist.append(os.path.join(root.encode('utf-8'), file.encode('utf-8')))
 
-            elif os.path.isdir(directorypath) == False:
+            elif not os.path.isdir(directorypath):
                 filelist.append(os.path.realpath(directorypath.encode('utf-8')))
 
             else:
@@ -123,64 +122,70 @@ def compress_files(tur_arg, sleeper=None):
 
         # create a tar archive
         print 'MESSAGE\t: Creating a Compressed Archive, This may take a minute.'
-        home_dir = os.getenv('HOME') + os.sep
+
         format = '%a%b%d-%H.%M.%S.%Y.'
-        today = datetime.datetime.today()
+        today = datetime.DateTime.time()
         ts = today.strftime(format)
-        file_name = ts + tur_arg.container + '.tgz'
-        
-        tmp_file = home_dir + file_name
-        
-        tar = tarfile.open(tmp_file, 'w:gz')
+
+        if tur_arg.tar_name:
+            tmp_file = tur_arg.tar_name + ts + '.tgz'
+        else:
+            home_dir = os.getenv('HOME') + os.sep
+            file_name = ts + tur_arg.container + '.tgz'
+            tmp_file = home_dir + file_name
+            #noinspection PyUnboundLocalVariable
+            tar_obj = tarfile.open(tmp_file, 'w:gz')
 
         busy_chars = ['|','/','-','\\']
         for name in filelist:
-            tar.add(name)
+            #noinspection PyUnboundLocalVariable
+            tar_obj.add(name)
 
             for c in busy_chars:
-                busy_char = c
                 sys.stdout.write("\rCompressing - [ %s ] " % c)
                 sys.stdout.flush()
                 time.sleep(sleeper * .01)
-        
-        tar.close()
 
-        tarfile.path = tmp_file
+        tar_obj.close()
+
+        tarfile = tmp_file
         if tur_arg.verbose:
-            print 'ARCHIVE\t:', tarfile.path
-        tar_len = tarfile.open(tarfile.path, 'r')
+            print 'ARCHIVE\t:', tarfile
+        tar_len = tarfile.open(tarfile, 'r')
         ver_array = []
         for member_info in tar_len.getmembers():
             ver_array.append(member_info.name)
         print 'ARCHIVE CONTENTS : %s files' % len(ver_array)
-        return tarfile.path
+        return tarfile
 
     except KeyboardInterrupt:
         print 'Caught KeyboardInterrupt, terminating workers'
         print 'MESSAGE\t: Removing Local Copy of the Archive'
+        #noinspection PyUnboundLocalVariable
         if os.path.exists(tmp_file):
             os.remove(tmp_file)
         sys.exit('\nI have stopped at your command\n')
+
     except:
         print 'ERROR\t: Removing Local Copy of the Archive'
+        #noinspection PyUnboundLocalVariable
         if os.path.exists(tmp_file):
             os.remove(tmp_file)
-            print 'I am sorry i just dont know what got into me\nMaybe this : ', sys.exc_info()[1]
+            print 'I am sorry i just dont know what got into me\nMaybe this : ', sys.exc_info()
         else:
-            print 'File "%tmpfile" Did not exist yet so there was nothing to delete.' % tmpfile
+            print 'File %tmpfile Did not exist yet so there was nothing to delete.'.format(tmp_file)
             print 'here some data you should read', sys.exc_info()[1]
 
 
 def queue_info(iters=None,):
     work = JoinableQueue()
-
     for filename in iters:
         work.put(obj=filename,)
     time.sleep(1)
     return work
 
 
-def worker_proc(tur_arg=None, authdata=None, sleeper=None, multipools=None, work=None):
+def worker_proc(tur_arg=None, authdata=None, multipools=None, work=None):
     for wp in range(multipools,):
         j = Process(target=uploader.UploadAction, args=(tur_arg, authdata, work,))
         j.deamon = True
@@ -191,10 +196,8 @@ def worker_proc(tur_arg=None, authdata=None, sleeper=None, multipools=None, work
 
 def run_turbolift():
     try:
-        args = arguments.GetArguments()
-        tur_arg = args.get_values()
-        au = authentication.NovaAuth()
-        authdata = au.osauth(tur_arg)
+        tur_arg = arguments.GetArguments().get_values()
+        authdata = authentication.NovaAuth().osauth(tur_arg)
     
         sleeper = float(0.01)
         container_create(tur_arg, authdata)
@@ -205,7 +208,7 @@ def run_turbolift():
             print 'MESSAGE\t: Uploading... %s bytes' % cfs
             uploader.UploadAction(tur_arg, authdata, cf,)
 
-            if tur_arg.no_cleanup == True:
+            if tur_arg.no_cleanup:
                 print 'MESSAGE\t: Archive Location =', cf
             else:
                 print 'MESSAGE\t: Removing Local Copy of the Archive'
@@ -214,7 +217,7 @@ def run_turbolift():
                 else:
                     print 'File "%s" Did not exist so there was nothing to delete.' % cf
 
-        elif (tur_arg.upload or tur_arg.tsync):
+        elif tur_arg.upload or tur_arg.tsync:
             gfn = get_filenames(tur_arg)
             gfn_count = len(gfn)
             iters = itertools.chain(gfn)
@@ -234,24 +237,24 @@ def run_turbolift():
             else:
                 multipools = tur_arg.cc
 
-            if (tur_arg.debug or tur_arg.verbose):
+            if tur_arg.debug or tur_arg.verbose:
                 print 'MESSAGE\t: We are going to create Processes :', multipools
 
             work = queue_info(iters,)
-            worker_proc(tur_arg, authdata, sleeper, multipools, work)
+            worker_proc(tur_arg, authdata, multipools, work)
 
         else:
             sys.exit('FAIL\t: Some how the Application attempted to continue without the needed arguments.')
 
         if not (tur_arg.upload or tur_arg.tsync or tur_arg.archive):
             print 'ERROR\t: Somehow I continued but I do not know how to proceed. So I Quit.'
-            sys.exit('MESSAGE\t: here comes the stack trace:\n', sys.exc_info()[1])
-            
+            print 'MESSAGE\t: here comes the stack trace:\n'
+            sys.exc_info()
+
     except KeyboardInterrupt:
         print 'Caught KeyboardInterrupt, terminating workers'
 
-    except:
-        print ''
 
 if __name__ == "__main__":
+    freeze_support()
     run_turbolift()

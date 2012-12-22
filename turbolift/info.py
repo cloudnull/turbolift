@@ -9,7 +9,7 @@
 # - Python       : >= 2.6
 
 """
-License Inforamtion
+License Information
 
 This software has no warranty, it is provided 'as is'. It is your
 responsibility to validate the behavior of the routines and its
@@ -19,6 +19,14 @@ license for further details (see GNU General Public License).
 http://www.gnu.org/licenses/gpl.html
 """
 
+__author__ = "Kevin Carter"
+__contact__ = "Kevin Carter"
+__email__ = "kevin@bkintegration.com"
+__copyright__ = "2012 All Rights Reserved"
+__license__ = "GPLv3+"
+__date__ = "2011-11-09"
+__version__ = "1.2-Stable"
+__status__ = "Production"
+
 # The Version Of the Application
-VN = '1.2-Stable'
-VNI = 'GNU Turbolift %s' % VN
+VN = 'GNU Turbolift %s' % __version__

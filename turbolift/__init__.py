@@ -9,7 +9,7 @@
 # - Python       : >= 2.6
 
 """
-License Inforamtion
+License Information
 
 This software has no warranty, it is provided 'as is'. It is your
 responsibility to validate the behavior of the routines and its

@@ -9,7 +9,7 @@
 # - Python       : >= 2.6
 
 """
-License Inforamtion
+License Information
 
 This software has no warranty, it is provided 'as is'. It is your 
 responsibility to validate the behavior of the routines and its 
@@ -22,17 +22,20 @@ http://www.gnu.org/licenses/gpl.html
 import argparse
 import sys
 import os
-import info
+
+from turbolift import info
 
 class GetArguments:
     """
     Class to get all of the needed arguments for Turbolift
     """
 
+    #noinspection PyUnusedLocal
     def __init__(self):
         """
         Init for class
         """
+        #noinspection PyMethodFirstArgAssignment
         self = None
     
     def get_values(self):
@@ -133,6 +136,10 @@ class GetArguments:
                                 required=True,
                                 help='Local content to be uploaded, this can be specified as many times as need be.')
 
+        archaction.add_argument('--tar-name',
+                                metavar='<name>',
+                                help='Name To Use for the Archive')
+
         archaction.add_argument('--no-cleanup',
                                 action='store_true',
                                 help='Used to keep the compressed Archive. The archive will be left in the Users Home Folder')
@@ -158,7 +165,7 @@ class GetArguments:
 
         optionals.add_argument('--version',
                                action='version',
-                               version=info.VNI)
+                               version=info.VN)
 
         args = parser.parse_args()
 
@@ -191,12 +198,12 @@ class GetArguments:
             args.cc = 1
             print '\nMESSAGE\t: Because I have not figured out how to multi-thread Archiving, the max Concurrency is 1'
         elif args.cc > 150:
-            print '\nMESSAGE\t: You have set the Concurency Override to', args.cc
+            print '\nMESSAGE\t: You have set the Concurrency Override to', args.cc
             print '\t  This is a lot of Processes and could fork bomb your'
-            print '\t  system or cause other nastyness.'
+            print '\t  system or cause other nastiness.'
             raw_input('\t  You have been warned, Press Enter to Continue\n')
         elif args.cc != defaultcc:
-            print 'MESSAGE\t: Setting a Concurency Override of', args.cc
+            print 'MESSAGE\t: Setting a Concurrency Override of', args.cc
 
         if args.debug:
             args.verbose = True

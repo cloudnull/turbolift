@@ -9,7 +9,7 @@
 # - Python       : >= 2.6
 
 """
-License Inforamtion
+License Information
 
 This software has no warranty, it is provided 'as is'. It is your
 responsibility to validate the behavior of the routines and its
@@ -38,11 +38,10 @@ class UploadAction:
         self.ad = authdata
         self.args = tur_arg
         self.error = 0
-        self.open_conn(self,)
+        self.open_conn()
         self.filename = filename
 
-
-        if (self.args.archive or os.path.isfile(self.args.source) == True):
+        if self.args.archive or os.path.isfile(self.args.source) == True:
             self.just_filename = os.path.basename(self.filename)
             self.put_uploader(self.filename)
             if self.args.debug:
@@ -50,6 +49,7 @@ class UploadAction:
         
         else:
             while True:
+                #noinspection PyBroadException
                 try:
                     self.wfile = self.filename.get()
                     if self.wfile is None:
@@ -69,26 +69,32 @@ class UploadAction:
                     if not (tur_arg.verbose or tur_arg.debug):
                         busy_chars = ['|','/','-','\\']
                         for c in busy_chars:
-                            sys.stdout.write("\rUploading Files - [ %(spin)s ] - Work Load %(qsize)s " % {"qsize" : self.filename.qsize(), "spin" : c})
+                            if sys.platform == 'darwin':
+                                qz = 'darwin'
+                            else:
+                                qz = self.filename.qsize()
+                            sys.stdout.write("\rUploading Files - [ %(spin)s ] - Work Load %(qsize)s " % {"qsize" : qz, "spin" : c})
                             sys.stdout.flush()
                             time.sleep(.1)
                     self.filename.task_done()
-                except KeyboardInterrupt, e:
+
+                except KeyboardInterrupt:
                     print 'Murdering the Workers...'
                     break
+
                 except:
                     print 'Failure', sys.exc_info()[1]
                     break
+
             self.conn.close()
 
 
-    def re_auth(self, authdata=None):
-        au = authentication.NovaAuth(self.args)
-        self.ad = au.osauth(self.args)
+    def re_auth(self):
+        self.ad = authentication.NovaAuth().osauth(self.args)
         return self
 
 
-    def open_conn(self, authdata=None):
+    def open_conn(self):
         time.sleep(1)
         endpoint = self.ad['endpoint'].split('/')[2]
         self.headers = {'Connection:' : 'Keep-alive', 'X-Auth-Token': self.ad['token']}
@@ -105,7 +111,7 @@ class UploadAction:
                 up_retry = False
                 if self.error >= 5:
                     print 'ERROR\t: The Application attempted to retry too many times.'
-                    print 'ERROR\t: Retry attempts were %s' % self.retry
+                    print 'ERROR\t: Retry attempts were %s' % self.error
                     break
                 filepath = '/v1/' + self.ad['tenantid'] + '/' + quote(self.args.container + '/' + self.just_filename)
                 f = open(filename, 'rb')
@@ -119,45 +125,50 @@ class UploadAction:
                 resp.read()
                 f.close()
 
-                if (self.args.verbose or self.args.debug):
+                if self.args.verbose or self.args.debug:
                     print 'info', resp.status, resp.reason, self.just_filename
                  
-                if resp.status == None:
+                if resp.status is None:
+                    UploadAction.open_conn(self)
+                    UploadAction.re_auth(self)
                     up_retry = True
+                    self.error += 1
                     continue
 
                 if resp.status == 401:
                     print 'MESSAGE\t: Token Seems to have expired, Forced Re-authentication is happening.'
-                    UploadAction.re_auth(self, self.args)
+                    UploadAction.re_auth(self)
                     up_retry = True
+                    self.error += 1
                     continue
                         
                 if resp.status == 400:
                     print 'MESSAGE\t: Opened File Error, re-Opening the Socket to retry.'
-                    self.open_conn(self)
+                    UploadAction.open_conn(self)
                     up_retry = True
+                    self.error += 1
                     continue
 
                 if resp.status >= 300:
                     print 'ERROR\t:', resp.status, resp.reason, self.just_filename, '\n', f, '\n'
 
-        except IOError, e:
-            if e.errno == errno.ENOENT:
-                print 'ERROR\t: path "%s" does not exist or is a broken symlink' % filename
+        except IOError:
+            print 'ERROR\t: path "%s" does not exist or is a broken symlink' % filename
         except ValueError:
             print 'ERROR\t: The data for "%s" got all jacked up, so it got skipped' % filename
-        except KeyboardInterrupt, e:
+        except KeyboardInterrupt:
             pass
 
 
     def sync_uploader(self, filename):
+        #noinspection PyBroadException
         try:
             up_retry = True
             while up_retry:
                 up_retry = False
                 if self.error >= 5:
                     print 'ERROR\t: The Application attempted to retry too many times.'
-                    print 'ERROR\t: Retry attempts were %s' % self.retry
+                    print 'ERROR\t: Retry attempts were %s' % self.error
                     break
                 
                 filepath = '/v1/' + self.ad['tenantid'] + '/' + quote(self.args.container + '/' + self.just_filename)
@@ -177,21 +188,30 @@ class UploadAction:
                     
                     if self.args.verbose:
                         print resp.status, resp.reason, self.just_filename
-            
-                    if resp.status == 401:
-                        print 'MESSAGE\t: Token Seems to have expired, Forced Re-authentication is happening.'
-                        UploadAction.re_auth(self, self.args)
-                        up_retry = True
-                        continue
-                    
-                    if resp.status == 400:
-                        print 'MESSAGE\t: Opened File Error, re-Opening the Socket to retry.'
-                        self.open_conn(self)
-                        up_retry = True
-                        continue
-                    
-                    if resp.status >= 300:
-                        print 'ERROR\t:', resp.status, resp.reason, self.just_filename, '\n', f, '\n'
+
+                if resp.status is None:
+                    UploadAction.open_conn(self)
+                    UploadAction.re_auth(self)
+                    up_retry = True
+                    self.error += 1
+                    continue
+
+                if resp.status == 401:
+                    print 'MESSAGE\t: Token Seems to have expired, Forced Re-authentication is happening.'
+                    UploadAction.re_auth(self)
+                    up_retry = True
+                    self.error += 1
+                    continue
+
+                if resp.status == 400:
+                    print 'MESSAGE\t: Opened File Error, re-Opening the Socket to retry.'
+                    UploadAction.open_conn(self)
+                    up_retry = True
+                    self.error += 1
+                    continue
+
+                if resp.status >= 300:
+                    print 'ERROR\t:', resp.status, resp.reason, self.just_filename, '\n', f, '\n'
             
                 else:
                     remotemd5sum = resp.getheader('etag')
@@ -215,19 +235,29 @@ class UploadAction:
                         
                         if self.args.verbose:
                             print 'MESSAGE\t: CheckSumm Mis-Match', localmd5sum, '!=', remotemd5sum, '\n\t ', 'File Upload :', resp.status, resp.reason, self.just_filename
-                        
+
+
+                        if resp.status is None:
+                            UploadAction.open_conn(self)
+                            UploadAction.re_auth(self)
+                            up_retry = True
+                            self.error += 1
+                            continue
+
                         if resp.status == 401:
                             print 'MESSAGE\t: Token Seems to have expired, Forced Re-authentication is happening.'
-                            UploadAction.re_auth(self, self.args)
+                            UploadAction.re_auth(self)
                             up_retry = True
+                            self.error += 1
                             continue
-                        
+
                         if resp.status == 400:
                             print 'MESSAGE\t: Opened File Error, re-Opening the Socket to retry.'
-                            self.open_conn(self)
+                            UploadAction.open_conn(self)
                             up_retry = True
+                            self.error += 1
                             continue
-                    
+
                         if resp.status >= 300:
                             print 'ERROR\t:', resp.status, resp.reason, self.just_filename, '\n', f, '\n'
                         
@@ -239,7 +269,7 @@ class UploadAction:
                 print 'ERROR\t: path "%s" does not exist or is a broken symlink' % filename
         except ValueError:
             print 'ERROR\t: The data for "%s" got all jacked up, so it got skipped' % filename
-        except KeyboardInterrupt, e:
+        except KeyboardInterrupt:
             pass
         except:
             print 'ERROR\t: Shits broke son, here comes the stack trace:\n', sys.exc_info()[1]

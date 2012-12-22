@@ -9,7 +9,7 @@
 # - Python       : >= 2.6
 
 """
-License Inforamtion
+License Information
 
 This software has no warranty, it is provided 'as is'. It is your
 responsibility to validate the behavior of the routines and its
@@ -26,10 +26,12 @@ import sys
 
 class NovaAuth:
 
-    def __init__(self, tur_arg=None):
-        self=None
-
-    def osauth(self, tur_arg):
+    def osauth(self, tur_arg=None):
+        """
+        Authentication For Openstack API, Pulls the full Openstack Service Catalog
+        Credentials are the Users API Username and Key/Password
+        "osauth" has a Built in Rackspace Method for Authentication
+        """
         if tur_arg.rax_auth == 'LON':
             tur_arg.region = tur_arg.rax_auth
             if tur_arg.auth_url:
@@ -68,6 +70,7 @@ class NovaAuth:
             print '\n', self, '\n'
             print 'JSON REQUEST: ' + jsonreq
 
+        #noinspection PyUnboundLocalVariable
         conn = httplib.HTTPSConnection(authurl, 443)
         if tur_arg.debug:
             conn.set_debuglevel(1)
@@ -77,7 +80,8 @@ class NovaAuth:
         readresp = resp.read()
         if resp.status >= 300:
             print '\n', 'REQUEST\t:', jsonreq, headers, authurl
-            sys.exit('\n', 'ERROR\t:', resp.status, resp.reason, '\n')
+            print 'ERROR\t:', resp.status, resp.reason, '\n'
+            sys.exc_info()
         json_response = json.loads(readresp)
         conn.close()
 
