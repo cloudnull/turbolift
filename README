@@ -130,6 +130,10 @@ Definitions and Information:
   * ``ServiceNet`` - is the internal network found on all Rackspace Cloud Servers. When Using ServiceNet Uploads are sent over the internal network interface to the Cloud Files repository found in the same Data Center. `You can NOT use ServiceNet to upload to a different Data Center.`
   * ``Public Network`` - Uploads sent over the general internet to a Cloud Files repository 
   * Total Size of all 30,000 files ``1875M``
+  * Test performed on a Rackspace Cloud Server at the size 512MB
+
+    * 20 Mbps Public interface
+    * 40 Mbps Internal Interface
 
 
 Command Used For Tests::
