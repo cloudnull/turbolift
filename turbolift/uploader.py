@@ -69,6 +69,7 @@ class UploadAction:
                     if not (tur_arg.verbose or tur_arg.debug):
                         busy_chars = ['|','/','-','\\']
                         for c in busy_chars:
+                            # Fixes Errors with OS X due to no sem_getvalue support
                             if sys.platform == 'darwin':
                                 qz = 'darwin'
                             else:

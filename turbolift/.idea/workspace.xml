@@ -28,23 +28,12 @@
   <component name="ExecutionTargetManager" SELECTED_TARGET="default_target" />
   <component name="FileEditorManager">
     <leaf>
-      <file leaf-file-name="executable.py" pinned="false" current="true" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/executable.py">
+      <file leaf-file-name="uploader.py" pinned="false" current="true" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/uploader.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="130" column="47" selection-start="4612" selection-end="4612" vertical-scroll-proportion="0.6875">
+            <state line="71" column="83" selection-start="2402" selection-end="2402" vertical-scroll-proportion="0.6469003">
               <folding>
                 <element signature="e#675#685#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="arguments.py" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/arguments.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="138" column="43" selection-start="5542" selection-end="5550" vertical-scroll-proportion="0.0">
-              <folding>
-                <element signature="e#678#693#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -61,11 +50,11 @@
     <option name="changedFiles">
       <list>
         <option value="$PROJECT_DIR$/info.py" />
-        <option value="$PROJECT_DIR$/uploader.py" />
         <option value="$PROJECT_DIR$/__init__.py" />
         <option value="$PROJECT_DIR$/authentication.py" />
         <option value="$PROJECT_DIR$/arguments.py" />
         <option value="$PROJECT_DIR$/executable.py" />
+        <option value="$PROJECT_DIR$/uploader.py" />
       </list>
     </option>
   </component>
@@ -440,28 +429,32 @@
         <state line="32" column="15" selection-start="942" selection-end="942" vertical-scroll-proportion="0.75842696" />
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/uploader.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="14" column="25" selection-start="466" selection-end="466" vertical-scroll-proportion="0.41982508" />
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/info.py">
       <provider selected="true" editor-type-id="text-editor">
         <state line="27" column="26" selection-start="886" selection-end="886" vertical-scroll-proportion="0.60732985" />
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/executable.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="130" column="47" selection-start="4612" selection-end="4612" vertical-scroll-proportion="1.703125">
+          <folding>
+            <element signature="e#675#685#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/arguments.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="138" column="43" selection-start="5542" selection-end="5550" vertical-scroll-proportion="0.0">
+        <state line="138" column="43" selection-start="5542" selection-end="5550" vertical-scroll-proportion="0.83827496">
           <folding>
             <element signature="e#678#693#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/executable.py">
+    <entry file="file://$PROJECT_DIR$/uploader.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="130" column="47" selection-start="4612" selection-end="4612" vertical-scroll-proportion="0.6875">
+        <state line="71" column="83" selection-start="2402" selection-end="2402" vertical-scroll-proportion="0.6469003">
           <folding>
             <element signature="e#675#685#0" expanded="true" />
           </folding>
