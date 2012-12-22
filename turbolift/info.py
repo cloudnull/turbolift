@@ -25,7 +25,7 @@ __email__ = "kevin@bkintegration.com"
 __copyright__ = "2012 All Rights Reserved"
 __license__ = "GPLv3+"
 __date__ = "2011-11-09"
-__version__ = "1.2-Stable"
+__version__ = "1.3-Development"
 __status__ = "Production"
 
 # The Version Of the Application

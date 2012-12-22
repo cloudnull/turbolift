@@ -38,6 +38,9 @@ from turbolift import uploader
 
 #noinspection PyBroadException
 def container_create(tur_arg=None, authdata=None):
+    """
+    Create a container if the container specified on the command line did not already exist.
+    """
     try:
         endpoint = authdata['endpoint'].split('/')[2]
         headers = {'X-Auth-Token': authdata['token']}
@@ -67,6 +70,9 @@ def container_create(tur_arg=None, authdata=None):
 
 
 def get_filenames(tur_arg=None):
+    """
+    Find all files specified in the "source" path, then create a list for all of files using the full path.
+    """
     filelist = []
     directorypath = tur_arg.source
 
@@ -99,19 +105,24 @@ def get_filenames(tur_arg=None):
 
 #noinspection PyBroadException
 def compress_files(tur_arg, sleeper=None):
+    """
+    If the archive function is used, create a compressed archive from all of files found from the "source" argument.
+    This function allows for multiple sources to be added to the compressed archive.
+    """
+    global tmp_file
     try:
         filelist = []
 
         for long_file_list in tur_arg.source:
             directorypath = long_file_list
 
-            if os.path.isdir(directorypath) == True:
+            if os.path.isdir(directorypath):
                 rootdir = os.path.realpath(directorypath) + os.sep
                 for (root, subfolders, files) in os.walk(rootdir.encode('utf-8')):
                     for file in files:
                         filelist.append(os.path.join(root.encode('utf-8'), file.encode('utf-8')))
 
-            elif os.path.isdir(directorypath) == False:
+            elif not os.path.isdir(directorypath):
                 filelist.append(os.path.realpath(directorypath.encode('utf-8')))
 
             else:
@@ -141,7 +152,6 @@ def compress_files(tur_arg, sleeper=None):
             tar.add(name)
 
             for c in busy_chars:
-                busy_char = c
                 sys.stdout.write("\rCompressing - [ %s ] " % c)
                 sys.stdout.flush()
                 time.sleep(sleeper * .01)
@@ -176,6 +186,10 @@ def compress_files(tur_arg, sleeper=None):
 
 
 def queue_info(iters=None,):
+    """
+    When the arguments "upload" or "tsync" are used all jobs will be added to the queue for processing.
+    This is a simple multiprocessing queue.
+    """
     work = JoinableQueue()
     for filename in iters:
         work.put(obj=filename,)
@@ -184,6 +198,10 @@ def queue_info(iters=None,):
 
 
 def worker_proc(tur_arg=None, authdata=None, multipools=None, work=None):
+    """
+    All threads produced by the worker are limited by the number of concurrency specified by the user.
+    The Threads are all made active prior to them processing jobs.
+    """
     for wp in range(multipools,):
         j = Process(target=uploader.UploadAction, args=(tur_arg, authdata, work,))
         j.deamon = True
@@ -193,6 +211,9 @@ def worker_proc(tur_arg=None, authdata=None, multipools=None, work=None):
         work.put(None)
 
 def run_turbolift():
+    """
+    This is the run section of the application Turbolift.
+    """
     try:
         tur_arg = arguments.GetArguments().get_values()
         authdata = authentication.NovaAuth().osauth(tur_arg)

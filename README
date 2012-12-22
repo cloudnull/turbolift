@@ -10,14 +10,18 @@ Turbolift Files to Rackspace Cloud Files
 General Overview
 ----------------
 
-If you have found yourself in a situation where you needed or wanted to upload a whole bunch of files to Cloud Files quickly, this is what you are looking for. Turbolift is an assistant for uploading files to the the Rackspace Cloud Files Repository with a bunch of options.
+If you have found yourself in a situation where you needed or wanted to upload a whole bunch of files to Cloud Files
+quickly, this is what you are looking for. Turbolift is an assistant for uploading files to the the Rackspace Cloud
+Files Repository with a bunch of options.
 
-You'll also probably want to read `Rackspace's Cloud Files API guide`__ (PDF) :
+You'll also probably want to read `The Rackspace Cloud Files API guide`__ (PDF) :
 The guide will provide you an overview of all of the available functions for Cloud Files.
 
 __ http://docs.rackspace.com/files/api/v1/cf-devguide/cf-devguide-latest.pdf
 
-The Process by which this application works is simple. All you have to do is Literally fill in the command line arguments and press enter. The application is a multiprocessing Cloud Files Uploader which will upload any directory or file provided to it.
+The Process by which this application works is simple. All you have to do is Literally fill in the command line
+arguments and press enter. The application is a multiprocessing Cloud Files Uploader which will upload any directory
+or file provided to it.
 
 Functions of the Application :
   * Upload a directory, recursively 
@@ -41,7 +45,8 @@ Installation :
 
 
 Python Modules Needed, for full operation :
-  NOTE : All of the modules needed should be part of the "standard" Library as of Python 2.6.  The setup file will install the two needed dependencies which may not have made it onto your system.
+  NOTE : All of the modules needed should be part of the "standard" Library as of Python 2.6.  The setup file will
+  install the two needed dependencies which may not have made it onto your system.
 
 
 Application Usage
@@ -49,7 +54,12 @@ Application Usage
 
 Here is the Basic Usage::
 
-    turbolift -u [CLOUD-USERNAME] -a [CLOUD-API-KEY] -e [DATACENTER-ENDPOINT] [POSITIONAL-ARGUMENT] -s [PATH-TO-DIRECTORY] -c [CONTAINER-NAME]
+    turbolift \
+    -u [CLOUD-USERNAME] \
+    -a [CLOUD-API-KEY] \
+    -u [CLOUD-AUTH-URL] \
+    -e [DATACENTER-ENDPOINT] \
+    [POSITIONAL-ARGUMENT] -s [PATH-TO-DIRECTORY] -c [CONTAINER-NAME]
 
 Run ``turbolift -h`` for a full list of available flags and operations
 

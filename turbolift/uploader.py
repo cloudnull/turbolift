@@ -33,7 +33,9 @@ import authentication
 
 
 class UploadAction:
-
+    """
+    The UploadAction class was created to facilitate the mode of upload based on file types and user Arguments.
+    """
     def __init__(self, tur_arg, authdata, filename):
         self.ad = authdata
         self.args = tur_arg
@@ -91,11 +93,18 @@ class UploadAction:
 
 
     def re_auth(self):
+        """
+        Created to re-run and store authentication information upon error
+        """
         self.ad = authentication.NovaAuth().osauth(self.args)
         return self
 
 
     def open_conn(self):
+        """
+        Opens the initial connection to the Swift repository from within the UploadAction class.
+        Also used to re-open a connection on error
+        """
         time.sleep(1)
         endpoint = self.ad['endpoint'].split('/')[2]
         self.headers = {'Connection:' : 'Keep-alive', 'X-Auth-Token': self.ad['token']}
@@ -106,6 +115,10 @@ class UploadAction:
 
 
     def put_uploader(self, filename,):
+        """
+        This is the simple upload Method. There is no file level checking at the target.
+        The files are simply uploaded.
+        """
         try:
             up_retry = True
             while up_retry:
@@ -162,6 +175,11 @@ class UploadAction:
 
 
     def sync_uploader(self, filename):
+        """
+        This is the Sync method which uploads files to the swift repository if they are not already found.
+        If a file "name" is found locally and in the swift repository an MD5 comparison is done between the two files.
+        If the MD5 is miss-matched the local file is uploaded to the repository.
+        """
         #noinspection PyBroadException
         try:
             up_retry = True

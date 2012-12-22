@@ -20,7 +20,7 @@ Description: Turbolift, the Cloud Files Uploader
         
         If you have found yourself in a situation where you needed or wanted to upload a whole bunch of files to Cloud Files quickly, this is what you are looking for. Turbolift is an assistant for uploading files to the the Rackspace Cloud Files Repository with a bunch of options.
         
-        You'll also probably want to read `Rackspace's Cloud Files API guide`__ (PDF) :
+        You'll also probably want to read `The Rackspace Cloud Files API guide`__ (PDF) :
         The guide will provide you an overview of all of the available functions for Cloud Files.
         
         __ http://docs.rackspace.com/files/api/v1/cf-devguide/cf-devguide-latest.pdf

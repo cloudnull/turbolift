@@ -40,7 +40,7 @@ class GetArguments:
     
     def get_values(self):
         """
-        Look for flags
+        Look for flags, these are all of the available options for Turbolift.
         """
         
         defaultcc = 50
