@@ -31,9 +31,9 @@ from multiprocessing import Process, freeze_support, JoinableQueue
 from urllib import quote
 
 # Local Files to Import
-import authentication
-import arguments
-import uploader
+from turbolift import authentication
+from turbolift import arguments
+from turbolift import uploader
 
 
 #noinspection PyBroadException
@@ -99,18 +99,19 @@ def get_filenames(tur_arg=None):
 
 #noinspection PyBroadException
 def compress_files(tur_arg, sleeper=None):
-    filelist = []
     try:
+        filelist = []
+
         for long_file_list in tur_arg.source:
             directorypath = long_file_list
 
-            if os.path.isdir(directorypath):
+            if os.path.isdir(directorypath) == True:
                 rootdir = os.path.realpath(directorypath) + os.sep
                 for (root, subfolders, files) in os.walk(rootdir.encode('utf-8')):
                     for file in files:
                         filelist.append(os.path.join(root.encode('utf-8'), file.encode('utf-8')))
 
-            elif not os.path.isdir(directorypath):
+            elif os.path.isdir(directorypath) == False:
                 filelist.append(os.path.realpath(directorypath.encode('utf-8')))
 
             else:
@@ -122,59 +123,56 @@ def compress_files(tur_arg, sleeper=None):
 
         # create a tar archive
         print 'MESSAGE\t: Creating a Compressed Archive, This may take a minute.'
-
         format = '%a%b%d-%H.%M.%S.%Y.'
-        today = datetime.DateTime.time()
+        today = datetime.datetime.today()
         ts = today.strftime(format)
 
         if tur_arg.tar_name:
-            tmp_file = tur_arg.tar_name + ts + '.tgz'
+            tmp_file = ts + tur_arg.tar_name + '.tgz'
         else:
             home_dir = os.getenv('HOME') + os.sep
             file_name = ts + tur_arg.container + '.tgz'
             tmp_file = home_dir + file_name
-            #noinspection PyUnboundLocalVariable
-            tar_obj = tarfile.open(tmp_file, 'w:gz')
+
+        tar = tarfile.open(tmp_file, 'w:gz')
 
         busy_chars = ['|','/','-','\\']
         for name in filelist:
-            #noinspection PyUnboundLocalVariable
-            tar_obj.add(name)
+            tar.add(name)
 
             for c in busy_chars:
+                busy_char = c
                 sys.stdout.write("\rCompressing - [ %s ] " % c)
                 sys.stdout.flush()
                 time.sleep(sleeper * .01)
 
-        tar_obj.close()
+        tar.close()
 
-        tarfile = tmp_file
+        tarfile.path = tmp_file
         if tur_arg.verbose:
-            print 'ARCHIVE\t:', tarfile
-        tar_len = tarfile.open(tarfile, 'r')
+            print 'ARCHIVE\t:', tarfile.path
+        tar_len = tarfile.open(tarfile.path, 'r')
         ver_array = []
         for member_info in tar_len.getmembers():
             ver_array.append(member_info.name)
         print 'ARCHIVE CONTENTS : %s files' % len(ver_array)
-        return tarfile
+        return tarfile.path
 
     except KeyboardInterrupt:
         print 'Caught KeyboardInterrupt, terminating workers'
         print 'MESSAGE\t: Removing Local Copy of the Archive'
-        #noinspection PyUnboundLocalVariable
         if os.path.exists(tmp_file):
             os.remove(tmp_file)
         sys.exit('\nI have stopped at your command\n')
-
     except:
         print 'ERROR\t: Removing Local Copy of the Archive'
-        #noinspection PyUnboundLocalVariable
         if os.path.exists(tmp_file):
             os.remove(tmp_file)
-            print 'I am sorry i just dont know what got into me\nMaybe this : ', sys.exc_info()
+            print 'I am sorry i just don\'t know what got into me\nMaybe this : ', sys.exc_info()[1]
         else:
-            print 'File %tmpfile Did not exist yet so there was nothing to delete.'.format(tmp_file)
+            print 'File "%s" Did not exist yet so there was nothing to delete.' % tmpfile
             print 'here some data you should read', sys.exc_info()[1]
+
 
 
 def queue_info(iters=None,):
