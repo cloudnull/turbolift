@@ -42,14 +42,13 @@ class GetArguments:
         """
         Look for flags, these are all of the available options for Turbolift.
         """
-        
+
         defaultcc = 50
         parser = argparse.ArgumentParser(formatter_class=lambda prog: \
                                          argparse.HelpFormatter(prog, max_help_position=50),
                                          usage='%(prog)s',
-                                         description='Uploads lots of Files Quickly, Using the unpatented GPLv3'
-                                                     'Cloud Files %(prog)s'
-                                         )
+                                         description='Uploads lots of Files Quickly Cloud Files %(prog)s')
+
         subparser = parser.add_subparsers(title='Infrastructure Spawner', metavar='<Commands>\n')
 
         authgroup = parser.add_argument_group('Authentication', 'Authentication against the OpenStack API')
@@ -107,32 +106,32 @@ class GetArguments:
                                choices=['dfw', 'ord', 'lon'],
                                help='Rackspace Cloud Authentication')
         
-        taction.add_argument('--container',
+        taction.add_argument('-c', '--container',
                              metavar='<name>',
                              required=True,
                              help='Specifies the Container')
         
-        taction.add_argument('--source',
+        taction.add_argument('-s', '--source',
                              metavar='<local>',
                              required=True,
                              help='Local content to be uploaded')
 
-        upaction.add_argument('--container',
+        upaction.add_argument('-c', '--container',
                               metavar='<name>',
                               required=True,
                               help='Specifies the Container')
         
-        upaction.add_argument('--source',
+        upaction.add_argument('-s', '--source',
                               metavar='<local>',
                               required=True,
                               help='Local content to be uploaded')
 
-        archaction.add_argument('--container',
+        archaction.add_argument('-c', '--container',
                                 metavar='<name>',
                                 required=True,
                                 help='Specifies the Container')
 
-        archaction.add_argument('--source',
+        archaction.add_argument('-s', '--source',
                                 metavar='<locals>',
                                 default=[], 
                                 action='append',
