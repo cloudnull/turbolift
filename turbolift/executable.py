@@ -85,6 +85,7 @@ def get_filenames(tur_arg=None):
 
         if tur_arg.debug:
             print '\n', rootdir, '\n'
+
         get_file_size = [ [files, os.path.getsize(files)] for files in filelist ]
         sort_size = sorted(get_file_size, key=operator.itemgetter(1))
         files = []
