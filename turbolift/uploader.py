@@ -76,7 +76,8 @@ class UploadAction:
                                 qz = 'darwin'
                             else:
                                 qz = self.filename.qsize()
-                            sys.stdout.write("\rUploading Files - [ %(spin)s ] - Work Load %(qsize)s " % {"qsize" : qz, "spin" : c})
+                            sys.stdout.write("\rUploading Files - [ %(spin)s ] - Work Load %(qsize)s "
+                                             % { "qsize" : qz, "spin" : c })
                             sys.stdout.flush()
                             time.sleep(.1)
                     self.filename.task_done()
@@ -253,7 +254,10 @@ class UploadAction:
                         resp.read()
                         
                         if self.args.verbose:
-                            print 'MESSAGE\t: CheckSumm Mis-Match', localmd5sum, '!=', remotemd5sum, '\n\t ', 'File Upload :', resp.status, resp.reason, self.just_filename
+                            print 'MESSAGE\t: CheckSumm Mis-Match %(lmd5)s != %(rmd5)s\n\t ' \
+                                  'File Upload : %(rs)s %(rr)s %(sjf)s' \
+                                  % { 'lmd5' : localmd5sum, 'rmd5' : remotemd5sum, 'rs' : resp.status,
+                                      'rr' : resp.reason, 'sjf' : self.just_filename }
 
 
                         if resp.status is None:

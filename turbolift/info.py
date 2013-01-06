@@ -22,11 +22,18 @@ http://www.gnu.org/licenses/gpl.html
 __author__ = "Kevin Carter"
 __contact__ = "Kevin Carter"
 __email__ = "kevin@bkintegration.com"
-__copyright__ = "2012 All Rights Reserved"
+__copyright__ = "2013 All Rights Reserved"
 __license__ = "GPLv3+"
-__date__ = "2011-11-09"
-__version__ = "1.3-Development"
+__date__ = "2013-01-05"
+__version__ = "1.2-Stable"
 __status__ = "Production"
 
 # The Version Of the Application
-VN = 'GNU Turbolift %s' % __version__
+VN = 'GNU Turbolift %(version)s, ' \
+     'developed by %(author)s, ' \
+     'Licenced Under %(license)s, ' \
+     'FYI : %(copyright)s' \
+     % { 'version' : __version__,
+         'author' : __author__,
+         'license' : __license__,
+         'copyright' : __copyright__ }

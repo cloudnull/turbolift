@@ -34,6 +34,7 @@ from urllib import quote
 from turbolift import authentication
 from turbolift import arguments
 from turbolift import uploader
+from turbolift import info
 
 
 #noinspection PyBroadException
@@ -178,7 +179,7 @@ def compress_files(tur_arg, sleeper=None):
         print 'ERROR\t: Removing Local Copy of the Archive'
         if os.path.exists(tmp_file):
             os.remove(tmp_file)
-            print 'I am sorry i just don\'t know what got into me\nMaybe this : ', sys.exc_info()[1]
+            print 'I am sorry i just don\'t know what you put into me Maybe this helps :\n', sys.exc_info()[1]
         else:
             print 'File "%s" Did not exist yet so there was nothing to delete.' % tmpfile
             print 'here some data you should read', sys.exc_info()[1]
@@ -266,7 +267,8 @@ def run_turbolift():
             sys.exit('FAIL\t: Some how the Application attempted to continue without the needed arguments.')
 
         if not (tur_arg.upload or tur_arg.tsync or tur_arg.archive):
-            print 'ERROR\t: Somehow I continued but I do not know how to proceed. So I Quit.'
+            print 'ERROR\t: Somehow I continued but I do not know how to proceed. So I Quit.' \
+                  'You should email me at %s' % info.__email__
             print 'MESSAGE\t: here comes the stack trace:\n'
             sys.exc_info()
 

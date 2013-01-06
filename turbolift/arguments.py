@@ -47,7 +47,8 @@ class GetArguments:
         parser = argparse.ArgumentParser(formatter_class=lambda prog: \
                                          argparse.HelpFormatter(prog, max_help_position=50),
                                          usage='%(prog)s',
-                                         description='Uploads lots of Files Quickly, Using the unpatented GPLv3 Cloud Files %(prog)s'
+                                         description='Uploads lots of Files Quickly, Using the unpatented GPLv3'
+                                                     'Cloud Files %(prog)s'
                                          )
         subparser = parser.add_subparsers(title='Infrastructure Spawner', metavar='<Commands>\n')
 
@@ -57,12 +58,14 @@ class GetArguments:
 
 
         upaction = subparser.add_parser('upload',
-                                        help='Upload Action, Type of upload to be performed as well as Source and Destination')
+                                        help='Upload Action, Type of upload to be performed as well as '
+                                             'Source and Destination')
         upaction.set_defaults(tsync=None, archive=None, upload=True)
 
         
         taction = subparser.add_parser('tsync',
-                                       help='T-Sync Action, Type of upload to be performed as well as Source and Destination')
+                                       help='T-Sync Action, Type of upload to be performed as well as '
+                                            'Source and Destination')
         taction.set_defaults(upload=None, archive=None, tsync=True)
 
 
@@ -142,7 +145,8 @@ class GetArguments:
 
         archaction.add_argument('--no-cleanup',
                                 action='store_true',
-                                help='Used to keep the compressed Archive. The archive will be left in the Users Home Folder')
+                                help='Used to keep the compressed Archive. The archive will be left in the Users '
+                                     'Home Folder')
 
         optionals.add_argument('-I',
                               '--internal',
