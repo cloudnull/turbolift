@@ -128,7 +128,10 @@ class UploadAction:
                     print 'ERROR\t: The Application attempted to retry too many times.'
                     print 'ERROR\t: Retry attempts were %s' % self.error
                     break
-                filepath = '/v1/' + self.ad['tenantid'] + '/' + quote(self.args.container + '/' + self.just_filename)
+
+                quoted_list = [ 'v1', self.ad['tenantid'], self.args.container, self.just_filename ]
+                filepath = '/%s' % quote('/'.join(quoted_list))
+
                 f = open(filename, 'rb')
                 if self.args.debug:
                     print 'MESSAGE\t: Upload path =', filepath
@@ -190,8 +193,10 @@ class UploadAction:
                     print 'ERROR\t: The Application attempted to retry too many times.'
                     print 'ERROR\t: Retry attempts were %s' % self.error
                     break
-                
-                filepath = '/v1/' + self.ad['tenantid'] + '/' + quote(self.args.container + '/' + self.just_filename)
+
+                quoted_list = [ 'v1', self.ad['tenantid'], self.args.container, self.just_filename ]
+                filepath = '/%s' % quote('/'.join(quoted_list))
+
                 f = open(filename)
                 
                 if self.args.debug:
