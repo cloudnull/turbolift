@@ -29,7 +29,7 @@ __version__ = "1.3-Stable"
 __status__ = "Production"
 
 # The Version Of the Application
-VN = 'GNU Turbolift %s' % __version__
+VN = '%s' % __version__
 
 # The Version and Information for the application
 VINFO = ('GNU Turbolift %(version)s, '
