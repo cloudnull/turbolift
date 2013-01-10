@@ -47,7 +47,8 @@ class GetArguments:
         parser = argparse.ArgumentParser(formatter_class=lambda prog: \
                                          argparse.HelpFormatter(prog, max_help_position=50),
                                          usage='%(prog)s',
-                                         description='Uploads lots of Files Quickly Cloud Files %(prog)s')
+                                         description='Uploads lots of Files Quickly Cloud Files %(prog)s',
+                                         epilog=info.VINFO)
 
         subparser = parser.add_subparsers(title='Infrastructure Spawner', metavar='<Commands>\n')
 
@@ -59,18 +60,24 @@ class GetArguments:
         upaction = subparser.add_parser('upload',
                                         help='Upload Action, Type of upload to be performed as well as '
                                              'Source and Destination')
-        upaction.set_defaults(tsync=None, archive=None, upload=True)
+        upaction.set_defaults(con_per_dir=None, tsync=None, archive=None, upload=True)
 
         
         taction = subparser.add_parser('tsync',
                                        help='T-Sync Action, Type of upload to be performed as well as '
                                             'Source and Destination')
-        taction.set_defaults(upload=None, archive=None, tsync=True)
+        taction.set_defaults(con_per_dir=None, upload=None, archive=None, tsync=True)
 
 
         archaction = subparser.add_parser('archive',
                                           help='Compress files or directories into a single archive')
-        archaction.set_defaults(upload=None, tsync=None, archive=True)
+        archaction.set_defaults(con_per_dir=None, upload=None, tsync=None, archive=True)
+
+
+        cpdaction = subparser.add_parser('con-per-dir',
+                                                 help='Uploads everything from a given source creating a '
+                                                      'single Container per Directory')
+        cpdaction.set_defaults(con_per_dir=True, upload=None, tsync=None, archive=None,)
 
 
         authgroup.add_argument('-u',
@@ -125,6 +132,12 @@ class GetArguments:
                               metavar='<local>',
                               required=True,
                               help='Local content to be uploaded')
+
+        cpdaction.add_argument('-s', '--source',
+                                 metavar='<local>',
+                                 required=True,
+                                 help='Local content to be uploaded')
+
 
         archaction.add_argument('-c', '--container',
                                 metavar='<name>',
@@ -191,8 +204,7 @@ class GetArguments:
         if args.password and args.apikey:
             parser.print_help()
             sys.exit('\nYou can\'t use both [--apikey] and [--password] in the same command, so I quit...\n')
-        
-        
+
         if args.rax_auth and args.region:
             parser.print_help()
             sys.exit('\nYou can\'t use both [--rax-auth] and [--region] in the same command, so I quit...\n')

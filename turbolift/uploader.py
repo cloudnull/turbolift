@@ -59,11 +59,16 @@ class UploadAction:
                         break
                     if self.args.debug:
                         print "Item =", self.wfile
+
                     self.just_filename = self.wfile.split(os.path.realpath(self.args.source))[1]
+                    self.just_filename = self.just_filename.lstrip(os.sep)
+                    if self.args.con_per_dir:
+                        self.just_filename = os.path.basename(self.just_filename)
+
 
                     if self.args.upload:
                         self.put_uploader(self.wfile,)
-                    elif self.args.tsync:
+                    elif self.args.tsync or self.args.con_per_dir:
                         self.sync_uploader(self.wfile,)
                     else:
                         print 'ERROR\t: Shits broke son, here comes the stack trace:\n', sys.exc_info()[1]
@@ -131,7 +136,6 @@ class UploadAction:
 
                 quoted_list = [ 'v1', self.ad['tenantid'], self.args.container, self.just_filename ]
                 filepath = '/%s' % quote('/'.join(quoted_list))
-
                 f = open(filename, 'rb')
                 if self.args.debug:
                     print 'MESSAGE\t: Upload path =', filepath
@@ -196,9 +200,7 @@ class UploadAction:
 
                 quoted_list = [ 'v1', self.ad['tenantid'], self.args.container, self.just_filename ]
                 filepath = '/%s' % quote('/'.join(quoted_list))
-
                 f = open(filename)
-                
                 if self.args.debug:
                     self.conn.set_debuglevel(1)
                 

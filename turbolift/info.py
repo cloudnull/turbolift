@@ -32,11 +32,11 @@ __status__ = "Production"
 VN = 'GNU Turbolift %s' % __version__
 
 # The Version and Information for the application
-VINFO = 'GNU Turbolift %(version)s, ' \
-     'developed by %(author)s, ' \
-     'Licenced Under %(license)s, ' \
-     'FYI : %(copyright)s' \
+VINFO = ('GNU Turbolift %(version)s, '
+     'developed by %(author)s, '
+     'Licenced Under %(license)s, '
+     'FYI : %(copyright)s'
      % { 'version' : __version__,
          'author' : __author__,
          'license' : __license__,
-         'copyright' : __copyright__ }
+         'copyright' : __copyright__ })

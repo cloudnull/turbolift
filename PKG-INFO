@@ -86,6 +86,7 @@ Description: Turbolift, the Cloud Files Uploader
           :upload: Use the Upload Function for a local Source.
           :tsync: Use the TSync function for a local Source. This function Operates Similar to RSYNC; uploading files that are not found currently on Cloud Files. This function validates the md5 checksum on the local system against what is found in Cloud Files prior to upload and if the checksums are different the local file will be uploaded.
           :archive: Compress files or directories into a single archive. Multiple Source Directories can be added to a single Archive.
+          :con-per-dir: Uploads everything from a given source creating a single Container per Directory. Not as fast as other methods for uploading.
 
 
         Appliction Flags can be passed to the program on the command line:
@@ -102,7 +103,6 @@ Description: Turbolift, the Cloud Files Uploader
           :debug: Turn up verbosity to over 9000
           :help: Show helpful information on the script and its available functions
           :version: Gives Version Number
-
 
 
         Environment Variables
