@@ -45,7 +45,7 @@ setuptools.setup(
     description='OpenStack Swift -Cloud Files- Uploader',
     long_description=long_description,
     license='GNU General Public License v3 or later (GPLv3+)',
-    packages=['turbolift'],
+    packages=['turbolift', 'turbolift.operations'],
     url='https://github.com/cloudnull/turbolift.git',
     install_requires=TM,
     classifiers=[
