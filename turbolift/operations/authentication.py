@@ -32,47 +32,47 @@ class NovaAuth:
         Credentials are the Users API Username and Key/Password
         "osauth" has a Built in Rackspace Method for Authentication
         """
-        if tur_arg.rax_auth == 'LON':
-            tur_arg.region = tur_arg.rax_auth
-            if tur_arg.auth_url:
-                print 'Using Override Auth URL to\t:', tur_arg.auth_url
-                authurl = tur_arg.auth_url
+        if tur_arg['rax_auth'] == 'LON':
+            tur_arg['region'] = tur_arg['rax_auth']
+            if tur_arg['auth_url']:
+                print 'Using Override Auth URL to\t:', tur_arg['auth_url']
+                authurl = tur_arg['auth_url']
             else:
                 authurl = 'lon.identity.api.rackspacecloud.com'
-        elif tur_arg.rax_auth == 'DFW' or tur_arg.rax_auth == 'ORD':
-            tur_arg.region = tur_arg.rax_auth
-            if tur_arg.auth_url:
-                print 'Using Override Auth URL to\t:', tur_arg.auth_url
-                authurl = tur_arg.auth_url
+        elif tur_arg['rax_auth'] == 'DFW' or tur_arg['rax_auth'] == 'ORD':
+            tur_arg['region'] = tur_arg['rax_auth']
+            if tur_arg['auth_url']:
+                print 'Using Override Auth URL to\t:', tur_arg['auth_url']
+                authurl = tur_arg['auth_url']
             else:
                 authurl = 'identity.api.rackspacecloud.com'
-        elif not tur_arg.rax_auth:
-            if not tur_arg.region:
+        elif not tur_arg['rax_auth']:
+            if not tur_arg['region']:
                 sys.exit('FAIL\t: You have to specify a Region along with an Auth URL')
-            if tur_arg.auth_url:
-                print 'Using Region\t:', tur_arg.region
-                print 'Using Auth URL\t:', tur_arg.auth_url
-                authurl = tur_arg.auth_url
+            if tur_arg['auth_url']:
+                print 'Using Region\t:', tur_arg['region']
+                print 'Using Auth URL\t:', tur_arg['auth_url']
+                authurl = tur_arg['auth_url']
             else:
                 sys.exit('FAIL\t: You have to specify an Auth URL along with the Region')
-        if tur_arg.apikey:
+        if tur_arg['apikey']:
             jsonreq = \
-                json.dumps({'auth': {'RAX-KSKEY:apiKeyCredentials': {'username': tur_arg.user,
-                           'apiKey': tur_arg.apikey}}})
-        elif tur_arg.password:
+                json.dumps({'auth': {'RAX-KSKEY:apiKeyCredentials': {'username': tur_arg['user'],
+                           'apiKey': tur_arg['apikey']}}})
+        elif tur_arg['password']:
             jsonreq = \
-                json.dumps({'auth': {'passwordCredentials': {'username': tur_arg.user,
-                           'password': tur_arg.password}}})
+                json.dumps({'auth': {'passwordCredentials': {'username': tur_arg['user'],
+                           'password': tur_arg['password']}}})
         else:
             sys.exit('ERROR\t: This should have not happened.\nThere was no way to proceed, so I quit.')
 
-        if tur_arg.debug:
+        if tur_arg['debug']:
             print '\n', self, '\n'
             print 'JSON REQUEST: ' + jsonreq
 
         #noinspection PyUnboundLocalVariable
         conn = httplib.HTTPSConnection(authurl, 443)
-        if tur_arg.debug:
+        if tur_arg['debug']:
             conn.set_debuglevel(1)
         headers = {'Content-type': 'application/json'}
         conn.request('POST', '/v2.0/tokens', jsonreq, headers)
@@ -85,11 +85,11 @@ class NovaAuth:
         json_response = json.loads(readresp)
         conn.close()
 
-        if tur_arg.internal:
+        if tur_arg['internal']:
             print 'MESSAGE\t: Using the Service Network in the', \
-                tur_arg.region, 'DC for', authurl
+                tur_arg['region'], 'DC for', authurl
 
-        if tur_arg.debug:
+        if tur_arg['debug']:
             print 'JSON decoded and pretty'
             print json.dumps(json_response, indent=2)
         details = {}
@@ -99,23 +99,23 @@ class NovaAuth:
             for service in catalogs:
                 if service['name'] == 'cloudFiles':
                     for endpoint in service['endpoints']:
-                        if tur_arg.rax_auth == 'MULTI':
-                            regions = tur_arg.region_multi
+                        if tur_arg['rax_auth'] == 'MULTI':
+                            regions = tur_arg['region_multi']
                             for region in regions:
                                 if endpoint['region'] == region:
-                                    if tur_arg.internal:
+                                    if tur_arg['internal']:
                                         details[region] = endpoint['internalURL']
                                     else:
                                         details[region] = endpoint['publicURL']
                         else:
-                            if endpoint['region'] == tur_arg.region:
-                                if tur_arg.internal:
+                            if endpoint['region'] == tur_arg['region']:
+                                if tur_arg['internal']:
                                     details['endpoint'] = endpoint['internalURL']
                                 else:
                                     details['endpoint'] = endpoint['publicURL']
                         details['tenantid'] = endpoint['tenantId']
             details['token'] = json_response['access']['token']['id']
-            if tur_arg.debug:
+            if tur_arg['debug']:
                 print '\n', details, '\n'
                 print 'Tenant\t\t: ', details['tenantid']
                 print 'Token\t\t: ', details['token']

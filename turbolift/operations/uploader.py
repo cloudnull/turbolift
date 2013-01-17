@@ -43,12 +43,12 @@ class UploadAction:
         self.open_conn()
         self.filename = filename
 
-        if self.args.archive or os.path.isfile(self.args.source) == True:
+        if self.args['archive'] or os.path.isfile(self.args['source']) == True:
             self.just_filename = os.path.basename(self.filename)
             self.put_uploader(self.filename)
-            if self.args.debug:
+            if self.args['debug']:
                 print 'filename =', self.filename
-        
+
         else:
             while True:
                 #noinspection PyBroadException
@@ -57,30 +57,30 @@ class UploadAction:
                     if self.wfile is None:
                         # Poison pill means shutdown
                         break
-                    if self.args.debug:
+                    if self.args['debug']:
                         print "Item =", self.wfile
 
-                    self.just_filename = self.wfile.split(os.path.realpath(self.args.source))[1]
+                    self.just_filename = self.wfile.split(os.path.realpath(self.args['source']))[0]
                     self.just_filename = self.just_filename.lstrip(os.sep)
-                    if self.args.con_per_dir:
+                    if self.args['con_per_dir']:
                         self.just_filename = os.path.basename(self.just_filename)
 
 
-                    if self.args.upload:
+                    if self.args['upload']:
                         self.put_uploader(self.wfile,)
-                    elif self.args.tsync or self.args.con_per_dir:
+                    elif self.args['tsync'] or self.args['con_per_dir']:
                         self.sync_uploader(self.wfile,)
                     else:
                         print 'ERROR\t: Shits broke son, here comes the stack trace:\n', sys.exc_info()[1]
 
-                    if not (tur_arg.verbose or tur_arg.debug):
+                    if not (self.args['verbose'] or self.args['debug']):
                         busy_chars = ['|','/','-','\\']
                         for c in busy_chars:
                             # Fixes Errors with OS X due to no sem_getvalue support
-                            if sys.platform == 'darwin':
-                                qz = 'darwin'
-                            else:
+                            if not sys.platform == 'darwin':
                                 qz = self.filename.qsize()
+                            else:
+                                qz = "OS X Can't Count... Please Wait."
                             sys.stdout.write("\rUploading Files - [ %(spin)s ] - Work Load %(qsize)s "
                                              % { "qsize" : qz, "spin" : c })
                             sys.stdout.flush()
@@ -115,7 +115,7 @@ class UploadAction:
         endpoint = self.ad['endpoint'].split('/')[2]
         self.headers = {'Connection:' : 'Keep-alive', 'X-Auth-Token': self.ad['token']}
         self.conn = httplib.HTTPSConnection(endpoint, 443)
-        if self.args.debug:
+        if self.args['debug']:
             self.conn.set_debuglevel(1)
         return self
 
@@ -134,22 +134,22 @@ class UploadAction:
                     print 'ERROR\t: Retry attempts were %s' % self.error
                     break
 
-                quoted_list = [ 'v1', self.ad['tenantid'], self.args.container, self.just_filename ]
+                quoted_list = [ 'v1', self.ad['tenantid'], self.args['container'], self.just_filename ]
                 filepath = '/%s' % quote('/'.join(quoted_list))
                 f = open(filename, 'rb')
-                if self.args.debug:
+                if self.args['debug']:
                     print 'MESSAGE\t: Upload path =', filepath
                     self.conn.set_debuglevel(1)
-                                    
+
                 self.conn.request('PUT', filepath, body=f, headers=self.headers)
 
                 resp = self.conn.getresponse()
                 resp.read()
                 f.close()
 
-                if self.args.verbose or self.args.debug:
+                if self.args['verbose'] or self.args['debug']:
                     print 'info', resp.status, resp.reason, self.just_filename
-                 
+
                 if resp.status is None:
                     UploadAction.open_conn(self)
                     UploadAction.re_auth(self)
@@ -163,7 +163,7 @@ class UploadAction:
                     up_retry = True
                     self.error += 1
                     continue
-                        
+
                 if resp.status == 400:
                     print 'MESSAGE\t: Opened File Error, re-Opening the Socket to retry.'
                     UploadAction.open_conn(self)
@@ -198,12 +198,12 @@ class UploadAction:
                     print 'ERROR\t: Retry attempts were %s' % self.error
                     break
 
-                quoted_list = [ 'v1', self.ad['tenantid'], self.args.container, self.just_filename ]
+                quoted_list = [ 'v1', self.ad['tenantid'], self.args['container'], self.just_filename ]
                 filepath = '/%s' % quote('/'.join(quoted_list))
                 f = open(filename)
-                if self.args.debug:
+                if self.args['debug']:
                     self.conn.set_debuglevel(1)
-                
+
                 self.conn.request('HEAD', filepath, headers=self.headers)
                 resp = self.conn.getresponse()
                 resp.read()
@@ -212,8 +212,8 @@ class UploadAction:
                     self.conn.request('PUT', filepath, body=f, headers=self.headers)
                     resp = self.conn.getresponse()
                     resp.read()
-                    
-                    if self.args.verbose:
+
+                    if self.args['verbose']:
                         print resp.status, resp.reason, self.just_filename
 
                 if resp.status is None:
@@ -239,7 +239,7 @@ class UploadAction:
 
                 if resp.status >= 300:
                     print 'ERROR\t:', resp.status, resp.reason, self.just_filename, '\n', f, '\n'
-            
+
                 else:
                     remotemd5sum = resp.getheader('etag')
                     md5 = hashlib.md5()
@@ -248,19 +248,19 @@ class UploadAction:
                             md5.update(chunk)
                         fmd5.close()
                     localmd5sum = md5.hexdigest()
-                        
+
                     if remotemd5sum != localmd5sum:
                         f = open(filename)
-                        
-                        if self.args.debug:
+
+                        if self.args['debug']:
                             self.conn.set_debuglevel(1)
                         self.conn.request('PUT', filepath, body=f, headers=self.headers)
                         f.close()
 
                         resp = self.conn.getresponse()
                         resp.read()
-                        
-                        if self.args.verbose:
+
+                        if self.args['verbose']:
                             print 'MESSAGE\t: CheckSumm Mis-Match %(lmd5)s != %(rmd5)s\n\t ' \
                                   'File Upload : %(rs)s %(rr)s %(sjf)s' \
                                   % { 'lmd5' : localmd5sum, 'rmd5' : remotemd5sum, 'rs' : resp.status,
@@ -290,9 +290,9 @@ class UploadAction:
 
                         if resp.status >= 300:
                             print 'ERROR\t:', resp.status, resp.reason, self.just_filename, '\n', f, '\n'
-                        
+
                     else:
-                        if self.args.verbose:
+                        if self.args['verbose']:
                             print 'MESSAGE\t: CheckSumm Match', localmd5sum
         except IOError, e:
             if e.errno == errno.ENOENT:

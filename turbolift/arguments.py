@@ -224,4 +224,4 @@ class GetArguments:
             args.verbose = True
             print args
 
-        return args
+        return vars(args)
