@@ -20,6 +20,7 @@ http://www.gnu.org/licenses/gpl.html
 """
 
 import httplib
+import tarfile
 import sys
 from urllib2 import quote
 
