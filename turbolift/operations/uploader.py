@@ -45,6 +45,7 @@ class UploadAction:
 
         if self.args['archive'] or os.path.isfile(self.args['source']) == True:
             self.just_filename = os.path.basename(self.filename)
+
             self.put_uploader(self.filename)
             if self.args['debug']:
                 print 'filename =', self.filename
@@ -60,8 +61,8 @@ class UploadAction:
                     if self.args['debug']:
                         print "Item =", self.wfile
 
-                    self.just_filename = self.wfile.split(os.path.realpath(self.args['source']))[0]
-                    self.just_filename = self.just_filename.lstrip(os.sep)
+                    self.just_filename = self.wfile.split(self.args['source'])[-1]
+                    
                     if self.args['con_per_dir']:
                         self.just_filename = os.path.basename(self.just_filename)
 
