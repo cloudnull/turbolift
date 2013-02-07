@@ -71,7 +71,18 @@ class NovaAuth:
             print 'JSON REQUEST: ' + jsonreq
 
         #noinspection PyUnboundLocalVariable
-        conn = httplib.HTTPSConnection(authurl, 443)
+        authurl = authurl.strip('http?s://')
+        url_data = authurl.split('/')
+        authurl = url_data[0]
+        
+        try:
+            conn = httplib.HTTPConnection(authurl)
+        except:
+            self.logger.warn('Attempting HTTPS connection')
+            conn = httplib.HTTPSConnection(authurl)
+
+        
+        conn = httplib.HTTPSConnection(authurl)
         if tur_arg['debug']:
             conn.set_debuglevel(1)
         headers = {'Content-type': 'application/json'}
