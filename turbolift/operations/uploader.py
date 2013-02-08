@@ -44,7 +44,9 @@ class UploadAction:
         self.filename = filename
 
         if self.args['archive'] or os.path.isfile(self.args['source']) == True:
-            self.just_filename = os.path.basename(self.filename)
+            path = os.path.realpath(self.args['source'])
+            self.filename = self.args['source'].split(os.sep)[-1]
+            self.just_filename = self.filename
 
             self.put_uploader(self.filename)
             if self.args['debug']:
@@ -59,13 +61,12 @@ class UploadAction:
                         # Poison pill means shutdown
                         break
                     if self.args['debug']:
-                        print "Item =", self.wfile
-
-                    self.just_filename = self.wfile.split(self.args['source'])[-1]
+                        print "Item =", self.wfile, 
+                    path = os.path.realpath(self.args['source'])
+                    self.just_filename = self.wfile.split(path)[-1].strip(os.sep)
                     
                     if self.args['con_per_dir']:
                         self.just_filename = os.path.basename(self.just_filename)
-
 
                     if self.args['upload']:
                         self.put_uploader(self.wfile,)
@@ -137,6 +138,7 @@ class UploadAction:
 
                 quoted_list = [ 'v1', self.ad['tenantid'], self.args['container'], self.just_filename ]
                 filepath = '/%s' % quote('/'.join(quoted_list))
+                
                 f = open(filename, 'rb')
                 if self.args['debug']:
                     print 'MESSAGE\t: Upload path =', filepath
