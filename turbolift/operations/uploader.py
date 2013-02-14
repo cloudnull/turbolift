@@ -52,7 +52,6 @@ class UploadAction:
             self.oscmd.container_create(self.container)
             if self.args['cdn_enabled']:
                 self.oscmd.enable_cdn(self.container)
-                sys.exit()
     
             # Thread into the job that we need to accomplish
             self.oscmd.connection_prep()
