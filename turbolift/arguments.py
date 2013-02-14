@@ -201,6 +201,12 @@ class GetArguments:
                                type=int,
                                default=50,
                                help='Upload Concurrency')
+        optionals.add_argument('--no-sort',
+                               action='store_true',
+                               help=('By default when getting the list of files to upload '
+                                     'Turbolift will sort the files by size. If you have a lot '
+                                     'of files this may be a time consuming operation. This flag will '
+                                     'disable that function.'))
         optionals.add_argument('--verbose',
                                action='store_true',
                                help='Be verbose While Uploading')
@@ -279,10 +285,13 @@ class GetArguments:
             set_args['cc'] = 1
             print '\nMESSAGE\t: Because I have not figured out how to multi-thread Archiving, the max Concurrency is 1'
         elif set_args['cc'] > 150:
-            print('\nMESSAGE\t: You have set the Concurrency Override to "%s"'
-                  '\t  This is a lot of Processes and could fork bomb your'
-                  '\t  system or cause other nastiness.' % set_args['cc'])
-            raw_input('\t  You have been warned, Press Enter to Continue\n')
+            try:
+                print('MESSAGE\t: You have set the Concurrency Override to "%s" '
+                      'This is a lot of Processes and could fork bomb your '
+                      'system or cause other nastiness.' % set_args['cc'])
+                raw_input('\t  You have been warned, Press Enter to Continue\n')
+            except:
+                sys.exit('Shutting Down...')
         elif set_args['cc'] != set_args['defaultcc']:
             print 'MESSAGE\t: Setting a Concurrency Override of', set_args['cc']
 
