@@ -1,8 +1,8 @@
 Turbolift, the Cloud Files Uploader
 ###################################
-:date: 2012-12-16 16:22
+:date: 2012-02-14 16:22
 :tags: rackspace, upload, mass, Cloud Files, files, api
-:category: linux 
+:category: \*nix
 
 Turbolift Files to Rackspace Cloud Files
 ========================================
@@ -88,6 +88,10 @@ Appliction Flags can be passed to the program on the command line:
 
 
 Optional Arguments:
+  :error-retry: Allows for a retry integer to be set, Default is 5
+  :base-headers: Allows for the use of customer heads as the base Header
+  :container-headers: Allows for Metadata to be set on Container(s)
+  :object-headers: Allows for Metadata to be set on Object(s)
   :cc: File Upload Concurrency
   :internal: Use ServiceNet Endpoint for Cloud Files
   :verbose: Shows Progress While Uploading
@@ -95,6 +99,11 @@ Optional Arguments:
   :help: Show helpful information on the script and its available functions
   :version: Gives Version Number
 
+
+CDN Arguments:
+  :cdn-enabled: Allows for container(s) to become CDN Enabled
+  :cdn-ttl: Provides for the TTL, default it 72 hours
+  :cdn-logs: Enables the Access Logs for the CDN Enabled Container, Default is False
 
 Environment Variables
 ---------------------
