@@ -30,12 +30,11 @@ class UploadAction:
 
 
     def job_prep(self):
-        # Prep Nova for Upload
-        self.oscmd = novacommands.NovaAuth(self.args)
-
         for key,val in self.pay_load:
             self.container = key
             work_q = generators.manager_queue(iters=val)
+            # Prep Nova for Upload
+            self.oscmd = novacommands.NovaAuth(self.args, work_q)
 
             if self.args['con_per_dir'] or self.args['archive']:
                 head,sep,tail = val[0].partition(key)

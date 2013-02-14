@@ -19,13 +19,14 @@ from turbolift.operations import generators
 
 
 class NovaAuth(object):
-    def __init__(self, tur_arg):
+    def __init__(self, tur_arg, work_q=None):
         """
         NovaAuth is a class that handels all aspects of the turbolift experience
         Here you will be able to authenticate agains the API, create containers
         and upload content
         """
         self.tur_arg = tur_arg
+        self.work_q = work_q
 
 
     def result_exception(self, resp, headers, authurl, jsonreq=None):
@@ -53,6 +54,9 @@ class NovaAuth(object):
                 time.sleep(int(di['retry-after']))
             elif resp.status == 400:
                 print 'MESSAGE\t: Opened File Error, re-Opening the Socket to retry.'
+            elif resp.status == 408:
+                self.conn.close()
+                self.connection_prep()
             elif resp.status == 502:
                 self.connection_prep(http=True)
             else:
@@ -146,12 +150,15 @@ class NovaAuth(object):
             
             conn.request('POST', tokenurl, jsonreq, headers)
 
-            # Compatibility with Python 2.6
-            if sys.version_info < (2, 7, 0):
-                resp = conn.getresponse()
-            else:
-                resp = conn.getresponse(buffering=True)
-
+            try:
+                # Compatibility with Python 2.6
+                if sys.version_info < (2, 7, 0):
+                    resp = conn.getresponse()
+                else:
+                    resp = conn.getresponse(buffering=True)
+            except httplib.BadStatusLine:
+                conn.close()
+                retry()
             readresp = resp.read()
             json_response = json.loads(readresp)
             conn.close()
@@ -225,7 +232,6 @@ class NovaAuth(object):
         cdnurl_data = self.tur_arg['simple_cdn_endpoint'].split('/')
         cdnurl = cdnurl_data[0]
         cdn_path = quote('/%s' % ('/'.join(cdnurl_data[1:])))
-        conn = httplib.HTTPSConnection(cdnurl)
         
         r_loc = '%s/%s' % (cdn_path, container_name)
         path = quote(r_loc)
@@ -235,17 +241,21 @@ class NovaAuth(object):
                           'X-Log-Retention':self.tur_arg['cdn_logs']})
         for retry in generators.retryloop(attempts=self.tur_arg['error_retry'], delay=5):
             try:
+                conn = httplib.HTTPSConnection(cdnurl)
                 for retry in generators.retryloop(attempts=self.tur_arg['error_retry'], delay=5):
                     conn.request('PUT', path, headers=c_headers)
-                    
 
-                    # Compatibility with Python 2.6
-                    if sys.version_info < (2, 7, 0):
-                        resp = conn.getresponse()
-                    else:
-                        resp = conn.getresponse(buffering=True)
-
+                    try:
+                        # Compatibility with Python 2.6
+                        if sys.version_info < (2, 7, 0):
+                            resp = conn.getresponse()
+                        else:
+                            resp = conn.getresponse(buffering=True)
+                    except httplib.BadStatusLine:
+                        conn.close()
+                        retry()
                     resp.read()
+
                     status_codes = (resp.status, resp.reason, container_name)
                     if self.tur_arg['os_verbose']:
                         print('ENABLING CDN ON CONTAINER: %s %s %s' % status_codes)
@@ -276,24 +286,36 @@ class NovaAuth(object):
                 # Check to see if the container exists
                 self.conn.request('HEAD', path, headers=c_headers)
 
-                # Compatibility with Python 2.6
-                if sys.version_info < (2, 7, 0):
-                    resp = self.conn.getresponse()
-                else:
-                    resp = self.conn.getresponse(buffering=True)
+                try:
+                    # Compatibility with Python 2.6
+                    if sys.version_info < (2, 7, 0):
+                        resp = self.conn.getresponse()
+                    else:
+                        resp = self.conn.getresponse(buffering=True)
+                except httplib.BadStatusLine:
+                    self.conn.close()
+                    self.connection_prep()
+                    retry()
                 resp.read()
+
                 status_codes = (resp.status, resp.reason, container_name)
 
                 # Check that the status was a good one
                 if resp.status == 404:
                     self.conn.request('PUT', path, headers=c_headers)
 
-                    # Compatibility with Python 2.6
-                    if sys.version_info < (2, 7, 0):
-                        resp = self.conn.getresponse()
-                    else:
-                        resp = self.conn.getresponse(buffering=True)
+                    try:
+                        # Compatibility with Python 2.6
+                        if sys.version_info < (2, 7, 0):
+                            resp = self.conn.getresponse()
+                        else:
+                            resp = self.conn.getresponse(buffering=True)
+                    except httplib.BadStatusLine:
+                        self.conn.close()
+                        self.connection_prep()
+                        retry()
                     resp.read()
+
                     status_codes = (resp.status, resp.reason, container_name)
                     if self.tur_arg['os_verbose']:
                         print('CREATING CONTAINER: %s %s %s' % status_codes)
@@ -311,13 +333,18 @@ class NovaAuth(object):
                     if self.tur_arg['object_headers']:
                         self.conn.request('POST', path, headers=c_headers)
 
-                        # Compatibility with Python 2.6
-                        if sys.version_info < (2, 7, 0):
-                            resp = self.conn.getresponse()
-                        else:
-                            resp = self.conn.getresponse(buffering=True)
-
+                        try:
+                            # Compatibility with Python 2.6
+                            if sys.version_info < (2, 7, 0):
+                                resp = self.conn.getresponse()
+                            else:
+                                resp = self.conn.getresponse(buffering=True)
+                        except httplib.BadStatusLine:
+                            self.conn.close()
+                            self.connection_prep()
+                            retry()
                         resp.read()
+
                         if resp.status >= 300:
                             self.result_exception(resp=resp,
                                                   headers=c_headers,
@@ -348,14 +375,18 @@ class NovaAuth(object):
                     # Open our source file
                     with open(file_path, 'rb') as f:
                         self.conn.request('PUT', filepath, body=f, headers=f_headers)
-
-                    # Compatibility with Python 2.6
-                    if sys.version_info < (2, 7, 0):
-                        resp = self.conn.getresponse()
-                    else:
-                        resp = self.conn.getresponse(buffering=True)
-
-                    resp.read()
+                    f.close()
+                    try:
+                        # Compatibility with Python 2.6
+                        if sys.version_info < (2, 7, 0):
+                            resp = self.conn.getresponse()
+                        else:
+                            resp = self.conn.getresponse(buffering=True)
+                        resp.read()
+                    except httplib.BadStatusLine:
+                        self.conn.close()
+                        self.connection_prep()
+                        retry()
 
                     # Give us more data if we requested it
                     if self.tur_arg['os_verbose'] or self.tur_arg['debug']:
@@ -372,7 +403,9 @@ class NovaAuth(object):
                         retry()
 
                 except Exception, e:
-                    print('Exception from within an upload Action : %s' % e)
+                    print e
+                    print('Exception from within an upload Action, placing the failed upload back in Queue')
+                    self.work_q.put(file_path)
         except IOError:
             print 'ERROR\t: path "%s" does not exist or is a broken symlink' % file_path
         except ValueError:
@@ -391,106 +424,127 @@ class NovaAuth(object):
         #noinspection PyBroadException
         try:
             for retry in generators.retryloop(attempts=self.tur_arg['error_retry'], delay=5):
-                # Set the headers if some custom ones were specified
-                f_headers = self.headers
-                if self.tur_arg['object_headers']:
-                    f_headers.update(self.tur_arg['object_headers'])
-
-                # Get the path ready for action
-                r_loc = '%s/%s/%s' % (self.c_path, container, file_name)
-                filepath = quote(r_loc)
-
-                self.conn.request('HEAD', filepath, headers=f_headers)
-
-                # Compatibility with Python 2.6
-                if sys.version_info < (2, 7, 0):
-                    resp = self.conn.getresponse()
-                else:
-                    resp = self.conn.getresponse(buffering=True)
-
-                resp.read()                
+                try:
+                    # Set the headers if some custom ones were specified
+                    f_headers = self.headers
+                    if self.tur_arg['object_headers']:
+                        f_headers.update(self.tur_arg['object_headers'])
     
-                if resp.status == 404:
-                    with open(file_path, 'rb') as f:
-                        self.conn.request('PUT', filepath, body=f, headers=f_headers)
-
-                    # Compatibility with Python 2.6
-                    if sys.version_info < (2, 7, 0):
-                        resp = self.conn.getresponse()
-                    else:
-                        resp = self.conn.getresponse(buffering=True)
-                    resp.read()
+                    # Get the path ready for action
+                    r_loc = '%s/%s/%s' % (self.c_path, container, file_name)
+                    filepath = quote(r_loc)
     
-                    if self.tur_arg['verbose']:
-                        print 'INFO\t: %s %s %s' % (resp.status, resp.reason, file_name)
-                elif resp.status >= 300 or resp.status == None:
-                    self.result_exception(resp=resp,
-                                          headers=f_headers,
-                                          authurl=filepath,
-                                          jsonreq=r_loc)
-                    retry()
-                else:
-                    remotemd5sum = resp.getheader('etag')
-                    md5 = hashlib.md5()
-                    with open(file_path, 'rb') as f:
-                        for chunk in iter(lambda : f.read(128 * md5.block_size), ''):
-                            md5.update(chunk)
-                    localmd5sum = md5.hexdigest()
+                    self.conn.request('HEAD', filepath, headers=f_headers)
     
-                    if remotemd5sum != localmd5sum:
-                        with open(file_path, 'rb') as f:
-                            self.conn.request('PUT', filepath, body=f, headers=f_headers)
-
+                    try:
                         # Compatibility with Python 2.6
                         if sys.version_info < (2, 7, 0):
                             resp = self.conn.getresponse()
                         else:
                             resp = self.conn.getresponse(buffering=True)
-                        resp.read()
-
-                        if self.tur_arg['verbose']:
-                            proc_dict = {'lmd5' : localmd5sum,
-                                         'rmd5' : remotemd5sum,
-                                         'rs' : resp.status,
-                                         'rr' : resp.reason,
-                                         'sjf' : file_name }
-                            print('MESSAGE\t: CheckSumm Mis-Match %(lmd5)s != %(rmd5)s\n'
-                                  '\t  File Upload : %(rs)s %(rr)s %(sjf)s' % proc_dict )
-    
-                        if resp.status >= 300:
-                            self.result_exception(resp=resp,
-                                                  headers=f_headers,
-                                                  authurl=filepath,
-                                                  jsonreq=r_loc)
-                            retry()
-                    else:
-                        if self.tur_arg['verbose']:
-                            print 'MESSAGE\t: CheckSum Match', localmd5sum
-
-                        # Put headers on the object if custom headers were specified
-                        if self.tur_arg['object_headers']:
-                            self.conn.request('POST', filepath, headers=f_headers)
-
+                    except httplib.BadStatusLine:
+                        self.conn.close()
+                        self.connection_prep()
+                        retry()
+                    resp.read()                
+        
+                    if resp.status == 404:
+                        with open(file_path, 'rb') as f:
+                            self.conn.request('PUT', filepath, body=f, headers=f_headers)
+                        f.close()
+                        try:
                             # Compatibility with Python 2.6
                             if sys.version_info < (2, 7, 0):
                                 resp = self.conn.getresponse()
                             else:
                                 resp = self.conn.getresponse(buffering=True)
+                        except httplib.BadStatusLine:
+                            self.conn.close()
+                            self.connection_prep()
+                            retry()
+                        resp.read()
+        
+                        if self.tur_arg['verbose']:
+                            print 'INFO\t: %s %s %s' % (resp.status, resp.reason, file_name)
+                    elif resp.status >= 300 or resp.status == None:
+                        self.result_exception(resp=resp,
+                                              headers=f_headers,
+                                              authurl=filepath,
+                                              jsonreq=r_loc)
+                        retry()
+                    else:
+                        remotemd5sum = resp.getheader('etag')
+                        md5 = hashlib.md5()
+                        with open(file_path, 'rb') as f:
+                            for chunk in iter(lambda : f.read(128 * md5.block_size), ''):
+                                md5.update(chunk)
+                        f.close()
+                        localmd5sum = md5.hexdigest()
+        
+                        if remotemd5sum != localmd5sum:
+                            with open(file_path, 'rb') as f:
+                                self.conn.request('PUT', filepath, body=f, headers=f_headers)
+                            f.close()
+                            try:
+                                # Compatibility with Python 2.6
+                                if sys.version_info < (2, 7, 0):
+                                    resp = self.conn.getresponse()
+                                else:
+                                    resp = self.conn.getresponse(buffering=True)
+                            except httplib.BadStatusLine:
+                                self.conn.close()
+                                self.connection_prep()
+                                retry()
                             resp.read()
-
+    
+                            if self.tur_arg['verbose']:
+                                proc_dict = {'lmd5' : localmd5sum,
+                                             'rmd5' : remotemd5sum,
+                                             'rs' : resp.status,
+                                             'rr' : resp.reason,
+                                             'sjf' : file_name }
+                                print('MESSAGE\t: CheckSumm Mis-Match %(lmd5)s != %(rmd5)s\n'
+                                      '\t  File Upload : %(rs)s %(rr)s %(sjf)s' % proc_dict )
+        
                             if resp.status >= 300:
                                 self.result_exception(resp=resp,
-                                                      headers=self.headers,
+                                                      headers=f_headers,
                                                       authurl=filepath,
                                                       jsonreq=r_loc)
                                 retry()
-                                
-        except IOError, e:
-            if e.errno == errno.ENOENT:
-                print 'ERROR\t: path "%s" does not exist or is a broken symlink' % filename
+                        else:
+                            if self.tur_arg['verbose']:
+                                print 'MESSAGE\t: CheckSum Match', localmd5sum
+    
+                            # Put headers on the object if custom headers were specified
+                            if self.tur_arg['object_headers']:
+                                self.conn.request('POST', filepath, headers=f_headers)
+    
+                                try:
+                                    # Compatibility with Python 2.6
+                                    if sys.version_info < (2, 7, 0):
+                                        resp = self.conn.getresponse()
+                                    else:
+                                        resp = self.conn.getresponse(buffering=True)
+                                except httplib.BadStatusLine:
+                                    self.conn.close()
+                                    self.connection_prep()
+                                    retry()
+                                resp.read()
+    
+                                if resp.status >= 300:
+                                    self.result_exception(resp=resp,
+                                                          headers=self.headers,
+                                                          authurl=filepath,
+                                                          jsonreq=r_loc)
+                                    retry()
+                except Exception, e:
+                    print e
+                    print('Exception from within an upload Action, placing the failed upload back in Queue')
+                    self.work_q.put(file_path)
+        except IOError:
+            print 'ERROR\t: path "%s" does not exist or is a broken symlink' % file_path
         except ValueError:
-            print 'ERROR\t: The data for "%s" got all jacked up, so it got skipped' % filename
+            print 'ERROR\t: The data for "%s" got all jacked up, so it got skipped' % file_path
         except KeyboardInterrupt:
             pass
-        except:
-            print 'ERROR\t: Shits broke son, here comes the stack trace:\n', sys.exc_info()[1]
