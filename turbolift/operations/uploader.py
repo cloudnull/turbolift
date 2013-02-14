@@ -96,7 +96,7 @@ class UploadAction:
                     for c in busy_chars:
                         # Fixes Errors with OS X due to no sem_getvalue support
                         if not sys.platform.startswith('darwin'):
-                            qz = 'Number of Jobs Left [ %s ]' % self.filename.qsize()
+                            qz = 'Number of Jobs Left [ %s ]' % work_q.qsize()
                         else:
                             qz = "OS X Can't Count... Please Wait."
                         sys.stdout.write('\rUploading Files - [ %(spin)s ] - %(qsize)s' % { "qsize" : qz, "spin" : c })
