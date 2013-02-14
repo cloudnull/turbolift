@@ -145,7 +145,13 @@ class NovaAuth(object):
             tokenurl = '/%s/tokens' % self.tur_arg['os_version']
             
             conn.request('POST', tokenurl, jsonreq, headers)
-            resp = conn.getresponse(buffering=True)
+
+            # Compatibility with Python 2.6
+            if sys.version_info < (2, 7, 0):
+                resp = conn.getresponse()
+            else:
+                resp = conn.getresponse(buffering=True)
+
             readresp = resp.read()
             json_response = json.loads(readresp)
             conn.close()
@@ -231,7 +237,14 @@ class NovaAuth(object):
             try:
                 for retry in generators.retryloop(attempts=self.tur_arg['error_retry'], delay=5):
                     conn.request('PUT', path, headers=c_headers)
-                    resp = conn.getresponse(buffering=True)
+                    
+
+                    # Compatibility with Python 2.6
+                    if sys.version_info < (2, 7, 0):
+                        resp = conn.getresponse()
+                    else:
+                        resp = conn.getresponse(buffering=True)
+
                     resp.read()
                     status_codes = (resp.status, resp.reason, container_name)
                     if self.tur_arg['os_verbose']:
@@ -262,14 +275,24 @@ class NovaAuth(object):
 
                 # Check to see if the container exists
                 self.conn.request('HEAD', path, headers=c_headers)
-                resp = self.conn.getresponse(buffering=True)
+
+                # Compatibility with Python 2.6
+                if sys.version_info < (2, 7, 0):
+                    resp = self.conn.getresponse()
+                else:
+                    resp = self.conn.getresponse(buffering=True)
                 resp.read()
                 status_codes = (resp.status, resp.reason, container_name)
 
                 # Check that the status was a good one
                 if resp.status == 404:
                     self.conn.request('PUT', path, headers=c_headers)
-                    resp = self.conn.getresponse(buffering=True)
+
+                    # Compatibility with Python 2.6
+                    if sys.version_info < (2, 7, 0):
+                        resp = self.conn.getresponse()
+                    else:
+                        resp = self.conn.getresponse(buffering=True)
                     resp.read()
                     status_codes = (resp.status, resp.reason, container_name)
                     if self.tur_arg['os_verbose']:
@@ -287,7 +310,13 @@ class NovaAuth(object):
                     # Put headers on the object if custom headers were specified
                     if self.tur_arg['object_headers']:
                         self.conn.request('POST', path, headers=c_headers)
-                        resp = self.conn.getresponse(buffering=True)
+
+                        # Compatibility with Python 2.6
+                        if sys.version_info < (2, 7, 0):
+                            resp = self.conn.getresponse()
+                        else:
+                            resp = self.conn.getresponse(buffering=True)
+
                         resp.read()
                         if resp.status >= 300:
                             self.result_exception(resp=resp,
@@ -319,7 +348,13 @@ class NovaAuth(object):
                     # Open our source file
                     with open(file_path, 'rb') as f:
                         self.conn.request('PUT', filepath, body=f, headers=f_headers)
-                    resp = self.conn.getresponse(buffering=True)
+
+                    # Compatibility with Python 2.6
+                    if sys.version_info < (2, 7, 0):
+                        resp = self.conn.getresponse()
+                    else:
+                        resp = self.conn.getresponse(buffering=True)
+
                     resp.read()
 
                     # Give us more data if we requested it
@@ -366,13 +401,24 @@ class NovaAuth(object):
                 filepath = quote(r_loc)
 
                 self.conn.request('HEAD', filepath, headers=f_headers)
-                resp = self.conn.getresponse(buffering=True)
+
+                # Compatibility with Python 2.6
+                if sys.version_info < (2, 7, 0):
+                    resp = self.conn.getresponse()
+                else:
+                    resp = self.conn.getresponse(buffering=True)
+
                 resp.read()                
     
                 if resp.status == 404:
                     with open(file_path, 'rb') as f:
                         self.conn.request('PUT', filepath, body=f, headers=f_headers)
-                    resp = self.conn.getresponse(buffering=True)
+
+                    # Compatibility with Python 2.6
+                    if sys.version_info < (2, 7, 0):
+                        resp = self.conn.getresponse()
+                    else:
+                        resp = self.conn.getresponse(buffering=True)
                     resp.read()
     
                     if self.tur_arg['verbose']:
@@ -394,7 +440,12 @@ class NovaAuth(object):
                     if remotemd5sum != localmd5sum:
                         with open(file_path, 'rb') as f:
                             self.conn.request('PUT', filepath, body=f, headers=f_headers)
-                        resp = self.conn.getresponse(buffering=True)
+
+                        # Compatibility with Python 2.6
+                        if sys.version_info < (2, 7, 0):
+                            resp = self.conn.getresponse()
+                        else:
+                            resp = self.conn.getresponse(buffering=True)
                         resp.read()
 
                         if self.tur_arg['verbose']:
@@ -419,8 +470,14 @@ class NovaAuth(object):
                         # Put headers on the object if custom headers were specified
                         if self.tur_arg['object_headers']:
                             self.conn.request('POST', filepath, headers=f_headers)
-                            resp = self.conn.getresponse(buffering=True)
+
+                            # Compatibility with Python 2.6
+                            if sys.version_info < (2, 7, 0):
+                                resp = self.conn.getresponse()
+                            else:
+                                resp = self.conn.getresponse(buffering=True)
                             resp.read()
+
                             if resp.status >= 300:
                                 self.result_exception(resp=resp,
                                                       headers=self.headers,
