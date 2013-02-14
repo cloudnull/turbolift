@@ -1,3 +1,14 @@
+"""
+License Information
+
+This software has no warranty, it is provided 'as is'. It is your
+responsibility to validate the behavior of the routines and its
+accuracy using the code provided. Consult the GNU General Public
+license for further details (see GNU General Public License).
+
+http://www.gnu.org/licenses/gpl.html
+"""
+
 import time
 import sys
 import os
@@ -56,39 +67,61 @@ def manager_queue(iters):
     return worker_q
 
 
-def worker_proc(job_action, num_jobs, t_args=None):
+def worker_pool(job_action, multipools, num_jobs):
     """
     job_action="What function will be used",
-
-    num_jobs="The number of jobs that will be processed"
-
+    multipools="The number Threads we are working on"
+    num_jobs="The total Number of Jobs we need to do"
     Requires the job_action and num_jobs variables for functionality.
     All threads produced by the worker are limited by the number of concurrency specified by the user.
     The Threads are all made active prior to them processing jobs.
     """
     import multiprocessing
-    # prep the List for actions
-    processes = []
 
     # Enable for multiprocessing Debug
-    #multiprocessing.log_to_stderr(level='DEBUG')
+    # multiprocessing.log_to_stderr(level='DEBUG')
 
-    if num_jobs < (multiprocessing.cpu_count()):
-        num_threads = num_jobs
-    else:
-        num_threads = (multiprocessing.cpu_count())
-    
-    proc_name = '%s-%s-Worker' % (info.__name__, str(job_action).split()[2])
-    
-    for _ in range(num_threads):
-            processes = [multiprocessing.Process(name=proc_name,
-                                                 target=job_action,) for _ in range(num_jobs)]
+    pool = multiprocessing.Pool(processes=multipools)
+    p = pool.imap(job_action, num_jobs)
+    #try:
+    #    results = p.get(0xFFFF)
+    #except KeyboardInterrupt:
+    #    print 'parent received control-c'
+    #    return
 
-    for j in processes:
+def worker_proc(job_action, multipools, work_q):
+    """
+    job_action="What function will be used",
+    multipools="The number Threads we are working on"
+    num_jobs="The total Number of Jobs we need to do"
+    Requires the job_action and num_jobs variables for functionality.
+    All threads produced by the worker are limited by the number of concurrency specified by the user.
+    The Threads are all made active prior to them processing jobs.
+    """
+    import multiprocessing
+
+    # Enable for multiprocessing Debug
+    # multiprocessing.log_to_stderr(level='DEBUG')
+
+    proc_name = 'Turbolift-%s-Worker' % info.VN
+    
+    processes = []
+    for _ in xrange(multipools):
+        j = multiprocessing.Process(name=proc_name,
+                                    target=job_action,
+                                    args=(work_q,))
+        processes.append(j)
+        j.daemon = True
         j.start()
+
+    work_q.join()
+
+    for _ in range(multipools):
+        work_q.put(None)
 
     for j in processes:
         j.join()
+
 
 
 # ACTIVE STATE retry loop

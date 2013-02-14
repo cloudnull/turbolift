@@ -1,13 +1,3 @@
-#!/usr/bin/env python
-
-# - title        : Upload for Swift(Rackspace Cloud Files)
-# - description  : Want to upload a bunch files to cloud files? This will do it.
-# - License      : GPLv3+
-# - author       : Kevin Carter
-# - date         : 2011-11-09
-# - notes        : This is a Swift(Rackspace Cloud Files) Upload Script
-# - Python       : >= 2.6
-
 """
 License Information
 
@@ -20,6 +10,7 @@ http://www.gnu.org/licenses/gpl.html
 """
 
 import os
+import sys
 import operator
 
 class GetDirsAndFiles(object):
@@ -31,35 +22,36 @@ class GetDirsAndFiles(object):
 
     def get_dir_and_files(self):
         """
-        Find all files and folders in all directories, this creates a Dictionary for all directories with a list
+        Find all files and folders in all directories, this creates a dictionary for all directories with a list
         for all of the files found in all of the directories.
         """
+        for source in self.tur_arg['source']:
+            if not source.endswith(os.sep):
+                directorypath = '%s%s' % (source, os.sep)
+            else:
+                directorypath = source
+    
+            for (root, directory, file_n) in os.walk(directorypath, topdown=True, onerror=None, followlinks=False):
+                self.dname.append(root)
 
-        if not self.tur_arg['source'].endswith(os.sep):
-            directorypath = '%s%s' % (self.tur_arg['source'], os.sep)
-        else:
-            directorypath = self.tur_arg['source']
-
-        for (root, directory, file) in os.walk(directorypath, topdown=True, onerror=None, followlinks=False):
-            self.dname.append(root)
-
-        for dir in self.dname:
+        for dir_n in self.dname:
             fs = []
-            for fname in os.listdir(dir):
-                if os.path.isfile('%s/%s' % (dir, fname)) is True:
+            flist = []
+            for fname in os.listdir(dir_n):
+                if os.path.isfile('%s/%s' % (dir_n, fname)) is True:
                     if fname is not None:
-                        fs.append('%s%s%s' % (dir, os.sep, fname))
+                        fs.append('%s%s%s' % (dir_n, os.sep, fname))
 
                     get_file_size = [ [files, os.path.getsize(files)] for files in fs ]
                     sort_size = sorted(get_file_size, key=operator.itemgetter(1), reverse=True)
-                    flist = []
 
                     for file_name, size in sort_size:
-                        flist.append(os.path.normpath(file_name))
+                        flist.append(os.path.realpath(file_name))
 
             if flist:
-                self.cpd[os.path.basename(dir)] = flist
+                self.cpd[os.path.basename(dir_n)] = flist
 
+        # gets rid of an open container name
         base_dir = os.path.basename(directorypath.rstrip(os.sep))
         self.cpd[base_dir] = self.cpd['']
         del self.cpd['']

@@ -1,12 +1,10 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python
 
 # - title        : Upload for Swift(Rackspace Cloud Files)
 # - description  : Want to upload a bunch files to cloud files? This will do it.
 # - License      : GPLv3+
 # - author       : Kevin Carter
 # - date         : 2011-11-09
-# - usage        : python turbolift.local.py
 # - notes        : This is a Swift(Rackspace Cloud Files) Upload Script
 # - Python       : >= 2.6
 

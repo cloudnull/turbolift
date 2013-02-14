@@ -1,13 +1,3 @@
-#!/usr/bin/env python
-
-# - title        : Upload for Swift(Rackspace Cloud Files)
-# - description  : Want to upload a bunch files to cloud files? This will do it.
-# - License      : GPLv3+
-# - author       : Kevin Carter
-# - date         : 2011-11-09
-# - notes        : This is a Swift(Rackspace Cloud Files) Upload Script
-# - Python       : >= 2.6
-
 """
 License Information
 
@@ -32,31 +22,38 @@ class FileNames(object):
         Find all files specified in the "source" path, then create a list for all of files using the full path.
         """
         filelist = []
-        directorypath = self.tur_arg['source']
-
-        if os.path.isdir(directorypath):
-            rootdir = '%s%s' % (os.path.realpath(directorypath), os.sep)
-            for (root, subfolders, files) in os.walk(rootdir.encode('utf-8')):
-                for file in files:
-                    filelist.append(os.path.join(root.encode('utf-8'), file.encode('utf-8')))
-
-            if self.tur_arg['debug']:
-                print '\n', rootdir, '\n'
-
-            get_file_size = [ [files, os.path.getsize(files)] for files in filelist ]
-            sort_size = sorted(get_file_size, key=operator.itemgetter(1), reverse=True)
-            files = []
-
-            for file_name, size in sort_size:
-                files.append(file_name)
-            return files
-
-        elif not os.path.isdir(directorypath):
-            filelist.append(os.path.realpath(directorypath.encode('utf-8')))
-
-            if self.tur_arg['debug']:
-                print 'File Name\t:', filelist
-            return filelist
+        final_files = []
+        
+        if self.tur_arg['archive']:
+            directory_list = self.tur_arg['source']
         else:
-            print 'ERROR\t: path %s does not exist, is not a directory, or is a broken symlink' % directorypath
-            sys.exit('MESSAGE\t: Try Again but this time with a valid directory path')
+            directory_list = [self.tur_arg['source']]
+
+        for directorypath in directory_list:
+            try:
+                if os.path.isdir(directorypath):
+                    rootdir = '%s%s' % (os.path.realpath(directorypath), os.sep)
+                    for (root, subfolders, files) in os.walk(rootdir.encode('utf8')):
+                        for fl in files:
+                            filelist.append(os.path.join(root.encode('utf8'), fl.encode('utf8')))
+        
+                    get_file_size = [[files, os.path.getsize(files)] for files in filelist]
+                    sort_size = sorted(get_file_size, key=operator.itemgetter(1), reverse=True)
+        
+                    for file_name, size in sort_size:
+                        final_files.append(file_name)
+        
+                    if self.tur_arg['debug']:
+                        print 'File List\t: %s' % files
+
+                elif not os.path.isdir(directorypath):
+                    final_files.append(os.path.realpath(directorypath.encode('utf8')))
+        
+                    if self.tur_arg['debug']:
+                        print 'File List\t: %s' % files
+                else:
+                    print 'ERROR\t: path %s does not exist, is not a directory, or is a broken symlink' % directorypath
+                    sys.exit('MESSAGE\t: Try Again but this time with a valid directory path')
+            except Exception, e:
+                sys.exit('Died for some reason... and here it is', e)
+        return final_files
