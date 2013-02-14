@@ -29,7 +29,7 @@ class NovaAuth(object):
         self.work_q = work_q
 
 
-    def result_exception(self, resp, headers, authurl, jsonreq=None):
+    def result_exception(self, resp, headers, authurl, jsonreq=None, file_path=None):
         """
         If we encounter an exception in our upload, we will look at how we can attempt
         to resolve the exception.
@@ -59,6 +59,15 @@ class NovaAuth(object):
                 self.connection_prep()
             elif resp.status == 502:
                 self.connection_prep(http=True)
+            elif resp.status >= 500:
+                print('FAILURE %s ==> REQUEST: %s %s %s %s' % (resp.status,
+                                                               resp.reason,
+                                                               authurl))
+                if file_path is not None:
+                    print('Placing %s back into the queue after the FAILURE' % file_path)
+                    self.work_q.put(file_path)
+                self.conn.close()
+                self.connection_prep()
             else:
                 print('NOVA-API FAILURE -> REQUEST: %s %s %s %s' % (resp.status,
                                                                     resp.reason,
@@ -164,7 +173,7 @@ class NovaAuth(object):
             conn.close()
     
             # Check that the status was a good one
-            if resp.status == 501:
+            if resp.status >= 500:
                 print('Attempting HTTP connection')
                 conn = httplib.HTTPConnection(url)
                 retry()
@@ -315,7 +324,12 @@ class NovaAuth(object):
                         self.connection_prep()
                         retry()
                     resp.read()
-
+                    if resp.status >= 300 or resp.status == None:
+                        self.result_exception(resp=resp,
+                                              headers=c_headers,
+                                              authurl=self.url,
+                                              jsonreq=path)
+                        retry()
                     status_codes = (resp.status, resp.reason, container_name)
                     if self.tur_arg['os_verbose']:
                         print('CREATING CONTAINER: %s %s %s' % status_codes)
@@ -344,7 +358,6 @@ class NovaAuth(object):
                             self.connection_prep()
                             retry()
                         resp.read()
-
                         if resp.status >= 300:
                             self.result_exception(resp=resp,
                                                   headers=c_headers,
@@ -382,10 +395,18 @@ class NovaAuth(object):
                             resp = self.conn.getresponse()
                         else:
                             resp = self.conn.getresponse(buffering=True)
-                        resp.read()
                     except httplib.BadStatusLine:
                         self.conn.close()
                         self.connection_prep()
+                        retry()
+                    resp.read()
+                    # Check that the status was a good one
+                    if resp.status >= 300 or resp.status == None:
+                        self.result_exception(resp=resp,
+                                              headers=f_headers,
+                                              authurl=self.url,
+                                              jsonreq=filepath,
+                                              file_path=file_path)
                         retry()
 
                     # Give us more data if we requested it
@@ -393,14 +414,6 @@ class NovaAuth(object):
                         print 'INFO\t: %s %s %s' % (resp.status, resp.reason, file_name)
                         if self.tur_arg['debug']:
                             print 'MESSAGE\t: Upload path = %s ==> %s' % (file_path, filepath)
-    
-                    # Check that the status was a good one
-                    if resp.status >= 300 or resp.status == None:
-                        self.result_exception(resp=resp,
-                                              headers=f_headers,
-                                              authurl=self.url,
-                                              jsonreq=filepath)
-                        retry()
 
                 except Exception, e:
                     print e
@@ -463,14 +476,22 @@ class NovaAuth(object):
                             self.connection_prep()
                             retry()
                         resp.read()
-        
+                        if resp.status >= 300 or resp.status == None:
+                            self.result_exception(resp=resp,
+                                                  headers=f_headers,
+                                                  authurl=filepath,
+                                                  jsonreq=r_loc,
+                                                  file_path=file_path)
+                            retry()
+
                         if self.tur_arg['verbose']:
                             print 'INFO\t: %s %s %s' % (resp.status, resp.reason, file_name)
                     elif resp.status >= 300 or resp.status == None:
                         self.result_exception(resp=resp,
                                               headers=f_headers,
                                               authurl=filepath,
-                                              jsonreq=r_loc)
+                                              jsonreq=r_loc,
+                                              file_path=file_path)
                         retry()
                     else:
                         remotemd5sum = resp.getheader('etag')
@@ -496,7 +517,14 @@ class NovaAuth(object):
                                 self.connection_prep()
                                 retry()
                             resp.read()
-    
+                            if resp.status >= 300:
+                                self.result_exception(resp=resp,
+                                                      headers=f_headers,
+                                                      authurl=filepath,
+                                                      jsonreq=r_loc,
+                                                      file_path=file_path)
+                                retry()
+
                             if self.tur_arg['verbose']:
                                 proc_dict = {'lmd5' : localmd5sum,
                                              'rmd5' : remotemd5sum,
@@ -505,13 +533,6 @@ class NovaAuth(object):
                                              'sjf' : file_name }
                                 print('MESSAGE\t: CheckSumm Mis-Match %(lmd5)s != %(rmd5)s\n'
                                       '\t  File Upload : %(rs)s %(rr)s %(sjf)s' % proc_dict )
-        
-                            if resp.status >= 300:
-                                self.result_exception(resp=resp,
-                                                      headers=f_headers,
-                                                      authurl=filepath,
-                                                      jsonreq=r_loc)
-                                retry()
                         else:
                             if self.tur_arg['verbose']:
                                 print 'MESSAGE\t: CheckSum Match', localmd5sum
@@ -531,12 +552,12 @@ class NovaAuth(object):
                                     self.connection_prep()
                                     retry()
                                 resp.read()
-    
                                 if resp.status >= 300:
                                     self.result_exception(resp=resp,
                                                           headers=self.headers,
                                                           authurl=filepath,
-                                                          jsonreq=r_loc)
+                                                          jsonreq=r_loc,
+                                                          file_path=file_path)
                                     retry()
                 except Exception, e:
                     print e
