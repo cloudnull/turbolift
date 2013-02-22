@@ -244,8 +244,7 @@ class GetArguments:
         set_args['defaultcc'] = set_args['cc']
 
         default_h = {'Connection':'Keep-alive',
-                     'X-Auth-Token':None,
-                     'Content-type':'application/json'}
+                     'X-Auth-Token':None}
 
         if set_args['base_headers']:
             added_h = dict(kv.split('=') for kv in set_args['base_headers'])
