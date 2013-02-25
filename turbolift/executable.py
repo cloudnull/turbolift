@@ -47,6 +47,9 @@ def run_turbolift():
         
         elif tur_arg['upload'] or tur_arg['tsync']:
             ops.file_upload()
+            
+        elif tur_arg['download'] or tur_arg['delete']:
+            ops.delete_download()
 
     except KeyboardInterrupt:
         print 'Caught KeyboardInterrupt, I\'M ON FIRE!!!!'

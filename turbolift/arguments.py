@@ -64,13 +64,20 @@ class GetArguments:
                               action='store_true',
                               default=False,
                               help='Set CDN Logging on a Container')
-        
+
+        del_args = argparse.ArgumentParser(add_help=False)
+        del_args.add_argument('--save-container',
+                              action='store_true',
+                              default=None,
+                              help=('This will allow the container to remain'
+                                    'untouched and intact, but only the container.'))
+
         shared_args = argparse.ArgumentParser(add_help=False)
         shared_args.add_argument('-c', '--container',
                                  metavar='<name>',
                                  required=True,
                                  help='Specifies the Container')
-        
+
         source_args = argparse.ArgumentParser(add_help=False)
         source_args.add_argument('-s',
                                  '--source',
@@ -96,7 +103,9 @@ class GetArguments:
         upaction.set_defaults(con_per_dir=None,
                               tsync=None,
                               archive=None,
-                              upload=True)
+                              upload=True,
+                              download=None,
+                              delete=None)
 
         taction = subparser.add_parser('tsync',
                                        parents=[source_args, shared_args, cdn_args],
@@ -105,7 +114,9 @@ class GetArguments:
         taction.set_defaults(con_per_dir=None,
                              upload=None,
                              archive=None,
-                             tsync=True)
+                             tsync=True,
+                             download=None,
+                             delete=None)
 
         archaction = subparser.add_parser('archive',
                                           parents=[multi_source_args, shared_args, cdn_args],
@@ -113,7 +124,9 @@ class GetArguments:
         archaction.set_defaults(con_per_dir=None,
                                 upload=None,
                                 tsync=None,
-                                archive=True)
+                                archive=True,
+                                download=None,
+                                delete=None)
 
         cpdaction = subparser.add_parser('con-per-dir',
                                          parents=[multi_source_args, cdn_args],
@@ -122,7 +135,30 @@ class GetArguments:
         cpdaction.set_defaults(con_per_dir=True,
                                upload=None,
                                tsync=None,
-                               archive=None,)
+                               archive=None,
+                               download=None,
+                               delete=None)
+        dwnaction = subparser.add_parser('download',
+                                         parents=[source_args, shared_args],
+                                         help=('Downloads everything from a given container creating a '
+                                               'target Directory if it does not exist'))
+        dwnaction.set_defaults(con_per_dir=None,
+                               upload=None,
+                               tsync=None,
+                               archive=None,
+                               download=True,
+                               delete=None)
+        delaction = subparser.add_parser('delete',
+                                         parents=[del_args, shared_args],
+                                         help=('Deletes everything in a given container '
+                                               'Including the container.'))
+        delaction.set_defaults(con_per_dir=None,
+                               upload=None,
+                               tsync=None,
+                               archive=None,
+                               download=None,
+                               delete=True)
+
 
         # Base Authentication Argument Set
         authgroup.add_argument('-u',
@@ -193,8 +229,8 @@ class GetArguments:
                                metavar='[ATTEMPTS]',
                                type=int,
                                default=5,
-                               help=('This option sets the number of attempts %(prog)s will attempt'
-                                     'an operation before quiting. The default is 5. This is useful if'
+                               help=('This option sets the number of attempts %(prog)s will attempt '
+                                     'an operation before quiting. The default is 5. This is useful if '
                                      'you have a spotty network or ISP.'))
         optionals.add_argument('--cc',
                                metavar='[CONCURRENCY]',
