@@ -43,7 +43,6 @@ Installation :
     python setup.py install
 
 
-
 Python Modules Needed, for full operation :
   NOTE : All of the modules needed should be part of the "standard" Library as of Python 2.6.  The setup file will
   install the two needed dependencies which may not have made it onto your system.
@@ -52,58 +51,68 @@ Python Modules Needed, for full operation :
 Application Usage
 -----------------
 
-Here is the Basic Usage::
+Here is the Basic Usage
 
-    turbolift \
-    -u [CLOUD-USERNAME] \
-    -a [CLOUD-API-KEY] \
-    -u [CLOUD-AUTH-URL] \
-    -e [DATACENTER-ENDPOINT] \
-    [POSITIONAL-ARGUMENT] -s [PATH-TO-DIRECTORY] -c [CONTAINER-NAME]
+    .. code-block:: bash
+
+        turbolift -u [CLOUD-USERNAME] -a [CLOUD-API-KEY] -u [CLOUD-AUTH-URL] -e [DATACENTER-ENDPOINT] [POSITIONAL-ARGUMENT] -s [PATH-TO-DIRECTORY] -c [CONTAINER-NAME]
 
 Run ``turbolift -h`` for a full list of available flags and operations
 
 
 Authentication Arguments:
-  :user: Username for the Cloud Account
-  :apikey: APIKEY for the Cloud Account
-  :password: Password for the Cloud Account
-  :region: Specify an Endpoint
-  :auth-url: Specify the Auth URL
-  :rax-auth: Specify a Rackspace Cloud Auth-URL and Endpoint [ dfw, ord, lon ].  At this time their is no ability for accounts to uploaded to both US and UK data centers.
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  - ``os-user`` | Username for the Cloud Account
+  - ``os-apikey`` | APIKEY for the Cloud Account
+  - ``os-password`` | Password for the Cloud Account
+  - ``os-region`` | Specify an Endpoint
+  - ``os-auth-url`` | Specify the Auth URL
+  - ``os-rax-auth`` | Specify a Rackspace Cloud Auth-URL and Endpoint [ dfw, ord, lon ].  At this time their is no ability for accounts to uploaded to both US and UK data centers.
 
 
 Positional Arguments:
-  :upload: Use the Upload Function for a local Source.
-  :tsync: Use the TSync function for a local Source. This function Operates Similar to RSYNC; uploading files that are not found currently on Cloud Files. This function validates the md5 checksum on the local system against what is found in Cloud Files prior to upload and if the checksums are different the local file will be uploaded.
-  :archive: Compress files or directories into a single archive. Multiple Source Directories can be added to a single Archive.
-  :con-per-dir: Uploads everything from a given source creating a single Container per Directory. Not as fast as other methods for uploading.
+~~~~~~~~~~~~~~~~~~~~~
+
+  - ``upload`` | Use the Upload Function for a local Source.
+  - ``tsync`` | Use the TSync function for a local Source. This function Operates Similar to RSYNC; uploading files that are not found currently on Cloud Files. This function validates the md5 checksum on the local system against what is found in Cloud Files prior to upload and if the checksums are different the local file will be uploaded.
+  - ``archive`` | Compress files or directories into a single archive. Multiple Source Directories can be added to a single Archive.
+  - ``con-per-dir`` | Uploads everything from a given source creating a single Container per Directory. Not as fast as other methods for uploading.
+  - ``delete`` | Deletes all of the files that are found in a container, This will also delete the container by default.
+  - ``download`` | Downloads all of the files in a container to a provided source. This also downloads all of the pesudo directories and its contents, while preserving the structure. 
 
 
 Appliction Flags can be passed to the program on the command line:
-  :container: Cloud Files Container that we are uploading too. If the container is not already in your Cloud Files repository the container will be created.
-  :source: Specify the Local Content to be uploaded.
-  :no-cleanup: [OPTIONAL] [ARCHIVE ONLY] Used to keep the compressed Archive after Upload. The archive will be left in the Users Home Folder
-  :tar-name: [OPTIONAL] [ARCHIVE ONLY] Name To Use for the Archive
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+  - ``container`` | Cloud Files Container that we are uploading too. If the container is not already in your Cloud Files repository the container will be created.
+  - ``source`` | Specify the Local Content to be uploaded.
+  - ``no-cleanup`` | [OPTIONAL] [ARCHIVE ONLY] Used to keep the compressed Archive after Upload. The archive will be left in the Users Home Folder
+  - ``tar-name`` | [OPTIONAL] [ARCHIVE ONLY] Name To Use for the Archive
 
 
 Optional Arguments:
-  :error-retry: Allows for a retry integer to be set, Default is 5
-  :base-headers: Allows for the use of customer heads as the base Header
-  :container-headers: Allows for Metadata to be set on Container(s)
-  :object-headers: Allows for Metadata to be set on Object(s)
-  :cc: File Upload Concurrency
-  :internal: Use ServiceNet Endpoint for Cloud Files
-  :verbose: Shows Progress While Uploading
-  :debug: Turn up verbosity to over 9000
-  :help: Show helpful information on the script and its available functions
-  :version: Gives Version Number
+~~~~~~~~~~~~~~~~~~~
+
+  - ``error-retry`` | Allows for a retry integer to be set, Default is 5
+  - ``base-headers`` | Allows for the use of customer heads as the base Header
+  - ``container-headers`` | Allows for Metadata to be set on Container(s)
+  - ``object-headers`` | Allows for Metadata to be set on Object(s)
+  - ``cc`` | Operational Concurrency
+  - ``internal`` | Use ServiceNet Endpoint for Cloud Files
+  - ``verbose`` | Shows Progress While Uploading
+  - ``debug`` | Turn up verbosity to over 9000
+  - ``help`` | Show helpful information on the script and its available functions
+  - ``version`` | Gives Version Number
 
 
 CDN Arguments:
-  :cdn-enabled: Allows for container(s) to become CDN Enabled
-  :cdn-ttl: Provides for the TTL, default it 72 hours
-  :cdn-logs: Enables the Access Logs for the CDN Enabled Container, Default is False
+~~~~~~~~~~~~~~
+
+  - ``cdn-enabled`` | Allows for container(s) to become CDN Enabled
+  - ``cdn-ttl`` | Provides for the TTL, default it 72 hours
+  - ``cdn-logs`` | Enables the Access Logs for the CDN Enabled Container, Default is False
+
 
 Environment Variables
 ---------------------
@@ -130,6 +139,7 @@ The application has been tested on :
   * Mac OS X 10.8
   * CentOS[RHEL] 6
 
+
 Bench Marks
 -----------
 
@@ -148,7 +158,8 @@ Definitions and Information:
 
 Command Used For Tests::
 
-    time turbolift --cc 150 --rax-auth $location upload --source /tmp/uptest/ --container $location-Test-$num
+    time turbolift --cc 150 --os-rax-auth $location upload --source /tmp/uptest/ --container $location-Test-$num
+
 
 **Note that the username and api authentication key have been exported into local environment variables**
 
