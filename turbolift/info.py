@@ -15,7 +15,7 @@ __email__ = "kevin@bkintegration.com"
 __copyright__ = "2013 All Rights Reserved"
 __license__ = "GPLv3+"
 __date__ = "2013-02-14"
-__version__ = "1.4.1"
+__version__ = "1.4.2"
 __status__ = "Production"
 __name__ = "Turbolift"
 
