@@ -121,7 +121,8 @@ class CloudFilesActions:
                 # If not verbose or Debug mode, show me a nice spinner
                 output_types = (self.args['verbose'],
                                 self.args['debug'],
-                                self.args['os_verbose'])
+                                self.args['os_verbose'],
+                                self.args['quiet'])
                 
                 if not any(output_types):
                     busy_chars = ['|','/','-','\\']

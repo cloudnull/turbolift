@@ -100,10 +100,13 @@ Optional Arguments:
   - ``object-headers`` | Allows for Metadata to be set on Object(s)
   - ``cc`` | Operational Concurrency
   - ``internal`` | Use ServiceNet Endpoint for Cloud Files
+  - ``quiet`` | Makes Turbolift Quiet
+  - ``system-config`` | Allows Turbolift to use a config file for it's credentials. The file MUST be set to permissions 400 or 600
   - ``verbose`` | Shows Progress While Uploading
   - ``debug`` | Turn up verbosity to over 9000
   - ``help`` | Show helpful information on the script and its available functions
   - ``version`` | Gives Version Number
+  
 
 
 CDN Arguments:
@@ -112,6 +115,17 @@ CDN Arguments:
   - ``cdn-enabled`` | Allows for container(s) to become CDN Enabled
   - ``cdn-ttl`` | Provides for the TTL, default it 72 hours
   - ``cdn-logs`` | Enables the Access Logs for the CDN Enabled Container, Default is False
+
+
+Environment Variables
+---------------------
+
+Turbolift can be set to use a Configuration file for easy integration into an with an account or multiple accounts. If you use a configuration file you will need to set the following values, however any parsable input allowed in Turbolift can be used in the configuration file::
+
+    [BasicConfiguration]
+    os_user = Your_Username
+    os_rax_auth = Your_RAX_DC
+    os_apikey  = Your_API_Key
 
 
 Environment Variables

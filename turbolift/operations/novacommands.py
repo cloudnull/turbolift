@@ -169,13 +169,14 @@ class NovaAuth(object):
         for retry in generators.retryloop(attempts=self.tur_arg['error_retry'],
                                           timeout=960,
                                           delay=5):
+
             conn = httplib.HTTPSConnection(url)
     
             if self.tur_arg['os_verbose']:
                 print('JSON REQUEST: %s' % jsonreq)
                 conn.set_debuglevel(1)
     
-            headers = {'Content-Type': 'application/json'}
+            headers = {'Content-Type':'application/json'}
             tokenurl = '/%s/tokens' % self.tur_arg['os_version']
             
             conn.request('POST', tokenurl, jsonreq, headers)

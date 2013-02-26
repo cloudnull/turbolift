@@ -243,6 +243,17 @@ class GetArguments:
                                      'Turbolift will sort the files by size. If you have a lot '
                                      'of files this may be a time consuming operation. This flag will '
                                      'disable that function.'))
+        optionals.add_argument('--system-config',
+                               metavar='[CONFIG-FILE]',
+                               type=str,
+                               default=None,
+                               help=('Path to your Configuration file. This is '
+                                     'an optional argument used to spec '
+                                     'credentials. File MUST use permissions '
+                                     '400 or 600'))
+        optionals.add_argument('--quiet',
+                               action='store_true',
+                               help='Make %(prog)s Shut the hell up')
         optionals.add_argument('--verbose',
                                action='store_true',
                                help='Be verbose While Uploading')
@@ -272,9 +283,18 @@ class GetArguments:
                                  action='append',
                                  help='These headers only effect Containers')
 
+        if len(sys.argv) == 1:
+            parser.print_help()
+            sys.exit('Give me something to do and I will do it')
+
         # Parse the arguments
         args = parser.parse_args()
         set_args = vars(args)
+
+        # Parse Config File
+        if set_args['system_config']:
+            from turbolift.operations import systemconfig
+            set_args = (systemconfig.ConfigureationSetup(set_args).config_args())
 
         # Interperate the Parsed Arguments
         set_args['defaultcc'] = set_args['cc']
@@ -303,7 +323,7 @@ class GetArguments:
 
         if not set_args['os_user']:
             parser.print_help()
-            sys.exit('\nNo Username was provided, use [--os-username]\n')
+            sys.exit('\nNo Username was provided, use [--os-user]\n')
             
         if not (set_args['os_apikey'] or set_args['os_password']):
             parser.print_help()
