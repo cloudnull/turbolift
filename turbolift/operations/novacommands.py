@@ -312,6 +312,9 @@ class NovaAuth(object):
                 retry()
             resp = resp_info[0]
             resp.read()
+            # Check that the status was a good one
+            if resp.status == 404:
+                print('Container Not Found')
             if resp.status >= 300 or resp.status == None:
                 self.result_exception(resp=resp,
                                       headers=c_headers,

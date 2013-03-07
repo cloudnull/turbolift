@@ -249,8 +249,7 @@ class GetArguments:
                                default=None,
                                help=('Path to your Configuration file. This is '
                                      'an optional argument used to spec '
-                                     'credentials. File MUST use permissions '
-                                     '400 or 600'))
+                                     'credentials.'))
         optionals.add_argument('--quiet',
                                action='store_true',
                                help='Make %(prog)s Shut the hell up')
@@ -324,7 +323,7 @@ class GetArguments:
         if not set_args['os_user']:
             parser.print_help()
             sys.exit('\nNo Username was provided, use [--os-user]\n')
-            
+
         if not (set_args['os_apikey'] or set_args['os_password']):
             parser.print_help()
             sys.exit('\nNo API Key or Password was provided, use [--os-apikey]\n')
