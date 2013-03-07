@@ -16,13 +16,7 @@ class ConfigureationSetup(object):
             confpath = self.config_file
             if os.path.isfile(os.path.realpath(confpath)):
                 mode = oct(stat.S_IMODE(os.stat(confpath).st_mode))
-                #m_dn = int(mode)
-                #if m_dn == 0600 or m_dn == 0400:
-                #    print('Config "OK"')
-                #else:
-                #    print mode
-                #    sys.exit('To use a configuration file the permissions '
-                #                    'need to be "0600" or "0400"')
+
 
     def config_args(self):
         # setup the parser to for safe config parsing with a no value argument
