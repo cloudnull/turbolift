@@ -2,7 +2,7 @@ import sys
 import os
 import ConfigParser
 import codecs
-import stat
+
 
 class ConfigureationSetup(object):
     def __init__(self, args):
@@ -11,33 +11,34 @@ class ConfigureationSetup(object):
         self.check_perms()
 
     def check_perms(self):
-        # If config file is specified, check that it exists and is the proper permissions
+        # If config file is specified, check that it exists
         if self.config_file:
             confpath = self.config_file
-            if os.path.isfile(os.path.realpath(confpath)):
-                mode = oct(stat.S_IMODE(os.stat(confpath).st_mode))
-
+            if not os.path.isfile(os.path.realpath(confpath)):
+                print('File "%s" was not found'
+                      % os.path.realpath(confpath))
 
     def config_args(self):
         # setup the parser to for safe config parsing with a no value argument
-        if sys.version_info > (2, 6, 0):
+        # Added per - https://github.com/cloudnull/turbolift/issues/2
+        if sys.version_info >= (2, 7, 0):
             parser = ConfigParser.SafeConfigParser(allow_no_value=True)
         else:
             parser = ConfigParser.SafeConfigParser()
 
         # Load the configuration file for parsing
-        with codecs.open(self.config_file, 'r', encoding='utf-8') as f:
-            parser.readfp(f)
+        with codecs.open(self.config_file, 'r', encoding='utf-8') as cfg:
+            parser.readfp(cfg)
 
         # Ensure that there is atleast one section in the configuration file
         if len(parser.sections()) < 1:
-            sys.exit('No sections were placed into the configuration file as such I have quit.')
+            sys.exit('No sections were placed into the configuration file as'
+                     ' such I have quit.')
         else:
-            # Parse all sections for the configuration file and load them into the shared args
+            # Parse all sections for the configuration file and load them
             for section_name in parser.sections():
                 for name, value in parser.items(section_name):
                     name = name.encode('utf8')
                     value = value.encode('utf8')
                     self.args.update({name:value})
-
         return self.args
