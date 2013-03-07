@@ -26,7 +26,10 @@ class ConfigureationSetup(object):
 
     def config_args(self):
         # setup the parser to for safe config parsing with a no value argument
-        parser = ConfigParser.SafeConfigParser(allow_no_value=True)
+        if sys.version_info > (2, 6, 0):
+            parser = ConfigParser.SafeConfigParser(allow_no_value=True)
+        else:
+            parser = ConfigParser.SafeConfigParser()
 
         # Load the configuration file for parsing
         with codecs.open(self.config_file, 'r', encoding='utf-8') as f:
