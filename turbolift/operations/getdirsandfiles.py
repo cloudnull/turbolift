@@ -1,13 +1,12 @@
-"""
-License Information
-
-This software has no warranty, it is provided 'as is'. It is your
-responsibility to validate the behavior of the routines and its
-accuracy using the code provided. Consult the GNU General Public
-license for further details (see GNU General Public License).
-
-http://www.gnu.org/licenses/gpl.html
-"""
+# ==============================================================================
+# Copyright [2013] [Kevin Carter]
+# License Information :
+# This software has no warranty, it is provided 'as is'. It is your
+# responsibility to validate the behavior of the routines and its accuracy using
+# the code provided. Consult the GNU General Public license for further details
+# (see GNU General Public License).
+# http://www.gnu.org/licenses/gpl.html
+# ==============================================================================
 
 import os
 import sys
@@ -22,31 +21,38 @@ class GetDirsAndFiles(object):
 
     def get_dir_and_files(self):
         """
-        Find all files and folders in all directories, this creates a dictionary for all directories with a list
-        for all of the files found in all of the directories.
+        Find all files and folders in all directories, this creates a
+        dictionary for all directories with a list for all of the files
+        found in all of the directories.
         """
         for source in self.tur_arg['source']:
             if not source.endswith(os.sep):
                 directorypath = '%s%s' % (source, os.sep)
             else:
                 directorypath = source
-    
-            for (root, directory, file_n) in os.walk(directorypath, topdown=True, onerror=None, followlinks=False):
+            for (root, directory, file_n) in os.walk(directorypath,
+                                                     topdown=True,
+                                                     onerror=None,
+                                                     followlinks=False):
                 self.dname.append(root)
 
         for dir_n in self.dname:
-            fs = []
+            _fs = []
             flist = []
             for fname in os.listdir(dir_n):
                 if os.path.isfile('%s/%s' % (dir_n, fname)) is True:
                     if fname is not None:
-                        fs.append('%s%s%s' % (dir_n, os.sep, fname))
+                        _fs.append('%s%s%s' % (dir_n, os.sep, fname))
 
                     if self.tur_arg['no_sort']:
-                        flist = filelist
+                        flist = _fs
                     else:
-                        get_file_size = [ [files, os.path.getsize(files)] for files in fs ]
-                        sort_size = sorted(get_file_size, key=operator.itemgetter(1), reverse=True)
+                        get_file_size = [[files,
+                                          os.path.getsize(files)]
+                            for files in _fs]
+                        sort_size = sorted(get_file_size,
+                                           key=operator.itemgetter(1),
+                                           reverse=True)
 
                         for file_name, size in sort_size:
                             flist.append(os.path.realpath(file_name))

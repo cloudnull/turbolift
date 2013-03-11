@@ -1,53 +1,53 @@
-"""
-License Information
-
-This software has no warranty, it is provided 'as is'. It is your 
-responsibility to validate the behavior of the routines and its 
-accuracy using the code provided. Consult the GNU General Public 
-license for further details (see GNU General Public License).
-
-http://www.gnu.org/licenses/gpl.html
-"""
+# ==============================================================================
+# Copyright [2013] [Kevin Carter]
+# License Information :
+# This software has no warranty, it is provided 'as is'. It is your
+# responsibility to validate the behavior of the routines and its accuracy using
+# the code provided. Consult the GNU General Public license for further details
+# (see GNU General Public License).
+# http://www.gnu.org/licenses/gpl.html
+# ==============================================================================
 
 import argparse
 import sys
 import os
 
 from turbolift import info
-from turbolift.operations import generators
 
-class GetArguments:
+
+class GetArguments(object):
     """
     Class to get all of the needed arguments for Turbolift
     """
-
-    #noinspection PyUnusedLocal
-    def __init__(self):
-        """
-        Init for class
-        """
-        #noinspection PyMethodFirstArgAssignment
-        self = None
-    
     def get_values(self):
         """
         Look for flags, these are all of the available options for Turbolift.
-        """        
-        parser = argparse.ArgumentParser(formatter_class=lambda prog: \
-                                         argparse.HelpFormatter(prog, max_help_position=50),
+        """
+        parser = argparse.ArgumentParser(
+            formatter_class=lambda prog:
+                argparse.HelpFormatter(prog, max_help_position=50),
                                          usage='%(prog)s',
-                                         description='Uploads lots of Files Quickly Cloud Files %(prog)s',
+                                         description=('Uploads lots of Files'
+                                                      ' Quickly Cloud Files'
+                                                      ' %(prog)s'),
                                          epilog=info.VINFO)
 
         # Setup for the positional Arguments
-        subparser = parser.add_subparsers(title='Infrastructure Spawner', metavar='<Commands>\n')
-        authgroup = parser.add_argument_group('Authentication', 'Authentication against the OpenStack API')
-        optionals = parser.add_argument_group('Additional Options', 'Things you might want to add to your operation')
+        subparser = parser.add_subparsers(title='Infrastructure Spawner',
+                                          metavar='<Commands>\n')
+        authgroup = parser.add_argument_group('Authentication',
+                                              'Authentication against'
+                                              ' the OpenStack API')
+        optionals = parser.add_argument_group('Additional Options',
+                                              'Things you might want to'
+                                              ' add to your operation')
         headers = parser.add_argument_group('Optional Header Options',
-                                            'Headers are Parsed as KEY=VALUE arguments. \
-                                            This is useful when setting a custom header \
-                                            when using a CDN URL or other HTTP action which \
-                                            may rely on Headers. Here are the default headers')
+                                            'Headers are Parsed as KEY=VALUE'
+                                            ' arguments. This is useful when'
+                                            ' setting a custom header when'
+                                            ' using a CDN URL or other HTTP'
+                                            ' action which may rely on Headers.'
+                                            ' Here are the default headers')
 
         # Adds a parent set of arguments that are shared between most functions
         cdn_args = argparse.ArgumentParser(add_help=False)
@@ -70,7 +70,8 @@ class GetArguments:
                               action='store_true',
                               default=None,
                               help=('This will allow the container to remain'
-                                    'untouched and intact, but only the container.'))
+                                    ' untouched and intact, but only the'
+                                    ' container.'))
 
         shared_args = argparse.ArgumentParser(add_help=False)
         shared_args.add_argument('-c', '--container',
@@ -91,15 +92,20 @@ class GetArguments:
                                        default=[],
                                        action='append',
                                        required=True,
-                                       help=('Local content to be uploaded, this can be specified '
-                                             'as many times as need be. The "Source" can be a directory '
-                                             'Path or File'))
+                                       help=('Local content to be uploaded,'
+                                             ' this can be specified as many'
+                                             ' times as need be. The "Source"'
+                                             ' can be a directory Path or'
+                                             ' File'))
 
         # All of the positional Arguments
         upaction = subparser.add_parser('upload',
-                                        parents=[source_args, shared_args, cdn_args],
-                                        help=('Upload Action, Type of upload to be performed as well as '
-                                              'Source and Destination'))
+                                        parents=[source_args,
+                                                 shared_args,
+                                                 cdn_args],
+                                        help=('Upload Action, Type of upload to'
+                                              ' be performed as well as'
+                                              ' Source and Destination'))
         upaction.set_defaults(con_per_dir=None,
                               tsync=None,
                               archive=None,
@@ -108,9 +114,12 @@ class GetArguments:
                               delete=None)
 
         taction = subparser.add_parser('tsync',
-                                       parents=[source_args, shared_args, cdn_args],
-                                       help=('T-Sync Action, Type of upload to be performed as well as'
-                                             'Source and Destination'))
+                                       parents=[source_args,
+                                                shared_args,
+                                                cdn_args],
+                                       help=('T-Sync Action, Type of upload to'
+                                             ' be performed as well as'
+                                             ' Source and Destination'))
         taction.set_defaults(con_per_dir=None,
                              upload=None,
                              archive=None,
@@ -119,8 +128,11 @@ class GetArguments:
                              delete=None)
 
         archaction = subparser.add_parser('archive',
-                                          parents=[multi_source_args, shared_args, cdn_args],
-                                          help='Compress files or directories into a single archive')
+                                          parents=[multi_source_args,
+                                                   shared_args,
+                                                   cdn_args],
+                                          help=('Compress files or directories'
+                                                ' into a single archive'))
         archaction.set_defaults(con_per_dir=None,
                                 upload=None,
                                 tsync=None,
@@ -130,8 +142,9 @@ class GetArguments:
 
         cpdaction = subparser.add_parser('con-per-dir',
                                          parents=[multi_source_args, cdn_args],
-                                         help=('Uploads everything from a given source creating a '
-                                               'single Container per Directory'))
+                                         help=('Uploads everything from a'
+                                               ' given source creating a single'
+                                               ' Container per Directory'))
         cpdaction.set_defaults(con_per_dir=True,
                                upload=None,
                                tsync=None,
@@ -140,8 +153,10 @@ class GetArguments:
                                delete=None)
         dwnaction = subparser.add_parser('download',
                                          parents=[source_args, shared_args],
-                                         help=('Downloads everything from a given container creating a '
-                                               'target Directory if it does not exist'))
+                                         help=('Downloads everything from a'
+                                               ' given container creating a'
+                                               ' target Directory if it does'
+                                               ' not exist'))
         dwnaction.set_defaults(con_per_dir=None,
                                upload=None,
                                tsync=None,
@@ -150,8 +165,9 @@ class GetArguments:
                                delete=None)
         delaction = subparser.add_parser('delete',
                                          parents=[del_args, shared_args],
-                                         help=('Deletes everything in a given container '
-                                               'Including the container.'))
+                                         help=('Deletes everything in a given'
+                                               ' container Including the'
+                                               ' container.'))
         delaction.set_defaults(con_per_dir=None,
                                upload=None,
                                tsync=None,
@@ -200,11 +216,13 @@ class GetArguments:
         authgroup.add_argument('--use-http',
                                 action='store_true',
                                 default=None,
-                                help='Forces the NOVA API to Use HTTP instead of HTTPS')
+                                help=('Forces the NOVA API to Use HTTP'
+                                      ' instead of HTTPS'))
         authgroup.add_argument('--os-verbose',
                                 action='store_true',
                                 default=None,
-                                help='Make the OpenStack Authentication Verbose')
+                                help=('Make the OpenStack Authentication'
+                                      ' Verbose'))
 
         # Archive Arguments
         archaction.add_argument('--tar-name',
@@ -212,15 +230,22 @@ class GetArguments:
                                 help='Name To Use for the Archive')
         archaction.add_argument('--no-cleanup',
                                 action='store_true',
-                                help=('Used to keep the compressed Archive. The archive will be left in the Users '
-                                      'Home Folder'))
+                                help=('Used to keep the compressed Archive.'
+                                      ' The archive will be left in the Users'
+                                      ' Home Folder'))
         archaction.add_argument('--verify',
                                 action='store_true',
-                                help=('Will open a created archive and verify its contents. '
-                                      'Used when needing to know without a doubt that all the '
-                                      'files that were specified were compressed.'))
+                                help=('Will open a created archive and verify'
+                                      ' its contents. Used when needing to know'
+                                      ' without a doubt that all the files that'
+                                      ' were specified were compressed.'))
 
         # Optional Aguments
+        optionals.add_argument('-P',
+                               '--preserve-path',
+                               action='store_true',
+                               help=('This will preserve the full path to a file'
+                                     ' when uploaded to a container.'))
         optionals.add_argument('-I',
                                '--internal',
                                action='store_true',
@@ -229,9 +254,11 @@ class GetArguments:
                                metavar='[ATTEMPTS]',
                                type=int,
                                default=5,
-                               help=('This option sets the number of attempts %(prog)s will attempt '
-                                     'an operation before quiting. The default is 5. This is useful if '
-                                     'you have a spotty network or ISP.'))
+                               help=('This option sets the number of attempts'
+                                     ' %(prog)s will attempt an operation'
+                                     ' before quiting. The default is 5. This'
+                                     ' is useful if you have a spotty'
+                                     ' network or ISP.'))
         optionals.add_argument('--cc',
                                metavar='[CONCURRENCY]',
                                type=int,
@@ -239,17 +266,18 @@ class GetArguments:
                                help='Upload Concurrency')
         optionals.add_argument('--no-sort',
                                action='store_true',
-                               help=('By default when getting the list of files to upload '
-                                     'Turbolift will sort the files by size. If you have a lot '
-                                     'of files this may be a time consuming operation. This flag will '
-                                     'disable that function.'))
+                               help=('By default when getting the list of files'
+                                     ' to upload Turbolift will sort the files'
+                                     ' by size. If you have a lot of files this'
+                                     ' may be a time consuming operation.'
+                                     ' This flag will disable that function.'))
         optionals.add_argument('--system-config',
                                metavar='[CONFIG-FILE]',
                                type=str,
                                default=None,
-                               help=('Path to your Configuration file. This is '
-                                     'an optional argument used to spec '
-                                     'credentials.'))
+                               help=('Path to your Configuration file. This is'
+                                     ' an optional argument used to spec '
+                                     ' credentials.'))
         optionals.add_argument('--quiet',
                                action='store_true',
                                help='Make %(prog)s Shut the hell up')
@@ -261,21 +289,22 @@ class GetArguments:
                                help='Turn up verbosity to over 9000')
         optionals.add_argument('--version',
                                action='version',
-                               version=info.VN)
-        
+                               version=info.__VN__)
         # Optional Headers
         headers.add_argument('--base-headers',
                                  metavar='[KEY=VALUE]',
                                  default=[],
                                  action='append',
-                                 help=('These are the basic headers used for all Turbolift operations. '
-                                       'Anything added here will modify ALL Turbolift Operations which'
-                                       'leverage the API.'))
+                                 help=('These are the basic headers used for'
+                                       ' all Turbolift operations. Anything'
+                                       ' added here will modify ALL Turbolift'
+                                       ' Operations which leverage the API.'))
         headers.add_argument('--object-headers',
                                  metavar='[KEY=VALUE]',
                                  default=[],
                                  action='append',
-                                 help='These Headers only effect Objects (files).')
+                                 help=('These Headers only effect Objects'
+                                       ' (files).'))
         headers.add_argument('--container-headers',
                                  metavar='[KEY=VALUE]',
                                  default=[],
@@ -293,7 +322,8 @@ class GetArguments:
         # Parse Config File
         if set_args['system_config']:
             from turbolift.operations import systemconfig
-            set_args = (systemconfig.ConfigureationSetup(set_args).config_args())
+            set_args = (
+                systemconfig.ConfigureationSetup(set_args).config_args())
 
         # Interperate the Parsed Arguments
         set_args['defaultcc'] = set_args['cc']
@@ -309,10 +339,12 @@ class GetArguments:
             set_args['base_headers'] = default_h
 
         if set_args['object_headers']:
-            set_args['object_headers'] = dict(kv.split('=') for kv in set_args['object_headers'])
+            _oh = [kv.split('=') for kv in set_args['object_headers']]
+            set_args['object_headers'] = dict(_oh)
 
         if set_args['container_headers']:
-            set_args['container_headers'] = dict(kv.split('=') for kv in set_args['container_headers'])
+            _ch = [kv.split('=') for kv in set_args['container_headers']]
+            set_args['container_headers'] = dict(_ch)
 
         if set_args['os_region']:
             set_args['os_region'] = set_args['os_region'].upper()
@@ -326,25 +358,27 @@ class GetArguments:
 
         if not (set_args['os_apikey'] or set_args['os_password']):
             parser.print_help()
-            sys.exit('\nNo API Key or Password was provided, use [--os-apikey]\n')
+            sys.exit('No API Key or Password was provided, use [--os-apikey]')
 
         if set_args['os_apikey']:
             set_args['os_password'] = set_args['os_apikey']
 
         if set_args['os_rax_auth'] and set_args['os_region']:
             parser.print_help()
-            sys.exit('\nYou can\'t use both [--os-rax-auth] and [--os-region] in the same command, so I quit...\n')
+            sys.exit('You can\'t use both [--os-rax-auth] and [--os-region] in'
+                     ' the same command, so I quit...')
 
         if set_args['archive']:
             set_args['cc'] = 1
-            print '\nMESSAGE\t: Because I have not figured out how to multi-thread Archiving, the max Concurrency is 1'
+            print('MESSAGE\t: Because I have not figured out how to'
+                  ' multi-thread Archiving, the max Concurrency is 1')
         elif set_args['cc'] > 150:
             try:
-                print('MESSAGE\t: You have set the Concurrency Override to "%s" '
-                      'This is a lot of Processes and could fork bomb your '
-                      'system or cause other nastiness.' % set_args['cc'])
+                print('MESSAGE\t: You have set the Concurrency Override to "%s"'
+                      ' This is a lot of Processes and could fork bomb your'
+                      ' system or cause other nastiness.' % set_args['cc'])
                 raw_input('\t  You have been warned, Press Enter to Continue\n')
-            except:
+            except Exception:
                 sys.exit('Shutting Down...')
         elif set_args['cc'] != set_args['defaultcc']:
             print 'MESSAGE\t: Setting a Concurrency Override of', set_args['cc']

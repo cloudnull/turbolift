@@ -1,12 +1,13 @@
 #!/usr/bin/env python
-
-# - title        : Upload for Swift(Rackspace Cloud Files)
-# - description  : Want to upload a bunch files to cloud files? This will do it.
-# - License      : GPLv3+
-# - author       : Kevin Carter
-# - date         : 2011-11-09
-# - notes        : This is a Swift(Rackspace Cloud Files) Upload Script
-# - Python       : >= 2.6
+# ==============================================================================
+# Copyright [2013] [Kevin Carter]
+# License Information :
+# This software has no warranty, it is provided 'as is'. It is your
+# responsibility to validate the behavior of the routines and its accuracy using
+# the code provided. Consult the GNU General Public license for further details
+# (see GNU General Public License).
+# http://www.gnu.org/licenses/gpl.html
+# ==============================================================================
 
 """
 License Information
@@ -18,16 +19,11 @@ license for further details (see GNU General Public License).
 
 http://www.gnu.org/licenses/gpl.html
 """
-
-import sys
-import os
-import time
-import itertools
-from multiprocessing import Process, freeze_support, Manager
+from multiprocessing import freeze_support
 
 # Local Files to Import
-from turbolift.operations import generators, baseofoperations, novacommands
-from turbolift import arguments, info
+from turbolift.operations import baseofoperations
+from turbolift import arguments
 
 
 def run_turbolift():
@@ -44,10 +40,10 @@ def run_turbolift():
 
         elif tur_arg['archive']:
             ops.archive()
-        
+
         elif tur_arg['upload'] or tur_arg['tsync']:
             ops.file_upload()
-            
+
         elif tur_arg['download'] or tur_arg['delete']:
             ops.delete_download()
 
