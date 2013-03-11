@@ -94,6 +94,7 @@ Appliction Flags can be passed to the program on the command line:
 Optional Arguments:
 ~~~~~~~~~~~~~~~~~~~
 
+  - ``preserve-path`` | Preserves the File Path when uploading to a container. Useful for pesudo directory structure.
   - ``error-retry`` | Allows for a retry integer to be set, Default is 5
   - ``base-headers`` | Allows for the use of customer heads as the base Header
   - ``container-headers`` | Allows for Metadata to be set on Container(s)
