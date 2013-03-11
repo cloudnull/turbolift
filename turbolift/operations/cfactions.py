@@ -1,13 +1,12 @@
-"""
-License Information
-
-This software has no warranty, it is provided 'as is'. It is your
-responsibility to validate the behavior of the routines and its
-accuracy using the code provided. Consult the GNU General Public
-license for further details (see GNU General Public License).
-
-http://www.gnu.org/licenses/gpl.html
-"""
+# ==============================================================================
+# Copyright [2013] [Kevin Carter]
+# License Information :
+# This software has no warranty, it is provided 'as is'. It is your
+# responsibility to validate the behavior of the routines and its accuracy using
+# the code provided. Consult the GNU General Public license for further details
+# (see GNU General Public License).
+# http://www.gnu.org/licenses/gpl.html
+# ==============================================================================
 
 import sys
 import os
@@ -29,17 +28,20 @@ class CloudFilesActions:
         self.pay_load = pay_load
         self.multipools = int(self.args['multipools'])
 
-
     def job_prep(self):
-        for key,val in self.pay_load:
+        """
+        This is a job setup function, the job prep will parse the payload
+        and determine the best course of action
+        """
+        for key, val in self.pay_load:
             self.container = key
             work_q = generators.manager_queue(iters=val)
             # Prep Nova for Upload
             self.oscmd = novacommands.NovaAuth(self.args, work_q)
 
             if self.args['con_per_dir'] or self.args['archive']:
-                head,sep,tail = val[0].partition(key)
-                self.base_path = '%s%s' % (head,sep)
+                head, sep, tail = val[0].partition(key)
+                self.base_path = '%s%s' % (head, sep)
             elif self.args['delete']:
                 self.base_path = None
             elif self.args['download']:
@@ -53,8 +55,8 @@ class CloudFilesActions:
                 self.base_path = os.path.realpath(self.args['source'])
             else:
                 break_down = os.path.realpath(self.args['source'])
-                fn = os.path.basename(break_down)
-                self.base_path = break_down.strip(fn)
+                _fn = os.path.basename(break_down)
+                self.base_path = break_down.strip(_fn)
             self.oscmd.connection_prep()
 
             # Prep our Container
@@ -70,12 +72,16 @@ class CloudFilesActions:
             generators.worker_proc(job_action=self.run_function,
                                    multipools=self.multipools,
                                    work_q=work_q)
-    
+
             # Close the connection because I am done
             self.oscmd.connection_prep(conn_close=True)
 
-
     def run_function(self, work_q):
+        """
+        The run_function starts the threads and begins performing actions which
+        have been placed into the "work_q". While the queue is not empty the
+        run_function will attempt to perform actions.
+        """
         while True:
             try:
                 wfile = work_q.get()
@@ -88,19 +94,23 @@ class CloudFilesActions:
                 # Options that use the TSYNC Method
                 sync_opts = (self.args['tsync'],
                              self.args['con_per_dir'])
-                
+
                 upload_archive = (self.args['upload'],
                                   self.args['archive'])
 
                 if any(sync_opts) or any(upload_archive):
-                    file_name = wfile.split(self.base_path)[-1].strip(os.sep)
+                    if self.args['preserve_path']:
+                        file_name = wfile.lstrip(os.sep)
+                    else:
+                        file_name = wfile.split(
+                            self.base_path)[-1].strip(os.sep)
                 elif self.base_path is None:
                     pass
                 else:
                     file_name = '%s%s%s' % (self.base_path, os.sep, wfile)
                     dir_end = wfile.split(os.path.basename(wfile)
-                                          )[0].rstrip(os.sep)
-                    directory = '%s%s%s' % (self.base_path,os.sep,dir_end)
+                                          )[0].rstrip('/')
+                    directory = '%s%s%s' % (self.base_path, os.sep, dir_end)
 
                 # Check Options
                 if any(upload_archive):
@@ -108,7 +118,7 @@ class CloudFilesActions:
 
                 elif any(sync_opts):
                     self.oscmd.sync_uploader(wfile, file_name, self.container)
-                    
+
                 elif self.args['download']:
                     self.mkdir_p(directory)
                     self.oscmd.get_downloader(wfile,
@@ -123,18 +133,18 @@ class CloudFilesActions:
                                 self.args['debug'],
                                 self.args['os_verbose'],
                                 self.args['quiet'])
-                
+
                 if not any(output_types):
-                    busy_chars = ['|','/','-','\\']
-                    for c in busy_chars:
+                    busy_chars = ['|', '/', '-', '\\']
+                    for _cr in busy_chars:
                         # Fixes Errors with OS X due to no sem_getvalue support
                         if not sys.platform.startswith('darwin'):
-                            qz = 'Number of Jobs Left [ %s ]' % work_q.qsize()
+                            _qz = 'Number of Jobs Left [ %s ]' % work_q.qsize()
                         else:
-                            qz = "OS X Can't Count... Please Wait."
+                            _qz = "OS X Can't Count... Please Wait."
                         sys.stdout.write('\rUploading Files - [ %(spin)s ] - '
-                                         '%(qsize)s' % { "qsize" : qz,
-                                                        "spin" : c })
+                                         '%(qsize)s' % {"qsize": _qz,
+                                                        "spin": _cr})
                         sys.stdout.flush()
                         time.sleep(.01)
 
@@ -144,14 +154,13 @@ class CloudFilesActions:
             finally:
                 work_q.task_done()
 
-
     def mkdir_p(self, path):
         """
         'mkdir -p' in Python
         Requires a path
         """
         # Original Code came from :
-        # http://stackoverflow.com/questions/600268/mkdir-p-functionality-in-python
+        # stackoverflow.com/questions/600268/mkdir-p-functionality-in-python
         try:
             if not os.path.isdir(path):
                 os.makedirs(path)
