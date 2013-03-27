@@ -237,7 +237,11 @@ class NovaAuth(object):
                     if service['name'] == 'cloudFiles':
                         for _ep in service['endpoints']:
                             if _ep['region'] == self.tur_arg['os_region']:
-                                self.tur_arg['endpoint'] = _ep['publicURL']
+                                if self.tur_arg['internal']:
+                                    endpt = _ep['internalURL']
+                                    self.tur_arg['endpoint'] = endpt
+                                else:
+                                    self.tur_arg['endpoint'] = _ep['publicURL']
                     elif service['name'] == 'swift':
                         for _ep in service['endpoints']:
                             if _ep['region'] == self.tur_arg['os_region']:
