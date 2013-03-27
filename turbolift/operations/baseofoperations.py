@@ -16,6 +16,10 @@ from turbolift.operations import getdirsandfiles, compressfiles, getfilenames
 from turbolift.operations import cfactions, novacommands, generators
 
 
+class NoSource(Exception):
+    pass
+
+
 class BaseCamp(object):
     def __init__(self, tur_arg):
         """
@@ -72,13 +76,15 @@ class BaseCamp(object):
         directory into a container. Using this method will craete a new
         container for all directories found from within a path.
         """
-        gen_p = getdirsandfiles.GetDirsAndFiles(self.tur_arg)
-        pay_load = gen_p.get_dir_and_files()
-        self.tur_arg['fc'] = len(pay_load.values())
-        self.set_concurency()
-
-        cfactions.CloudFilesActions(tur_arg=self.tur_arg,
-                                    pay_load=pay_load.items()).job_prep()
+        if self.tur_arg['source']:
+            gen_p = getdirsandfiles.GetDirsAndFiles(self.tur_arg)
+            pay_load = gen_p.get_dir_and_files()
+            self.tur_arg['fc'] = len(pay_load.values())
+            self.set_concurency()
+            cfactions.CloudFilesActions(tur_arg=self.tur_arg,
+                                        pay_load=pay_load.items()).job_prep()
+        else:
+            raise NoSource('You did not give me a source for the upload')
 
 
     def archive(self):
@@ -88,43 +94,50 @@ class BaseCamp(object):
         "sources" can be used as they will simply preserve the upload source
         from within the tarball.
         """
-        self.basic_file_structure()
-        self.tur_arg['multipools'] = 1
+        if self.tur_arg['source']:
+            self.basic_file_structure()
+            self.tur_arg['multipools'] = 1
 
-        _cf = compressfiles.Compressor(self.tur_arg,
-                                      self.gfn).compress_files()
-        cfs = os.path.getsize(_cf)
-        print 'MESSAGE\t: Uploading... %s bytes' % cfs
-        pay_load = {self.tur_arg['container']: [_cf]}
-        cfactions.CloudFilesActions(tur_arg=self.tur_arg,
-                                    pay_load=pay_load.items()).job_prep()
+            _cf = compressfiles.Compressor(self.tur_arg,
+                                          self.gfn).compress_files()
+            cfs = os.path.getsize(_cf)
+            print 'MESSAGE\t: Uploading... %s bytes' % cfs
+            pay_load = {self.tur_arg['container']: [_cf]}
+            cfactions.CloudFilesActions(tur_arg=self.tur_arg,
+                                        pay_load=pay_load.items()).job_prep()
 
-        # Nuke the left over file if there was one.
-        if self.tur_arg['no_cleanup']:
-            print 'MESSAGE\t: Archive Location = %s' % _cf
-        else:
-            print 'MESSAGE\t: Removing Local Copy of the Archive'
-            if os.path.exists(_cf):
-                os.remove(_cf)
+            # Nuke the left over file if there was one.
+            if self.tur_arg['no_cleanup']:
+                print 'MESSAGE\t: Archive Location = %s' % _cf
             else:
-                print('File "%s" Did not exist so there was nothing to delete.'
-                      % _cf)
+                print 'MESSAGE\t: Removing Local Copy of the Archive'
+                if os.path.exists(_cf):
+                    os.remove(_cf)
+                else:
+                    print('File "%s" Did not exist so there was nothing to delete.'
+                          % _cf)
+        else:
+            raise NoSource('You did not give me a source for the upload')
 
     def file_upload(self):
         """
         This is the first and most basic method, using file_upload is to simply
         upload all files and folders to a specified container.
         """
-        self.basic_file_structure()
-        self.pay_load = {self.tur_arg['container']: self.gfn}
+        if self.tur_arg['source']:
+            self.basic_file_structure()
+            self.pay_load = {self.tur_arg['container']: self.gfn}
 
-        if self.tur_arg['debug']:
-            print('FILELIST\t: %s\n'
-                  'ARGS\t: %s\n' % (self.pay_load, self.tur_arg))
+            if self.tur_arg['debug']:
+                print('FILELIST\t: %s\n'
+                      'ARGS\t: %s\n' % (self.pay_load, self.tur_arg))
 
-        # Upload our built payload
-        cfactions.CloudFilesActions(tur_arg=self.tur_arg,
-                                    pay_load=self.pay_load.items()).job_prep()
+            # Upload our built payload
+            cfactions.CloudFilesActions(tur_arg=self.tur_arg,
+                                        pay_load=self.pay_load.items()
+                                        ).job_prep()
+        else:
+            raise NoSource('You did not give me a source for the upload')
 
     def delete_download(self):
         """
