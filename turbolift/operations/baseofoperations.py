@@ -76,7 +76,7 @@ class BaseCamp(object):
         directory into a container. Using this method will craete a new
         container for all directories found from within a path.
         """
-        if self.tur_arg['source']:
+        if os.path.exists(self.tur_arg['source']):
             gen_p = getdirsandfiles.GetDirsAndFiles(self.tur_arg)
             pay_load = gen_p.get_dir_and_files()
             self.tur_arg['fc'] = len(pay_load.values())
@@ -94,7 +94,7 @@ class BaseCamp(object):
         "sources" can be used as they will simply preserve the upload source
         from within the tarball.
         """
-        if self.tur_arg['source']:
+        if os.path.exists(self.tur_arg['source']):
             self.basic_file_structure()
             self.tur_arg['multipools'] = 1
 
@@ -124,7 +124,7 @@ class BaseCamp(object):
         This is the first and most basic method, using file_upload is to simply
         upload all files and folders to a specified container.
         """
-        if self.tur_arg['source']:
+        if os.path.exists(self.tur_arg['source']):
             self.basic_file_structure()
             self.pay_load = {self.tur_arg['container']: self.gfn}
 
