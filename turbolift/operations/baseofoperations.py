@@ -23,7 +23,7 @@ class NoSource(Exception):
 class BaseCamp(object):
     def __init__(self, tur_arg):
         """
-        To access teh BaseCamp class you will need to provide "tur_arg" which is
+        To access the BaseCamp class you will need to provide "tur_arg" which is
         a Dictionary for all of the parsed arguments.
 
         BaseCamp acts as a simple metthod for seperating out methods from one
