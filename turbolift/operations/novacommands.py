@@ -352,7 +352,7 @@ class NovaAuth(object):
             # Check that the status was a good one
             if resp.status == 404:
                 print('Container Not Found')
-            if resp.status >= 300 or resp.status == None:
+            elif resp.status >= 300 or resp.status == None:
                 self.result_exception(resp=resp,
                                       headers=c_headers,
                                       authurl=self.url,
@@ -383,7 +383,6 @@ class NovaAuth(object):
                 # Check that the status was a good one
                 if resp.status == 404:
                     self.conn.request('PUT', path, headers=c_headers)
-
                     resp_info = self.response_type()
                     if not resp_info[1]:
                         retry()
