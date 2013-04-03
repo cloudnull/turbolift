@@ -12,6 +12,11 @@ import os
 import sys
 import operator
 
+
+class NoFileProvided(Exception):
+    pass
+
+
 class FileNames(object):
     def __init__(self, tur_arg):
         self.tur_arg = tur_arg
@@ -37,8 +42,10 @@ class FileNames(object):
                          subfolders,
                          files) in os.walk(rootdir.encode('utf8')):
                         for _fl in files:
-                            filelist.append(os.path.join(root.encode('utf8'),
-                                                         _fl.encode('utf8')))
+                            inode = os.path.join(root.encode('utf8'),
+                                                 _fl.encode('utf8'))
+                            if os.path.exists(inode):
+                                filelist.append(inode)
                         if self.tur_arg['debug']:
                             print 'File List\t: %s' % files
 
@@ -56,7 +63,11 @@ class FileNames(object):
 
                 elif not os.path.isdir(directorypath):
                     _full_path = os.path.realpath(directorypath.encode('utf8'))
-                    final_files.append(_full_path)
+                    if os.path.exists(_full_path):
+                        final_files.append(_full_path)
+                    else:
+                        raise NoFileProvided('No Real Path was Found for %s'
+                                             % _full_path)
 
                 else:
                     print('ERROR\t: path %s does not exist, is not a directory,'

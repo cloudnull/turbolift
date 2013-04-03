@@ -40,22 +40,23 @@ class GetDirsAndFiles(object):
             _fs = []
             flist = []
             for fname in os.listdir(dir_n):
-                if os.path.isfile('%s/%s' % (dir_n, fname)) is True:
-                    if fname is not None:
-                        _fs.append('%s%s%s' % (dir_n, os.sep, fname))
+                if fname is not None:
+                    inode = '%s%s%s' % (dir_n, os.sep, fname)
+                    if (os.path.isfile(inode) and os.path.exists(inode)):
+                        _fs.append(inode)
 
-                    if self.tur_arg['no_sort']:
-                        flist = _fs
-                    else:
-                        get_file_size = [[files,
-                                          os.path.getsize(files)]
-                            for files in _fs]
-                        sort_size = sorted(get_file_size,
-                                           key=operator.itemgetter(1),
-                                           reverse=True)
+            if self.tur_arg['no_sort']:
+                flist = _fs
+            else:
+                get_file_size = [[files,
+                                  os.path.getsize(files)]
+                    for files in _fs]
+                sort_size = sorted(get_file_size,
+                                   key=operator.itemgetter(1),
+                                   reverse=True)
 
-                        for file_name, size in sort_size:
-                            flist.append(os.path.realpath(file_name))
+                for file_name, size in sort_size:
+                    flist.append(os.path.realpath(file_name))
 
             if flist:
                 self.cpd[os.path.basename(dir_n)] = flist
