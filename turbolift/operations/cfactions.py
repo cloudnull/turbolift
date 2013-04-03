@@ -106,8 +106,8 @@ class CloudFilesActions:
                         # (Do it now, as symlinks may confuse things earlier)
                         src = self.args['source']
                         if not src.endswith(os.sep):
-                            src = "%s%s" % (src,os.sep)
-                        file_name = src + file_name
+                            src = "%s%s" % (src, os.sep)
+                        file_name = "%s%s" % (src, file_name)
                     if self.args['debug']:
                         print "Destination Name = %s\n" % file_name,
                 elif self.base_path is None:
