@@ -385,11 +385,13 @@ class NovaAuth(object):
                     self.conn.request('PUT', path, headers=c_headers)
 
                     resp_info = self.response_type()
-                    if resp_info[1] is not True:
+                    if not resp_info[1]:
                         retry()
                     resp = resp_info[0]
                     resp.read()
-                    if resp.status >= 300 or resp.status == None:
+                    if resp.status == 404:
+                        print('Container Not Found %s' % resp.status)
+                    elif resp.status >= 300 or resp.status == None:
                         self.result_exception(resp=resp,
                                               headers=c_headers,
                                               authurl=self.url,
