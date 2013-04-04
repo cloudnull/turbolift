@@ -86,7 +86,6 @@ class BaseCamp(object):
         else:
             raise NoSource('You did not give me a source for the upload')
 
-
     def archive(self):
         """
         The archive function was made to simply build a Tarball of all of the
@@ -94,30 +93,31 @@ class BaseCamp(object):
         "sources" can be used as they will simply preserve the upload source
         from within the tarball.
         """
-        if os.path.exists(self.tur_arg['source']):
-            self.basic_file_structure()
-            self.tur_arg['multipools'] = 1
+        for source in self.tur_arg['source']:
+            if not os.path.exists(source):
+                raise NoSource('Source Provided is broken or does not exist %s'
+                               % source)
+        self.basic_file_structure()
+        self.tur_arg['multipools'] = 1
 
-            _cf = compressfiles.Compressor(self.tur_arg,
-                                          self.gfn).compress_files()
-            cfs = os.path.getsize(_cf)
-            print 'MESSAGE\t: Uploading... %s bytes' % cfs
-            pay_load = {self.tur_arg['container']: [_cf]}
-            cfactions.CloudFilesActions(tur_arg=self.tur_arg,
-                                        pay_load=pay_load.items()).job_prep()
+        _cf = compressfiles.Compressor(self.tur_arg,
+                                       self.gfn).compress_files()
+        cfs = os.path.getsize(_cf)
+        print 'MESSAGE\t: Uploading... %s bytes' % cfs
+        pay_load = {self.tur_arg['container']: [_cf]}
+        cfactions.CloudFilesActions(tur_arg=self.tur_arg,
+                                    pay_load=pay_load.items()).job_prep()
 
-            # Nuke the left over file if there was one.
-            if self.tur_arg['no_cleanup']:
-                print 'MESSAGE\t: Archive Location = %s' % _cf
-            else:
-                print 'MESSAGE\t: Removing Local Copy of the Archive'
-                if os.path.exists(_cf):
-                    os.remove(_cf)
-                else:
-                    print('File "%s" Did not exist so there was nothing to delete.'
-                          % _cf)
+        # Nuke the left over file if there was one.
+        if self.tur_arg['no_cleanup']:
+            print 'MESSAGE\t: Archive Location = %s' % _cf
         else:
-            raise NoSource('You did not give me a source for the upload')
+            print 'MESSAGE\t: Removing Local Copy of the Archive'
+            if os.path.exists(_cf):
+                os.remove(_cf)
+            else:
+                print('File "%s" Did not exist so there was nothing to delete.'
+                      % _cf)
 
     def file_upload(self):
         """
