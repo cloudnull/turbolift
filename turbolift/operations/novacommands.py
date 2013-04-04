@@ -382,6 +382,7 @@ class NovaAuth(object):
 
                 # Check that the status was a good one
                 if resp.status == 404:
+                    print('Creating Container ==> %s' % container_name)
                     self.conn.request('PUT', path, headers=c_headers)
                     resp_info = self.response_type()
                     if not resp_info[1]:
