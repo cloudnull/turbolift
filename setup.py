@@ -10,7 +10,6 @@
 # ==============================================================================
 import setuptools
 import sys
-import turbolift
 from turbolift import info
 
 
@@ -19,19 +18,19 @@ if sys.version_info < (2, 6, 0):
     sys.exit('\nUpgrade python because you version of it is VERY deprecated\n')
 
 with open('README') as r_file:
-    long_description = r_file.read()
+    LDINFO = r_file.read()
 
 setuptools.setup(
-    name='turbolift',
+    name=info.__appname__,
     version=info.__version__,
-    author='Kevin Carter',
-    author_email='kevin@bkintegration.com',
-    description='OpenStack Swift -Cloud Files- Uploader',
-    long_description=long_description,
+    author=info.__author__,
+    author_email=info.__email__,
+    description=info.__description__,
+    long_description=LDINFO,
     license='GNU General Public License v3 or later (GPLv3+)',
     packages=['turbolift',
               'turbolift.operations'],
-    url='https://github.com/cloudnull/turbolift.git',
+    url=info.__url__,
     install_requires=['argparse',
                       'datetime'],
     classifiers=[
@@ -40,10 +39,13 @@ setuptools.setup(
         'Intended Audience :: System Administrators',
         'Intended Audience :: Developers',
         'Operating System :: OS Independent',
-        'License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)',
+        ('License :: OSI Approved :: GNU General Public License v3 or later'
+         ' (GPLv3+)'),
         'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
         'Topic :: Utilities',
         'Topic :: Software Development :: Libraries :: Python Modules'],
-    entry_points={"console_scripts": ["turbolift = turbolift.executable:run_turbolift"]}
+    entry_points={
+        "console_scripts": ["turbolift = turbolift.executable:run_turbolift"]
+            }
     )

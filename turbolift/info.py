@@ -17,6 +17,8 @@ __date__ = "2013-02-14"
 __version__ = "1.4.5"
 __status__ = "Production"
 __appname__ = "Turbolift"
+__description__ = 'OpenStack Swift -Cloud Files- Uploader'
+__url__ = 'https://github.com/cloudnull/turbolift.git'
 
 # The Version Of the Application
 __VN__ = '%s' % __version__
