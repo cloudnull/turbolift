@@ -90,10 +90,6 @@ class NovaAuth(object):
                                                             resp.reason,
                                                             authurl,
                                                             jsonreq))
-                if file_path is not None:
-                    print('Placing %s back into the queue after the FAILURE'
-                          % file_path)
-                    self.work_q.put(file_path)
                 self.conn.close()
                 self.connection_prep()
             else:
@@ -686,11 +682,9 @@ class NovaAuth(object):
                             print('MESSAGE\t: Upload path = %s ==> %s'
                                   % (file_path, filepath))
 
-                except Exception:
-                    print(traceback.format_exc())
-                    print('Exception from within an upload Action, placing'
-                          ' the failed upload back in Queue')
-                    self.work_q.put(file_path)
+                except Exception, exp:
+                    print('\nFile Failed to be uploaded %s. Error ==> %s'
+                          % (file_path, exp))
         except IOError:
             print('ERROR\t: path "%s" does not exist or is a broken symlink'
                   % file_path)
@@ -829,11 +823,9 @@ class NovaAuth(object):
                                                           jsonreq=r_loc,
                                                           file_path=file_path)
                                     retry()
-                except Exception:
-                    print(traceback.format_exc())
-                    print('Exception from within an upload Action, placing'
-                          ' the failed upload back in Queue')
-                    self.work_q.put(file_path)
+                except Exception, exp:
+                    print('\nFile Failed to be uploaded %s. Error ==> %s'
+                          % (file_path, exp))
         except IOError:
             print('ERROR\t: path "%s" does not exist or is a broken symlink'
                   % file_path)
