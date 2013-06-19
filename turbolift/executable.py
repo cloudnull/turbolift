@@ -31,20 +31,20 @@ def run_turbolift():
     This is the run section of the application Turbolift.
     """
     freeze_support()
-    tur_arg = arguments.GetArguments().get_values()
+    tur_arg = arguments.get_values()
     try:
         ops = baseofoperations.BaseCamp(tur_arg)
 
-        if tur_arg['con_per_dir']:
+        if tur_arg.get('con_per_dir'):
             ops.con_per_dir()
 
-        elif tur_arg['archive']:
+        elif tur_arg.get('archive'):
             ops.archive()
 
-        elif tur_arg['upload'] or tur_arg['tsync']:
+        elif any([tur_arg.get('upload'), tur_arg.get('tsync')]):
             ops.file_upload()
 
-        elif tur_arg['download'] or tur_arg['delete']:
+        elif any([tur_arg.get('download'), tur_arg.get('delete')]):
             ops.delete_download()
 
     except KeyboardInterrupt:
