@@ -15,7 +15,7 @@ import os
 from turbolift import info
 
 
-def get_values(self):
+def get_values():
     """
     Look for flags, these are all of the available options for Turbolift.
     """
@@ -102,12 +102,7 @@ def get_values(self):
                                     help=('Upload Action, Type of upload to'
                                           ' be performed as well as'
                                           ' Source and Destination'))
-    upaction.set_defaults(con_per_dir=None,
-                          tsync=None,
-                          archive=None,
-                          upload=True,
-                          download=None,
-                          delete=None)
+    upaction.set_defaults(upload=True)
 
     taction = subparser.add_parser('tsync',
                                    parents=[source_args,
@@ -116,12 +111,7 @@ def get_values(self):
                                    help=('T-Sync Action, Type of upload to'
                                          ' be performed as well as'
                                          ' Source and Destination'))
-    taction.set_defaults(con_per_dir=None,
-                         upload=None,
-                         archive=None,
-                         tsync=True,
-                         download=None,
-                         delete=None)
+    taction.set_defaults(tsync=True)
 
     archaction = subparser.add_parser('archive',
                                       parents=[multi_source_args,
@@ -129,24 +119,14 @@ def get_values(self):
                                                cdn_args],
                                       help=('Compress files or directories'
                                             ' into a single archive'))
-    archaction.set_defaults(con_per_dir=None,
-                            upload=None,
-                            tsync=None,
-                            archive=True,
-                            download=None,
-                            delete=None)
+    archaction.set_defaults(archive=True)
 
     cpdaction = subparser.add_parser('con-per-dir',
                                      parents=[multi_source_args, cdn_args],
                                      help=('Uploads everything from a'
                                            ' given source creating a single'
                                            ' Container per Directory'))
-    cpdaction.set_defaults(con_per_dir=True,
-                           upload=None,
-                           tsync=None,
-                           archive=None,
-                           download=None,
-                           delete=None)
+    cpdaction.set_defaults(con_per_dir=True)
 
     dwnaction = subparser.add_parser('download',
                                      parents=[source_args, shared_args],
@@ -154,24 +134,14 @@ def get_values(self):
                                            ' given container creating a'
                                            ' target Directory if it does'
                                            ' not exist'))
-    dwnaction.set_defaults(con_per_dir=None,
-                           upload=None,
-                           tsync=None,
-                           archive=None,
-                           download=True,
-                           delete=None)
+    dwnaction.set_defaults(download=True)
 
     delaction = subparser.add_parser('delete',
                                      parents=[del_args, shared_args],
                                      help=('Deletes everything in a given'
                                            ' container Including the'
                                            ' container.'))
-    delaction.set_defaults(con_per_dir=None,
-                           upload=None,
-                           tsync=None,
-                           archive=None,
-                           download=None,
-                           delete=True)
+    delaction.set_defaults(delete=True)
 
     # Base Authentication Argument Set
     authgroup.add_argument('-u',
@@ -199,7 +169,7 @@ def get_values(self):
                            help='Defaults to env[OS_AUTH_URL]',
                            default=os.environ.get('OS_AUTH_URL', None))
     authgroup.add_argument('--os-rax-auth',
-                           choices=['dfw', 'ord', 'lon'],
+                           choices=['dfw', 'ord', 'lon', 'syn'],
                            help='Rackspace Cloud Authentication',
                            default=None)
     authgroup.add_argument('--os-version', 

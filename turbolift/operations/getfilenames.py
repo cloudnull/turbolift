@@ -29,7 +29,7 @@ class FileNames(object):
         filelist = []
         final_files = []
 
-        if self.tur_arg['archive']:
+        if self.tur_arg.get('archive'):
             directory_list = self.tur_arg['source']
         else:
             directory_list = [self.tur_arg['source']]
@@ -46,10 +46,10 @@ class FileNames(object):
                                                  _fl.encode('utf8'))
                             if os.path.exists(inode):
                                 filelist.append(inode)
-                        if self.tur_arg['debug']:
+                        if self.tur_arg.get('debug'):
                             print 'File List\t: %s' % files
 
-                    if self.tur_arg['no_sort']:
+                    if self.tur_arg.get('no_sort'):
                         final_files = filelist
                     else:
                         get_file_size = [[files,

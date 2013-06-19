@@ -45,7 +45,7 @@ class GetDirsAndFiles(object):
                     if (os.path.isfile(inode) and os.path.exists(inode)):
                         _fs.append(inode)
 
-            if self.tur_arg['no_sort']:
+            if self.tur_arg.get('no_sort'):
                 flist = _fs
             else:
                 get_file_size = [[files,

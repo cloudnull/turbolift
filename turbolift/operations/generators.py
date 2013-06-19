@@ -88,8 +88,6 @@ def worker_proc(job_action, multipools, work_q):
         _jo.daemon = True
         _jo.start()
 
-    work_q.join()
-
     for _ in range(multipools):
         work_q.put(None)
 
