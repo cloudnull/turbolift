@@ -34,7 +34,7 @@ class Compressor(object):
             today = datetime.datetime.today()
             _ts = today.strftime(date_format)
 
-            if self.tur_arg['tar_name']:
+            if self.tur_arg.get('tar_name'):
                 tmp_file = '%s%s.tgz' % (_ts, self.tur_arg['tar_name'])
             else:
                 home_dir = '%s%s' % (os.getenv('HOME'), os.sep)
@@ -42,14 +42,8 @@ class Compressor(object):
                 tmp_file = '%s%s' % (home_dir, file_name)
 
             tar = tarfile.open(tmp_file, 'w:gz')
-
-            busy_chars = ['|', '/', '-', '\\']
             for name in self.filelist:
                 tar.add(name)
-                for _cr in busy_chars:
-                    sys.stdout.write("\rCompressing - [ %s ] " % _cr)
-                    sys.stdout.flush()
-                    time.sleep(.01)
             tar.close()
 
             # Set the Base Path for uploading the file
