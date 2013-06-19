@@ -14,7 +14,7 @@ __email__ = "kevin@bkintegration.com"
 __copyright__ = "2013 All Rights Reserved"
 __license__ = "GPLv3+"
 __date__ = "2013-02-14"
-__version__ = "1.4.4"
+__version__ = "1.4.5"
 __status__ = "Production"
 __appname__ = "Turbolift"
 
@@ -26,7 +26,7 @@ VINFO = ('GNU Turbolift %(version)s, '
      'developed by %(author)s, '
      'Licenced Under %(license)s, '
      'FYI : %(copyright)s'
-     % { 'version': __version__,
-         'author': __author__,
-         'license': __license__,
-         'copyright': __copyright__})
+     % {'version': __version__,
+        'author': __author__,
+        'license': __license__,
+        'copyright': __copyright__})
