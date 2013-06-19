@@ -11,6 +11,7 @@
 import setuptools
 import sys
 import turbolift
+from turbolift import info
 
 
 if sys.version_info < (2, 6, 0):
@@ -22,7 +23,7 @@ with open('README') as r_file:
 
 setuptools.setup(
     name='turbolift',
-    version=turbolift.info.__VN__,
+    version=info.__version__,
     author='Kevin Carter',
     author_email='kevin@bkintegration.com',
     description='OpenStack Swift -Cloud Files- Uploader',
