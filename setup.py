@@ -32,7 +32,8 @@ setuptools.setup(
               'turbolift.operations'],
     url=info.__url__,
     install_requires=['argparse',
-                      'datetime'],
+                      'datetime',
+                      'hashlib'],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Information Technology',
