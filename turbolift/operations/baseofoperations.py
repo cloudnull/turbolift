@@ -31,8 +31,9 @@ class BaseCamp(object):
         """
         self.tur_arg = generators.manager_dict(tur_arg)
         try:
-            self.nova = novacommands.NovaAuth(self.tur_arg)
-            self.nova.osauth()
+            self.nova = novacommands.NovaAuth(tur_arg=self.tur_arg)
+            reqjson, auth_url = self.nova.osauth()
+            self.nova.make_request(jsonreq=reqjson, url=auth_url)
         except Exception:
             print(traceback.format_exc())
             sys.exit('Authentication against the NOVA API had issues,'
