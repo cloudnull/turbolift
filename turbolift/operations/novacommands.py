@@ -15,8 +15,11 @@ import hashlib
 import httplib
 import traceback
 from urllib import quote
-
 from turbolift.operations import generators
+
+
+class AuthenticationProblem(Exception):
+    pass
 
 
 class NovaAuth(object):
@@ -28,9 +31,10 @@ class NovaAuth(object):
         """
         self.tur_arg = tur_arg
         self.work_q = work_q
+        self.retry_atmp = self.tur_arg.get('error_retry', 1)
 
     def response_type(self):
-        for retry in generators.retryloop(attempts=self.tur_arg['error_retry'],
+        for retry in generators.retryloop(attempts=self.retry_atmp,
                                           timeout=960,
                                           delay=5):
             try:
@@ -48,12 +52,7 @@ class NovaAuth(object):
             else:
                 return None, False
 
-    def result_exception(self,
-                         resp,
-                         headers,
-                         authurl,
-                         jsonreq=None,
-                         file_path=None):
+    def result_exception(self, resp, headers, authurl, jsonreq=None, file_path=None):
         """
         If we encounter an exception in our upload, we will look at how we
         can attempt to resolve the exception.
@@ -64,7 +63,8 @@ class NovaAuth(object):
                 print('MESSAGE\t: Forced Re-authentication is happening.')
                 sys.exit('Authentication has failed. so we quit')
                 self.connection_prep()
-                self.osauth()
+                reqjson, auth_url = self.osauth()
+                self.make_request(jsonreq=reqjson, url=auth_url)
                 print('NOVA-API AUTH FAILURE -> REQUEST:'
                       ' %s %s %s %s' % (resp.status,
                                         resp.reason,
@@ -75,8 +75,8 @@ class NovaAuth(object):
                 _di = dict(status_info)
                 print(_di)
                 print('The System encountered an API limitation and will'
-                      ' continue in %s Seconds' % _di['retry-after'])
-                time.sleep(int(_di['retry-after']))
+                      ' continue in %s Seconds' % _di.get('retry_after', 5))
+                time.sleep(int(_di.get('retry_after', 5)))
             elif resp.status == 400:
                 print('MESSAGE\t: Opened File Error, re-Opening the'
                       ' Socket to retry.')
@@ -136,21 +136,18 @@ class NovaAuth(object):
 
         Set a DC Endpoint and Authentication URL for the Open Stack environment
         """
-        rax_us_dc = (self.tur_arg['os_rax_auth'] == 'DFW',
-                 self.tur_arg['os_rax_auth'] == 'ORD')
-        rax_eu_dc = (self.tur_arg['os_rax_auth'] == 'LON',
-                     self.tur_arg['os_rax_auth'] == 'NEWDC')
-
-        if any(rax_eu_dc):
-            self.tur_arg['os_region'] = self.tur_arg['os_rax_auth']
+        if any([self.tur_arg['os_rax_auth'] == 'LON']):
+            self.tur_arg['os_region'] = self.tur_arg.get('os_rax_auth')
             if self.tur_arg['os_auth_url']:
-                authurl = self.tur_arg['os_auth_url']
+                authurl = self.tur_arg.get('os_auth_url')
             else:
                 authurl = 'lon.identity.api.rackspacecloud.com'
-        elif any(rax_us_dc):
-            self.tur_arg['os_region'] = self.tur_arg['os_rax_auth']
-            if self.tur_arg['os_auth_url']:
-                authurl = self.tur_arg['os_auth_url']
+        elif any([self.tur_arg['os_rax_auth'] == 'DFW',
+                  self.tur_arg['os_rax_auth'] == 'ORD',
+                  self.tur_arg['os_rax_auth'] == 'SYN']):
+            self.tur_arg['os_region'] = self.tur_arg.get('os_rax_auth')
+            if self.tur_arg.get('os_auth_url'):
+                authurl = self.tur_arg.get('os_auth_url')
             else:
                 authurl = 'identity.api.rackspacecloud.com'
         else:
@@ -158,26 +155,31 @@ class NovaAuth(object):
                 sys.exit('FAIL\t: You have to specify '
                          'a Region along with an Auth URL')
             if self.tur_arg['os_auth_url']:
-                authurl = self.tur_arg['os_auth_url']
+                authurl = self.tur_arg.get('os_auth_url')
             else:
                 sys.exit('FAIL\t: You have to specify an Auth URL'
                          ' along with the Region')
 
-        if self.tur_arg['os_apikey'] or self.tur_arg['os_rax_auth']:
-            jsonreq = json.dumps({'auth': {'RAX-KSKEY:apiKeyCredentials':
-                {'username': self.tur_arg['os_user'],
-                 'apiKey': self.tur_arg['os_apikey']}}})
+        # Setup our Authentication POST
+        setup = {'username': self.tur_arg.get('os_user')}
+        if any([self.tur_arg.get('os_apikey'),
+                self.tur_arg.get('os_rax_auth')]):
+            prefix = 'RAX-KSKEY:apiKeyCredentials'
+            setup['apiKey'] = self.tur_arg.get('os_apikey')
         else:
-            jsonreq = json.dumps({'auth': {'passwordCredentials':
-                {'username': self.tur_arg['os_user'],
-                 'password': self.tur_arg['os_password']}}})
-            authurl = self.tur_arg['os_auth_url']
+            prefix = 'passwordCredentials'
+            setup['password'] = self.tur_arg.get('os_password')
+            authurl = self.tur_arg.get('os_auth_url')
+        jsonreq = json.dumps({'auth': {prefix: setup}})
 
         # remove the prefix for the Authentication URL
         authurl = authurl.strip('http?s://')
         url_data = authurl.split('/')
         url = url_data[0]
-        for retry in generators.retryloop(attempts=self.tur_arg['error_retry'],
+        return jsonreq, url
+
+    def make_request(self, jsonreq, url):
+        for retry in generators.retryloop(attempts=self.retry_atmp,
                                           timeout=960,
                                           delay=5):
             conn = httplib.HTTPSConnection(url)
@@ -187,8 +189,7 @@ class NovaAuth(object):
                 conn.set_debuglevel(1)
 
             headers = {'Content-Type': 'application/json'}
-            tokenurl = '/%s/tokens' % self.tur_arg['os_version']
-
+            tokenurl = '/%s/tokens' % self.tur_arg.get('os_version')
             conn.request('POST', tokenurl, jsonreq, headers)
 
             try:
@@ -200,8 +201,9 @@ class NovaAuth(object):
             except httplib.BadStatusLine:
                 conn.close()
                 retry()
+
             readresp = resp.read()
-            json_response = json.loads(readresp)
+            jrp = json.loads(readresp)
             conn.close()
 
             # Check that the status was a good one
@@ -216,68 +218,68 @@ class NovaAuth(object):
                                       jsonreq=self.c_path)
                 try:
                     retry()
-                except Exception, exp:
+                except generators.RetryError, exp:
                     print('Authentication has FAILED "%s %s %s %s"'
                           % (resp.status,
                              resp.reason,
                              readresp,
                              exp))
-                    continue
+                    raise AuthenticationProblem('Auth Failed')
             else:
                 if self.tur_arg['os_verbose']:
                     print('JSON decoded and pretty')
-                    print json.dumps(json_response, indent=2)
+                    print json.dumps(jrp, indent=2)
+            # Send Response to Parser
+            return self.parse_request(json_response=jrp)
 
-            try:
-                for service in json_response['access']['serviceCatalog']:
-                    if service['name'] == 'cloudFiles':
-                        for _ep in service['endpoints']:
-                            if _ep['region'] == self.tur_arg['os_region']:
-                                if self.tur_arg['internal']:
-                                    endpt = _ep['internalURL']
-                                    self.tur_arg['endpoint'] = endpt
-                                else:
-                                    self.tur_arg['endpoint'] = _ep['publicURL']
-                    elif service['name'] == 'swift':
-                        for _ep in service['endpoints']:
-                            if _ep['region'] == self.tur_arg['os_region']:
-                                if self.tur_arg['internal']:
-                                    endpt = _ep['internalURL']
-                                    self.tur_arg['endpoint'] = endpt
-                                else:
-                                    self.tur_arg['endpoint'] = _ep['publicURL']
-                    if service['name'] == 'cloudFilesCDN':
-                        for _ep in service['endpoints']:
-                            if _ep['region'] == self.tur_arg['os_region']:
-                                self.tur_arg['CDNendpoint'] = _ep['publicURL']
+    def parse_request(self, json_response):
+        try:
+            jra = json_response.get('access')
+            token = jra.get('token').get('id')
+            self.tur_arg['tenantid'] = jra.get('token').get('tenant').get('id')
 
-                tenant_id = json_response['access']['token']['tenant']['id']
-                self.tur_arg['tenantid'] = tenant_id
-                token = json_response['access']['token']['id']
-                headers = self.tur_arg['base_headers']
-                headers.update({'X-Auth-Token': token})
-                self.tur_arg['base_headers'] = headers
+            scat = jra.pop('serviceCatalog')
+            for srv in scat:
+                if srv.get('name') in ('cloudFilesCDN', 'cloudFiles'):
+                    if srv.get('name') == 'cloudFilesCDN':
+                        cdn = srv.get('endpoints')
+                    if srv.get('name') == 'cloudFiles':
+                        cfl = srv.get('endpoints')
+                elif 'swift' in srv.get('name'):
+                    cfl = scat.pop(scat.index(srv))
 
-                cdn_encode = self.tur_arg['CDNendpoint'].encode('utf8')
-                cdn_split = cdn_encode.split('//')[1]
-                self.tur_arg['simple_cdn_endpoint'] = cdn_split
+            for srv in cfl:
+                if self.tur_arg.get('os_region') in srv.get('region'):
+                    internal = srv.get('internalURL')
+                    external = srv.get('publicURL')
 
-                url_encode = self.tur_arg['endpoint'].encode('utf8')
-                url_split = url_encode.split('//')[1]
-                self.tur_arg['simple_endpoint'] = url_split
-                if self.tur_arg['os_verbose']:
-                    print('SimpleURL\t: %s'
-                          '\nPublicURL\t: %s'
-                          '\nTenant\t\t: %s'
-                          '\nCDN_manage\t: %s' % (url_split,
-                                                  self.tur_arg['endpoint'],
-                                                  tenant_id,
-                                                  cdn_encode))
+            for srv in cdn:
+                if self.tur_arg.get('os_region') in srv.get('region'):
+                    self.tur_arg['CDNendpoint'] = srv.get('publicURL')
+                    cdn_split = self.tur_arg['CDNendpoint'].split('//')[1]
+                    self.tur_arg['simple_cdn_endpoint'] = cdn_split
 
-                return self.tur_arg
-            except (KeyError, IndexError):
-                print('Error while getting answers from auth server.'
-                      ' Check the endpoint and auth credentials.')
+            if not cfl and any([internal, external]):
+                raise AuthenticationProblem('No Endpoint Found')
+
+            if self.tur_arg.get('internal'):
+                self.tur_arg['endpoint'] = internal
+            else:
+                self.tur_arg['endpoint'] = external
+
+            headers = self.tur_arg.get('base_headers')
+            headers.update({'X-Auth-Token': token})
+            self.tur_arg['base_headers'] = headers
+
+            url_split = self.tur_arg['endpoint'].split('//')[1]
+            self.tur_arg['simple_endpoint'] = url_split
+            if self.tur_arg['os_verbose']:
+                print('SimpleURL\t: %s\nPublicURL\t: %s\nPrivateURL\t: %s\n'
+                      % (url_split, external, internal))
+            return self.tur_arg
+        except (KeyError, IndexError):
+            print('Error while getting answers from auth server.'
+                  ' Check the endpoint and auth credentials.')
 
     def enable_cdn(self, container_name):
         """
@@ -296,7 +298,7 @@ class NovaAuth(object):
         c_headers.update({'X-CDN-Enabled': True,
                           'X-TTL': self.tur_arg['cdn_ttl'],
                           'X-Log-Retention': self.tur_arg['cdn_logs']})
-        for retry in generators.retryloop(attempts=self.tur_arg['error_retry'],
+        for retry in generators.retryloop(attempts=self.retry_atmp,
                                           delay=5):
             try:
                 conn = httplib.HTTPSConnection(cdnurl)
@@ -305,11 +307,11 @@ class NovaAuth(object):
                     delay=5):
                     conn.request('PUT', path, headers=c_headers)
 
-                    resp_info = self.response_type()
-                    if resp_info[1] is not True:
+                    resp, check = self.response_type()
+                    if check is not True:
                         retry()
-                    resp = resp_info[0]
-                    resp.read()
+                    else:
+                        resp.read()
 
                     status_codes = (resp.status, resp.reason, container_name)
                     if self.tur_arg['os_verbose']:
@@ -335,16 +337,16 @@ class NovaAuth(object):
         self.connection_prep()
         r_loc = '%s/%s' % (self.c_path, container_name)
         path = quote(r_loc)
-        for retry in generators.retryloop(attempts=self.tur_arg['error_retry'],
+        for retry in generators.retryloop(attempts=self.retry_atmp,
                                           delay=5):
             c_headers = self.headers
             # Check to see if the container exists
             self.conn.request('HEAD', path, headers=c_headers)
-            resp_info = self.response_type()
-            if resp_info[1] is not True:
+            resp, check = self.response_type()
+            if check is not True:
                 retry()
-            resp = resp_info[0]
-            resp.read()
+            else:
+                resp.read()
             # Check that the status was a good one
             if resp.status == 404:
                 print('Container Not Found')
@@ -367,8 +369,8 @@ class NovaAuth(object):
         r_loc = '%s/%s' % (self.c_path, container_name)
         path = quote(r_loc)
         try:
-            for retry in generators.retryloop(
-                attempts=self.tur_arg['error_retry'], delay=5):
+            for retry in generators.retryloop(attempts=self.retry_atmp,
+                                              delay=5):
                 c_headers = self.headers
                 if self.tur_arg['container_headers']:
                     c_headers.update(self.tur_arg['container_headers'])
@@ -380,11 +382,11 @@ class NovaAuth(object):
                 if resp.status == 404:
                     print('Creating Container ==> %s' % container_name)
                     self.conn.request('PUT', path, headers=c_headers)
-                    resp_info = self.response_type()
-                    if not resp_info[1]:
+                    resp, check = self.response_type()
+                    if not check is True:
                         retry()
-                    resp = resp_info[0]
-                    resp.read()
+                    else:
+                        resp.read()
                     if resp.status == 404:
                         print('Container Not Found %s' % resp.status)
                     elif resp.status >= 300 or resp.status == None:
@@ -410,11 +412,12 @@ class NovaAuth(object):
                     if self.tur_arg['object_headers']:
                         self.conn.request('POST', path, headers=c_headers)
 
-                        resp_info = self.response_type()
-                        if resp_info[1] is not True:
+                        resp, check = self.response_type()
+                        if check is not True:
                             retry()
-                        resp = resp_info[0]
-                        resp.read()
+                        else:
+                            resp.read()
+
                         if resp.status >= 300:
                             self.result_exception(resp=resp,
                                                   headers=c_headers,
@@ -433,16 +436,17 @@ class NovaAuth(object):
         """
         r_loc = '%s/%s/%s' % (self.c_path, container, file_path)
         path = quote(r_loc)
-        for retry in generators.retryloop(attempts=self.tur_arg['error_retry'],
+        for retry in generators.retryloop(attempts=self.retry_atmp,
                                           delay=5):
             c_headers = self.headers
             # Check to see if the container exists
             self.conn.request('DELETE', path, headers=c_headers)
-            resp_info = self.response_type()
-            if resp_info[1] is not True:
+            resp, check = self.response_type()
+            if check is not True:
                 retry()
-            resp = resp_info[0]
-            resp.read()
+            else:
+                resp.read()
+
             if resp.status == 401 or resp.status >= 500:
                 self.result_exception(resp=resp,
                                       headers=c_headers,
@@ -466,16 +470,17 @@ class NovaAuth(object):
         self.connection_prep()
         r_loc = '%s/%s' % (self.c_path, container)
         path = quote(r_loc)
-        for retry in generators.retryloop(attempts=self.tur_arg['error_retry'],
+        for retry in generators.retryloop(attempts=self.retry_atmp,
                                           delay=5):
             c_headers = self.headers
             # Check to see if the container exists
             self.conn.request('DELETE', path, headers=c_headers)
-            resp_info = self.response_type()
-            if resp_info[1] is not True:
+            resp, check = self.response_type()
+            if check is not True:
                 retry()
-            resp = resp_info[0]
-            resp.read()
+            else:
+                resp.read()
+
             if resp.status >= 300 or resp.status == None:
                 self.result_exception(resp=resp,
                                       headers=c_headers,
@@ -511,11 +516,11 @@ class NovaAuth(object):
                     filepath = quote(r_loc)
                     self.conn.request('HEAD', filepath, headers=c_headers)
 
-                    resp_info = self.response_type()
-                    if resp_info[1] is not True:
+                    resp, check = self.response_type()
+                    if check is not True:
                         retry()
-                    resp = resp_info[0]
-                    resp.read()
+                    else:
+                        resp.read()
 
                     if resp.status >= 300:
                         self.result_exception(resp=resp,
@@ -536,10 +541,9 @@ class NovaAuth(object):
 
                     for _ in xrange(jobs):
                         self.conn.request('GET', filepath, headers=f_headers)
-                        resp_info = self.response_type()
-                        if resp_info[1] is not True:
+                        resp, check = self.response_type()
+                        if check is not True:
                             retry()
-                        resp = resp_info[0]
                         if resp.status >= 300:
                             self.result_exception(resp=resp,
                                                   headers=c_headers,
@@ -580,8 +584,9 @@ class NovaAuth(object):
         at the target. The files are simply downloaded.
         """
         try:
-            for retry in generators.retryloop(
-                attempts=self.tur_arg['error_retry'], delay=5, backoff=2):
+            for retry in generators.retryloop(attempts=self.retry_atmp,
+                                              delay=5,
+                                              backoff=1):
                 try:
                     # Set the headers if some custom ones were specified
                     f_headers = self.headers
@@ -592,10 +597,9 @@ class NovaAuth(object):
                     r_loc = '%s/%s/%s' % (self.c_path, container, file_path)
                     filepath = quote(r_loc)
                     self.conn.request('GET', filepath, headers=f_headers)
-                    resp_info = self.response_type()
-                    if resp_info[1] is not True:
+                    resp, check = self.response_type()
+                    if check is not True:
                         retry()
-                    resp = resp_info[0]
                     _rr = resp.read()
                     # Check that the status was a good one
                     if resp.status >= 300 or resp.status == None:
@@ -640,8 +644,9 @@ class NovaAuth(object):
         ' at the target. The files are simply uploaded.
         """
         try:
-            for retry in generators.retryloop(
-                attempts=self.tur_arg['error_retry'], delay=5, backoff=2):
+            for retry in generators.retryloop(attempts=self.retry_atmp,
+                                              delay=5,
+                                              backoff=2):
                 try:
                     # Set the headers if some custom ones were specified
                     f_headers = self.headers
@@ -658,11 +663,11 @@ class NovaAuth(object):
                                           body=f_path,
                                           headers=f_headers)
                     f_path.close()
-                    resp_info = self.response_type()
-                    if resp_info[1] is not True:
+                    resp, check = self.response_type()
+                    if check is not True:
                         retry()
-                    resp = resp_info[0]
-                    resp.read()
+                    else:
+                        resp.read()
 
                     # Check that the status was a good one
                     if resp.status >= 300 or resp.status == None:
@@ -705,8 +710,8 @@ class NovaAuth(object):
         """
         #noinspection PyBroadException
         try:
-            for retry in generators.retryloop(
-                attempts=self.tur_arg['error_retry'], delay=5):
+            for retry in generators.retryloop(attempts=self.retry_atmp,
+                                              delay=5):
                 try:
                     # Set the headers if some custom ones were specified
                     f_headers = self.headers
@@ -719,11 +724,11 @@ class NovaAuth(object):
 
                     self.conn.request('HEAD', filepath, headers=f_headers)
 
-                    resp_info = self.response_type()
-                    if resp_info[1] is not True:
+                    resp, check = self.response_type()
+                    if check is not True:
                         retry()
-                    resp = resp_info[0]
-                    resp.read()
+                    else:
+                        resp.read()
 
                     if resp.status == 404:
                         with open(file_path, 'rb') as f_path:
@@ -766,8 +771,9 @@ class NovaAuth(object):
                         remotemd5sum = resp.getheader('etag')
                         md5 = hashlib.md5()
                         with open(file_path, 'rb') as f_hash:
-                            for chunk in iter(lambda: f_hash.read(
-                                128 * md5.block_size), ''):
+                            for chunk in iter(lambda:
+                                f_hash.read(128 * md5.block_size),
+                                ''):
                                 md5.update(chunk)
                         f_hash.close()
                         localmd5sum = md5.hexdigest()
@@ -779,11 +785,11 @@ class NovaAuth(object):
                                                   body=f_path,
                                                   headers=f_headers)
                             f_path.close()
-                            resp_info = self.response_type()
-                            if resp_info[1] is not True:
+                            resp, check = self.response_type()
+                            if check is not True:
                                 retry()
-                            resp = resp_info[0]
-                            resp.read()
+                            else:
+                                resp.read()
                             if resp.status >= 300:
                                 self.result_exception(resp=resp,
                                                       headers=f_headers,
@@ -811,11 +817,12 @@ class NovaAuth(object):
                                                   filepath,
                                                   headers=f_headers)
 
-                                resp_info = self.response_type()
-                                if resp_info[1] is not True:
+                                resp, check = self.response_type()
+                                if check is not True:
                                     retry()
-                                resp = resp_info[0]
-                                resp.read()
+                                else:
+                                    resp.read()
+
                                 if resp.status >= 300:
                                     self.result_exception(resp=resp,
                                                           headers=self.headers,
