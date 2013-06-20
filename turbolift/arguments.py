@@ -169,7 +169,7 @@ def get_values():
                            help='Defaults to env[OS_AUTH_URL]',
                            default=os.environ.get('OS_AUTH_URL', None))
     authgroup.add_argument('--os-rax-auth',
-                           choices=['dfw', 'ord', 'lon', 'syn'],
+                           choices=['dfw', 'ord', 'lon', 'syd'],
                            help='Rackspace Cloud Authentication',
                            default=None)
     authgroup.add_argument('--os-version', 

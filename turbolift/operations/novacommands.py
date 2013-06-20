@@ -144,7 +144,7 @@ class NovaAuth(object):
                 authurl = 'lon.identity.api.rackspacecloud.com'
         elif any([self.tur_arg['os_rax_auth'] == 'DFW',
                   self.tur_arg['os_rax_auth'] == 'ORD',
-                  self.tur_arg['os_rax_auth'] == 'SYN']):
+                  self.tur_arg['os_rax_auth'] == 'SYD']):
             self.tur_arg['os_region'] = self.tur_arg.get('os_rax_auth')
             if self.tur_arg.get('os_auth_url'):
                 authurl = self.tur_arg.get('os_auth_url')
