@@ -1,12 +1,12 @@
-# ==============================================================================
+# =============================================================================
 # Copyright [2013] [Kevin Carter]
 # License Information :
 # This software has no warranty, it is provided 'as is'. It is your
-# responsibility to validate the behavior of the routines and its accuracy using
-# the code provided. Consult the GNU General Public license for further details
-# (see GNU General Public License).
+# responsibility to validate the behavior of the routines and its accuracy
+# using the code provided. Consult the GNU General Public license for further
+# details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
-# ==============================================================================
+# =============================================================================
 
 import os
 import sys
@@ -37,7 +37,8 @@ class FileNames(object):
         for directorypath in directory_list:
             try:
                 if os.path.isdir(directorypath):
-                    rootdir = '%s%s' % (os.path.realpath(directorypath), os.sep)
+                    rootdir = '%s%s' % (os.path.realpath(directorypath),
+                                        os.sep)
                     for (root,
                          subfolders,
                          files) in os.walk(rootdir.encode('utf8')):
@@ -54,7 +55,7 @@ class FileNames(object):
                     else:
                         get_file_size = [[files,
                                           os.path.getsize(files)]
-                            for files in filelist]
+                                         for files in filelist]
                         sort_size = sorted(get_file_size,
                                            key=operator.itemgetter(1),
                                            reverse=True)
@@ -62,7 +63,8 @@ class FileNames(object):
                             final_files.append(file_name)
 
                 elif not os.path.isdir(directorypath):
-                    _full_path = os.path.realpath(directorypath.encode('utf8'))
+                    _full_path = os.path.realpath(
+                        directorypath.encode('utf8'))
                     if os.path.exists(_full_path):
                         final_files.append(_full_path)
                     else:
@@ -70,8 +72,8 @@ class FileNames(object):
                                              % _full_path)
 
                 else:
-                    print('ERROR\t: path %s does not exist, is not a directory,'
-                          ' or is a broken symlink' % directorypath)
+                    print('ERROR\t: path %s does not exist, is not a'
+                          ' directory, or is a broken symlink' % directorypath)
                     sys.exit('MESSAGE\t: Try Again but this time with a valid'
                              ' directory path')
             except Exception, exp:

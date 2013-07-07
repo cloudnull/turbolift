@@ -1,23 +1,22 @@
-# ==============================================================================
+# =============================================================================
 # Copyright [2013] [Kevin Carter]
 # License Information :
 # This software has no warranty, it is provided 'as is'. It is your
-# responsibility to validate the behavior of the routines and its accuracy using
-# the code provided. Consult the GNU General Public license for further details
-# (see GNU General Public License).
+# responsibility to validate the behavior of the routines and its accuracy
+# using the code provided. Consult the GNU General Public license for further
+# details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
-# ==============================================================================
+# =============================================================================
 
 import os
-import sys
 import operator
+
 
 class GetDirsAndFiles(object):
     def __init__(self, tur_arg):
         self.tur_arg = tur_arg
         self.dname = []
         self.cpd = {}
-
 
     def get_dir_and_files(self):
         """
@@ -49,8 +48,7 @@ class GetDirsAndFiles(object):
                 flist = _fs
             else:
                 get_file_size = [[files,
-                                  os.path.getsize(files)]
-                    for files in _fs]
+                                  os.path.getsize(files)] for files in _fs]
                 sort_size = sorted(get_file_size,
                                    key=operator.itemgetter(1),
                                    reverse=True)
