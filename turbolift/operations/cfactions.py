@@ -11,7 +11,6 @@
 import sys
 import os
 import errno
-import time
 
 # Local Files to Import
 from turbolift.operations import generators, novacommands, IndicatorThread
