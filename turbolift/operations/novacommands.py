@@ -1,12 +1,12 @@
-# ==============================================================================
+# =============================================================================
 # Copyright [2013] [Kevin Carter]
 # License Information :
 # This software has no warranty, it is provided 'as is'. It is your
-# responsibility to validate the behavior of the routines and its accuracy using
-# the code provided. Consult the GNU General Public license for further details
-# (see GNU General Public License).
+# responsibility to validate the behavior of the routines and its accuracy
+# using the code provided. Consult the GNU General Public license for further
+# details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
-# ==============================================================================
+# =============================================================================
 
 import sys
 import time
@@ -15,92 +15,85 @@ import hashlib
 import httplib
 import traceback
 from urllib import quote
-from turbolift.operations import generators
+from turbolift.operations import generators as gen
 
 
 class AuthenticationProblem(Exception):
     pass
 
 
+class SystemProblem(Exception):
+    pass
+
+
 class NovaAuth(object):
     def __init__(self, tur_arg, work_q=None):
         """
-        NovaAuth is a class that handels all aspects of the turbolift experience
-        Here you will be able to authenticate agains the API, create containers
-        and upload content
+        NovaAuth is a class that handels all aspects of the turbolift
+        experience Here you will be able to authenticate agains the API, create
+        containers and upload content
         """
         self.tur_arg = tur_arg
         self.work_q = work_q
         self.retry_atmp = self.tur_arg.get('error_retry', 1)
 
     def response_type(self):
-        for retry in generators.retryloop(attempts=self.retry_atmp,
-                                          timeout=960,
-                                          delay=5):
+        for retry in gen.retryloop(attempts=self.retry_atmp,
+                                   timeout=960,
+                                   delay=5):
             try:
                 # Compatibility with Python 2.6
                 if sys.version_info < (2, 7, 0):
                     resp = self.conn.getresponse()
                 else:
                     resp = self.conn.getresponse(buffering=True)
-                return resp, True
             except httplib.BadStatusLine:
-                self.conn.close()
-                self.connection_prep()
+                self.connection_prep(conn_close=True)
                 retry()
-                continue
             else:
-                return None, False
+                return resp, True
 
-    def result_exception(self, resp, headers, authurl, jsonreq=None, file_path=None):
+    def result_exception(self, resp, headers, authurl, jsonreq=None):
         """
         If we encounter an exception in our upload, we will look at how we
         can attempt to resolve the exception.
         """
         try:
-            if resp.status == 401 or resp.status == None:
-                time.sleep(2)
+            if any([resp.status == 401, resp.status is None]):
                 print('MESSAGE\t: Forced Re-authentication is happening.')
-                sys.exit('Authentication has failed. so we quit')
-                self.connection_prep()
+                time.sleep(2)
+                self.connection_prep(conn_close=True)
                 reqjson, auth_url = self.osauth()
                 self.make_request(jsonreq=reqjson, url=auth_url)
-                print('NOVA-API AUTH FAILURE -> REQUEST:'
-                      ' %s %s %s %s' % (resp.status,
-                                        resp.reason,
-                                        jsonreq,
-                                        authurl))
+                raise SystemProblem('NOVA-API AUTH FAILURE -> REQUEST:'
+                                    ' %s %s %s %s' % (resp.status,
+                                                      resp.reason,
+                                                      jsonreq,
+                                                      authurl))
             elif resp.status == 413:
-                status_info = resp.getheaders()
-                _di = dict(status_info)
-                print(_di)
-                print('The System encountered an API limitation and will'
-                      ' continue in %s Seconds' % _di.get('retry_after', 5))
+                _di = dict(resp.getheaders())
                 time.sleep(int(_di.get('retry_after', 5)))
-            elif resp.status == 400:
-                print('MESSAGE\t: Opened File Error, re-Opening the'
-                      ' Socket to retry.')
-            elif resp.status == 408:
-                self.conn.close()
-                self.connection_prep()
+                self.connection_prep(conn_close=True)
+                raise SystemProblem('The System encountered an API limitation'
+                                    ' and will continue in %s Seconds'
+                                    % _di.get('retry_after', 5))
             elif resp.status == 502:
-                self.connection_prep(http=True)
-            elif resp.status >= 500:
-                print('FAILURE %s ==> REQUEST: %s %s %s' % (resp.status,
-                                                            resp.reason,
-                                                            authurl,
-                                                            jsonreq))
-                self.conn.close()
-                self.connection_prep()
-            else:
-                print('NOVA-API FAILURE -> REQUEST: %s %s %s %s' % (resp.status,
-                                                                    resp.reason,
-                                                                    authurl,
-                                                                    jsonreq))
+                self.connection_prep(conn_close=True, http=True)
+                raise SystemProblem('Failure using HTTPS, Changing to HTTP')
+            elif resp.status >= 300:
+                self.connection_prep(conn_close=True)
+                raise SystemProblem('NOVA-API FAILURE -> REQUEST: %s %s %s %s'
+                                    % (resp.status,
+                                       resp.reason,
+                                       authurl,
+                                       jsonreq))
+        except SystemProblem, exp:
+            print(exp)
+            return True
         except Exception, exp:
             sys.exit(exp)
-        finally:
-            self.connection_prep()
+        else:
+            return False
 
     def connection_prep(self, conn_close=None, http=None):
         """
@@ -179,9 +172,9 @@ class NovaAuth(object):
         return jsonreq, url
 
     def make_request(self, jsonreq, url):
-        for retry in generators.retryloop(attempts=self.retry_atmp,
-                                          timeout=960,
-                                          delay=5):
+        for retry in gen.retryloop(attempts=self.retry_atmp,
+                                   timeout=960,
+                                   delay=5):
             conn = httplib.HTTPSConnection(url)
 
             if self.tur_arg['os_verbose']:
@@ -211,20 +204,11 @@ class NovaAuth(object):
                 print('Attempting HTTP connection')
                 conn = httplib.HTTPConnection(url)
                 retry()
-            elif resp.status >= 300 or resp.status == None:
-                self.result_exception(resp=resp,
-                                      headers=self.headers,
-                                      authurl=self.url,
-                                      jsonreq=self.c_path)
-                try:
-                    retry()
-                except generators.RetryError, exp:
-                    print('Authentication has FAILED "%s %s %s %s"'
-                          % (resp.status,
-                             resp.reason,
-                             readresp,
-                             exp))
-                    raise AuthenticationProblem('Auth Failed')
+            elif self.result_exception(resp=resp,
+                                       headers=self.headers,
+                                       authurl=self.url,
+                                       jsonreq=self.c_path):
+                retry()
             else:
                 if self.tur_arg['os_verbose']:
                     print('JSON decoded and pretty')
@@ -298,30 +282,23 @@ class NovaAuth(object):
         c_headers.update({'X-CDN-Enabled': True,
                           'X-TTL': self.tur_arg['cdn_ttl'],
                           'X-Log-Retention': self.tur_arg['cdn_logs']})
-        for retry in generators.retryloop(attempts=self.retry_atmp,
-                                          delay=5):
+        for retry in gen.retryloop(attempts=self.retry_atmp, delay=5):
             try:
                 conn = httplib.HTTPSConnection(cdnurl)
-                for retry in generators.retryloop(
-                    attempts=self.tur_arg['error_retry'],
-                    delay=5):
-                    conn.request('PUT', path, headers=c_headers)
-
-                    resp, check = self.response_type()
-                    if check is not True:
-                        retry()
-                    else:
-                        resp.read()
-
-                    status_codes = (resp.status, resp.reason, container_name)
-                    if self.tur_arg['os_verbose']:
-                        print('ENABLING CDN ON CONTAINER: %s %s %s'
-                              % status_codes)
-                    if resp.status >= 300 or resp.status == None:
-                        print('Failure happened, will retry %s %s %s'
-                              % status_codes)
-                        retry()
-                        continue
+                conn.request('PUT', path, headers=c_headers)
+                resp, check = self.response_type()
+                if check is not True:
+                    rty()
+                else:
+                    resp.read()
+                if self.tur_arg['os_verbose']:
+                    print('ENABLING CDN ON CONTAINER: %s %s %s'
+                          % resp.status, resp.reason, container_name)
+                if self.result_exception(resp=resp,
+                                         headers=c_headers,
+                                         authurl=cdnurl,
+                                         jsonreq=path):
+                    retry()
             except Exception, exp:
                 print('ERROR\t: Shits broke son, here comes the'
                       ' stack trace:\t %s' % (sys.exc_info()[1]))
@@ -337,8 +314,7 @@ class NovaAuth(object):
         self.connection_prep()
         r_loc = '%s/%s' % (self.c_path, container_name)
         path = quote(r_loc)
-        for retry in generators.retryloop(attempts=self.retry_atmp,
-                                          delay=5):
+        for retry in gen.retryloop(attempts=self.retry_atmp, delay=5):
             c_headers = self.headers
             # Check to see if the container exists
             self.conn.request('HEAD', path, headers=c_headers)
@@ -350,11 +326,10 @@ class NovaAuth(object):
             # Check that the status was a good one
             if resp.status == 404:
                 print('Container Not Found')
-            elif resp.status >= 300 or resp.status == None:
-                self.result_exception(resp=resp,
-                                      headers=c_headers,
-                                      authurl=self.url,
-                                      jsonreq=path)
+            elif self.result_exception(resp=resp,
+                                       headers=c_headers,
+                                       authurl=self.url,
+                                       jsonreq=path):
                 retry()
             return resp
 
@@ -369,8 +344,7 @@ class NovaAuth(object):
         r_loc = '%s/%s' % (self.c_path, container_name)
         path = quote(r_loc)
         try:
-            for retry in generators.retryloop(attempts=self.retry_atmp,
-                                              delay=5):
+            for retry in gen.retryloop(attempts=self.retry_atmp, delay=5):
                 c_headers = self.headers
                 if self.tur_arg['container_headers']:
                     c_headers.update(self.tur_arg['container_headers'])
@@ -389,26 +363,24 @@ class NovaAuth(object):
                         resp.read()
                     if resp.status == 404:
                         print('Container Not Found %s' % resp.status)
-                    elif resp.status >= 300 or resp.status == None:
-                        self.result_exception(resp=resp,
-                                              headers=c_headers,
-                                              authurl=self.url,
-                                              jsonreq=path)
+                    elif self.result_exception(resp=resp,
+                                               headers=c_headers,
+                                               authurl=self.url,
+                                               jsonreq=path):
                         retry()
                     status_codes = (resp.status, resp.reason, container_name)
                     if self.tur_arg['os_verbose']:
                         print('CREATING CONTAINER: %s %s %s' % status_codes)
-                elif resp.status >= 300 or resp.status == None:
-                    self.result_exception(resp=resp,
-                                          headers=c_headers,
-                                          authurl=self.url,
-                                          jsonreq=path)
+                elif self.result_exception(resp=resp,
+                                           headers=c_headers,
+                                           authurl=self.url,
+                                           jsonreq=path):
                     retry()
                 else:
                     if self.tur_arg['os_verbose']:
                         print('Container Found %s %s %s' % status_codes)
 
-                    # Put headers on the object if custom headers were specified
+                    # Put headers on the object if custom headers used
                     if self.tur_arg['object_headers']:
                         self.conn.request('POST', path, headers=c_headers)
 
@@ -418,11 +390,10 @@ class NovaAuth(object):
                         else:
                             resp.read()
 
-                        if resp.status >= 300:
-                            self.result_exception(resp=resp,
-                                                  headers=c_headers,
-                                                  authurl=self.url,
-                                                  jsonreq=path)
+                        if self.result_exception(resp=resp,
+                                                 headers=c_headers,
+                                                 authurl=self.url,
+                                                 jsonreq=path):
                             retry()
         except Exception, exp:
             print('ERROR\t: Shits broke son, here comes the'
@@ -436,8 +407,7 @@ class NovaAuth(object):
         """
         r_loc = '%s/%s/%s' % (self.c_path, container, file_path)
         path = quote(r_loc)
-        for retry in generators.retryloop(attempts=self.retry_atmp,
-                                          delay=5):
+        for retry in gen.retryloop(attempts=self.retry_atmp, delay=5):
             c_headers = self.headers
             # Check to see if the container exists
             self.conn.request('DELETE', path, headers=c_headers)
@@ -446,18 +416,16 @@ class NovaAuth(object):
                 retry()
             else:
                 resp.read()
-
-            if resp.status == 401 or resp.status >= 500:
-                self.result_exception(resp=resp,
-                                      headers=c_headers,
-                                      authurl=self.url,
-                                      jsonreq=path)
+            if self.result_exception(resp=resp,
+                                     headers=c_headers,
+                                     authurl=self.url,
+                                     jsonreq=path):
                 retry()
-                continue
-
             # Give us more data if we requested it
-            if self.tur_arg['os_verbose'] or self.tur_arg['debug']:
-                print 'INFO\t: %s %s %s' % (resp.status, resp.reason, file_path)
+            if any([self.tur_arg['os_verbose'], self.tur_arg['debug']]):
+                print 'INFO\t: %s %s %s' % (resp.status,
+                                            resp.reason,
+                                            file_path)
                 if self.tur_arg['debug']:
                     print 'MESSAGE\t: Delete path = %s ==> %s' % (file_path,
                                                                   container)
@@ -470,8 +438,7 @@ class NovaAuth(object):
         self.connection_prep()
         r_loc = '%s/%s' % (self.c_path, container)
         path = quote(r_loc)
-        for retry in generators.retryloop(attempts=self.retry_atmp,
-                                          delay=5):
+        for retry in gen.retryloop(attempts=self.retry_atmp, delay=5):
             c_headers = self.headers
             # Check to see if the container exists
             self.conn.request('DELETE', path, headers=c_headers)
@@ -480,17 +447,16 @@ class NovaAuth(object):
                 retry()
             else:
                 resp.read()
-
-            if resp.status >= 300 or resp.status == None:
-                self.result_exception(resp=resp,
-                                      headers=c_headers,
-                                      authurl=self.url,
-                                      jsonreq=path)
+            if self.result_exception(resp=resp,
+                                     headers=c_headers,
+                                     authurl=self.url,
+                                     jsonreq=path):
                 retry()
-
             # Give us more data if we requested it
-            if self.tur_arg['os_verbose'] or self.tur_arg['debug']:
-                print 'INFO\t: %s %s %s' % (resp.status, resp.reason, container)
+            if any([self.tur_arg['os_verbose'], self.tur_arg['debug']]):
+                print 'INFO\t: %s %s %s' % (resp.status,
+                                            resp.reason,
+                                            container)
                 if self.tur_arg['debug']:
                     print 'MESSAGE\t: Delete path = %s' % (container)
         self.connection_prep(conn_close=True)
@@ -501,8 +467,9 @@ class NovaAuth(object):
         """
         lastobj = None
         try:
-            for retry in generators.retryloop(
-                attempts=self.tur_arg['error_retry'], delay=5, backoff=2):
+            for retry in gen.retryloop(attempts=self.retry_atmp,
+                                       delay=5,
+                                       backoff=2):
                 try:
                     self.connection_prep()
 
@@ -521,12 +488,11 @@ class NovaAuth(object):
                         retry()
                     else:
                         resp.read()
-
-                    if resp.status >= 300:
-                        self.result_exception(resp=resp,
-                                              headers=c_headers,
-                                              authurl=self.url,
-                                              jsonreq=filepath)
+                    if self.result_exception(resp=resp,
+                                             headers=c_headers,
+                                             authurl=self.url,
+                                             jsonreq=filepath):
+                        retry()
                     count = int(resp.getheader('X-Container-Object-Count'))
 
                     # Build the List
@@ -540,27 +506,31 @@ class NovaAuth(object):
                     f_headers.update({'Content-type': 'application/json'})
 
                     for _ in xrange(jobs):
-                        self.conn.request('GET', filepath, headers=f_headers)
-                        resp, check = self.response_type()
-                        if check is not True:
-                            retry()
-                        if resp.status >= 300:
-                            self.result_exception(resp=resp,
-                                                  headers=c_headers,
-                                                  authurl=self.url,
-                                                  jsonreq=filepath)
-                        _rr = json.loads(resp.read())
-                        for obj in _rr:
-                            file_list.append(obj['name'])
+                        for nest_rty in gen.retryloop(attempts=self.retry_atmp,
+                                                      delay=5):
+                            self.conn.request('GET',
+                                              filepath,
+                                              headers=f_headers)
+                            resp, check = self.response_type()
+                            if check is not True:
+                                retry()
+                            if self.result_exception(resp=resp,
+                                                     headers=c_headers,
+                                                     authurl=self.url,
+                                                     jsonreq=filepath):
+                                nest_rty()
+                            _rr = json.loads(resp.read())
+                            for obj in _rr:
+                                file_list.append(obj['name'])
 
-                        if count - 10000 > 0:
-                            count = count - 10000
-                            lastobj = file_list[-1]
-                            filepath = '%s&marker=%s' % (filepath_m,
-                                                         quote(lastobj))
-
+                            if count - 10000 > 0:
+                                count = count - 10000
+                                lastobj = file_list[-1]
+                                filepath = '%s&marker=%s' % (filepath_m,
+                                                             quote(lastobj))
                     # Give us more data if we requested it
-                    if self.tur_arg['os_verbose'] or self.tur_arg['debug']:
+                    if any([self.tur_arg['os_verbose'],
+                            self.tur_arg['debug']]):
                         print 'INFO\t: %s %s %s' % (resp.status,
                                                     resp.reason,
                                                     file_list)
@@ -584,9 +554,9 @@ class NovaAuth(object):
         at the target. The files are simply downloaded.
         """
         try:
-            for retry in generators.retryloop(attempts=self.retry_atmp,
-                                              delay=5,
-                                              backoff=1):
+            for retry in gen.retryloop(attempts=self.retry_atmp,
+                                       delay=5,
+                                       backoff=1):
                 try:
                     # Set the headers if some custom ones were specified
                     f_headers = self.headers
@@ -602,12 +572,10 @@ class NovaAuth(object):
                         retry()
                     _rr = resp.read()
                     # Check that the status was a good one
-                    if resp.status >= 300 or resp.status == None:
-                        self.result_exception(resp=resp,
-                                              headers=f_headers,
-                                              authurl=self.url,
-                                              jsonreq=filepath,
-                                              file_path=file_path)
+                    if self.result_exception(resp=resp,
+                                             headers=f_headers,
+                                             authurl=self.url,
+                                             jsonreq=filepath):
                         retry()
 
                     # Open our source file
@@ -616,7 +584,8 @@ class NovaAuth(object):
                     f_name.close()
 
                     # Give us more data if we requested it
-                    if self.tur_arg['os_verbose'] or self.tur_arg['debug']:
+                    if any([self.tur_arg['os_verbose'],
+                            self.tur_arg['debug']]):
                         print 'INFO\t: %s %s %s' % (resp.status,
                                                     resp.reason,
                                                     file_name)
@@ -644,9 +613,9 @@ class NovaAuth(object):
         ' at the target. The files are simply uploaded.
         """
         try:
-            for retry in generators.retryloop(attempts=self.retry_atmp,
-                                              delay=5,
-                                              backoff=2):
+            for retry in gen.retryloop(attempts=self.retry_atmp,
+                                       delay=5,
+                                       backoff=2):
                 try:
                     # Set the headers if some custom ones were specified
                     f_headers = self.headers
@@ -670,16 +639,15 @@ class NovaAuth(object):
                         resp.read()
 
                     # Check that the status was a good one
-                    if resp.status >= 300 or resp.status == None:
-                        self.result_exception(resp=resp,
-                                              headers=f_headers,
-                                              authurl=self.url,
-                                              jsonreq=filepath,
-                                              file_path=file_path)
+                    if self.result_exception(resp=resp,
+                                             headers=f_headers,
+                                             authurl=self.url,
+                                             jsonreq=filepath):
                         retry()
 
                     # Give us more data if we requested it
-                    if self.tur_arg['os_verbose'] or self.tur_arg['debug']:
+                    if any([self.tur_arg['os_verbose'],
+                            self.tur_arg['debug']]):
                         print('INFO\t: %s %s %s' % (resp.status,
                                                     resp.reason,
                                                     file_name))
@@ -703,15 +671,15 @@ class NovaAuth(object):
         """
         This is the Sync method which uploads files to the swift repository'
         if they are not already found. If a file "name" is found locally and
-        in the swift repository an MD5 comparison is done between the two files.
-        If the MD5 is miss-matched the local file is uploaded to the repository.
-        If custom meta data is specified, and the object exists the method will
-        put the metadata onto the object.
+        in the swift repository an MD5 comparison is done between the two
+        files. If the MD5 is miss-matched the local file is uploaded to the
+        repository. If custom meta data is specified, and the object exists the
+        method will put the metadata onto the object.
         """
         #noinspection PyBroadException
         try:
-            for retry in generators.retryloop(attempts=self.retry_atmp,
-                                              delay=5):
+            for retry in gen.retryloop(attempts=self.retry_atmp,
+                                       delay=5):
                 try:
                     # Set the headers if some custom ones were specified
                     f_headers = self.headers
@@ -748,32 +716,27 @@ class NovaAuth(object):
                             self.connection_prep()
                             retry()
                         resp.read()
-                        if resp.status >= 300 or resp.status == None:
-                            self.result_exception(resp=resp,
-                                                  headers=f_headers,
-                                                  authurl=filepath,
-                                                  jsonreq=r_loc,
-                                                  file_path=file_path)
+                        if self.result_exception(resp=resp,
+                                                 headers=f_headers,
+                                                 authurl=filepath,
+                                                 jsonreq=r_loc):
                             retry()
 
                         if self.tur_arg['verbose']:
                             print 'INFO\t: %s %s %s' % (resp.status,
                                                         resp.reason,
                                                         file_name)
-                    elif resp.status >= 300 or resp.status == None:
-                        self.result_exception(resp=resp,
-                                              headers=f_headers,
-                                              authurl=filepath,
-                                              jsonreq=r_loc,
-                                              file_path=file_path)
+                    elif self.result_exception(resp=resp,
+                                               headers=f_headers,
+                                               authurl=filepath,
+                                               jsonreq=r_loc):
                         retry()
                     else:
                         remotemd5sum = resp.getheader('etag')
                         md5 = hashlib.md5()
                         with open(file_path, 'rb') as f_hash:
-                            for chunk in iter(lambda:
-                                f_hash.read(128 * md5.block_size),
-                                ''):
+                            for chunk in iter(lambda: f_hash.read(
+                                    128 * md5.block_size), ''):
                                 md5.update(chunk)
                         f_hash.close()
                         localmd5sum = md5.hexdigest()
@@ -790,12 +753,10 @@ class NovaAuth(object):
                                 retry()
                             else:
                                 resp.read()
-                            if resp.status >= 300:
-                                self.result_exception(resp=resp,
-                                                      headers=f_headers,
-                                                      authurl=filepath,
-                                                      jsonreq=r_loc,
-                                                      file_path=file_path)
+                            if self.result_exception(resp=resp,
+                                                     headers=f_headers,
+                                                     authurl=filepath,
+                                                     jsonreq=r_loc):
                                 retry()
 
                             if self.tur_arg['verbose']:
@@ -823,12 +784,10 @@ class NovaAuth(object):
                                 else:
                                     resp.read()
 
-                                if resp.status >= 300:
-                                    self.result_exception(resp=resp,
-                                                          headers=self.headers,
-                                                          authurl=filepath,
-                                                          jsonreq=r_loc,
-                                                          file_path=file_path)
+                                if self.result_exception(resp=resp,
+                                                         headers=self.headers,
+                                                         authurl=filepath,
+                                                         jsonreq=r_loc):
                                     retry()
                 except Exception, exp:
                     print('\nFile Failed to be uploaded %s. Error ==> %s'
