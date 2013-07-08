@@ -64,8 +64,6 @@ class Compressor(object):
                         sys.stdout.flush()
                         time.sleep(.01)
                 print 'ARCHIVE CONTENTS : %s files' % len(ver_array)
-            return tmp_file
-
         except KeyboardInterrupt:
             print('Caught KeyboardInterrupt, terminating workers\n'
                   'MESSAGE\t: Removing Local Copy of the Archive')
@@ -84,3 +82,5 @@ class Compressor(object):
                       ' delete. here some data you should read'
                       % tmp_file)
                 print(exp)
+        else:
+            return tmp_file
