@@ -47,11 +47,10 @@ class BaseCamp(object):
         the number of operations.
         """
         if self.tur_arg.get('cc', 0) > self.tur_arg.get('fc', 1):
-            print('MESSAGE\t: There are less things to do than the number of'
-                  ' concurrent\n\t  processes specified by either an override'
-                  ' or the system defaults.\n\t  I am leveling the number of'
-                  ' concurrent processes to the number of\n\t jobs to'
-                  ' perform.')
+            print('MESSAGE\t: There are less things to do than the number of\n'
+                  '\t  concurrent processes specified by either an override\n'
+                  '\t  or the system defaults. I am leveling the number of\n'
+                  '\t  concurrent processes to the number of jobs to perform.')
             self.tur_arg['multipools'] = self.tur_arg['fc']
         else:
             self.tur_arg['multipools'] = self.tur_arg['cc']
