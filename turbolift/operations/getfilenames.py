@@ -39,9 +39,7 @@ class FileNames(object):
                 if os.path.isdir(directorypath):
                     rootdir = '%s%s' % (os.path.realpath(directorypath),
                                         os.sep)
-                    for (root,
-                         subfolders,
-                         files) in os.walk(rootdir.encode('utf8')):
+                    for root, sfs, files in os.walk(rootdir.encode('utf8')):
                         for _fl in files:
                             inode = os.path.join(root.encode('utf8'),
                                                  _fl.encode('utf8'))
@@ -49,19 +47,16 @@ class FileNames(object):
                                 filelist.append(inode)
                         if self.tur_arg.get('debug'):
                             print 'File List\t: %s' % files
-
-                    if self.tur_arg.get('no_sort'):
+                    if self.tur_arg.get('no_sort') is True:
                         final_files = filelist
                     else:
-                        get_file_size = [[files,
-                                          os.path.getsize(files)]
+                        get_file_size = [[files, os.path.getsize(files)]
                                          for files in filelist]
                         sort_size = sorted(get_file_size,
                                            key=operator.itemgetter(1),
                                            reverse=True)
                         for file_name, size in sort_size:
                             final_files.append(file_name)
-
                 elif not os.path.isdir(directorypath):
                     _full_path = os.path.realpath(
                         directorypath.encode('utf8'))
@@ -70,13 +65,11 @@ class FileNames(object):
                     else:
                         raise NoFileProvided('No Real Path was Found for %s'
                                              % _full_path)
-
                 else:
                     print('ERROR\t: path %s does not exist, is not a'
                           ' directory, or is a broken symlink' % directorypath)
                     sys.exit('MESSAGE\t: Try Again but this time with a valid'
                              ' directory path')
             except Exception, exp:
-                print(exp)
-                sys.exit('Died for some reason... and here it is')
+                sys.exit('Died for some reason... and here it is\n%s' % exp)
         return final_files
