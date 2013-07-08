@@ -1,13 +1,12 @@
-# ==============================================================================
+# =============================================================================
 # Copyright [2013] [Kevin Carter]
 # License Information :
 # This software has no warranty, it is provided 'as is'. It is your
-# responsibility to validate the behavior of the routines and its accuracy using
-# the code provided. Consult the GNU General Public license for further details
-# (see GNU General Public License).
+# responsibility to validate the behavior of the routines and its accuracy
+# using the code provided. Consult the GNU General Public license for further
+# details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
-# ==============================================================================
-
+# =============================================================================
 import sys
 import time
 import json
@@ -15,94 +14,136 @@ import hashlib
 import httplib
 import traceback
 from urllib import quote
-from turbolift.operations import generators
+from turbolift.operations import generators as gen
 
 
 class AuthenticationProblem(Exception):
     pass
 
 
+class SystemProblem(Exception):
+    pass
+
+
 class NovaAuth(object):
     def __init__(self, tur_arg, work_q=None):
         """
-        NovaAuth is a class that handels all aspects of the turbolift experience
-        Here you will be able to authenticate agains the API, create containers
-        and upload content
+        NovaAuth is a class that handels all aspects of the turbolift
+        experience Here you will be able to authenticate agains the API, create
+        containers and upload content
         """
         self.tur_arg = tur_arg
         self.work_q = work_q
         self.retry_atmp = self.tur_arg.get('error_retry', 1)
 
-    def response_type(self):
-        for retry in generators.retryloop(attempts=self.retry_atmp,
-                                          timeout=960,
-                                          delay=5):
+    def set_headers(self, ctr=False, cdn=False):
+        """
+        Set the headers used in the Cloud Files Request
+        """
+        # Set the headers if some custom ones were specified
+        headers = self.headers
+        if ctr is True:
+            if self.tur_arg['container_headers']:
+                headers.update(self.tur_arg['container_headers'])
+        elif cdn is True:
+            headers.update({'X-CDN-Enabled': True,
+                            'X-TTL': self.tur_arg.get('cdn_ttl'),
+                            'X-Log-Retention': self.tur_arg.get('cdn_logs')})
+        else:
+            if self.tur_arg['object_headers']:
+                headers.update(self.tur_arg['object_headers'])
+        return headers
+
+    def response_type(self, mcr=False):
+        """
+        Understand the reposnce type and provide for the connection
+        """
+        for retry in gen.retryloop(attempts=self.retry_atmp,
+                                   timeout=960,
+                                   delay=5):
             try:
-                # Compatibility with Python 2.6
                 if sys.version_info < (2, 7, 0):
                     resp = self.conn.getresponse()
                 else:
                     resp = self.conn.getresponse(buffering=True)
-                return resp, True
-            except httplib.BadStatusLine:
-                self.conn.close()
-                self.connection_prep()
-                retry()
-                continue
+            except httplib.BadStatusLine, exp:
+                if mcr is False:
+                    self.connection_prep(conn_close=True)
+                    retry()
+                else:
+                    raise SystemProblem('Failed to perform Action %s' % exp)
             else:
-                return None, False
+                return resp, True
 
-    def result_exception(self, resp, headers, authurl, jsonreq=None, file_path=None):
+    def response_get(self, rty, ret_read=False, mcr=False):
+        """
+        Get the reposnse informantion and return it.
+        """
+        resp, check = self.response_type(mcr)
+        if check is not True:
+            rty()
+        else:
+            resp_read = resp.read()
+        if ret_read is True:
+            return resp, resp_read
+        else:
+            return resp
+
+    def result_exception(self, resp, headers, authurl, jsonreq=None, dfc=None):
         """
         If we encounter an exception in our upload, we will look at how we
         can attempt to resolve the exception.
         """
         try:
-            if resp.status == 401 or resp.status == None:
-                time.sleep(2)
+            if any([resp.status == 401, resp.status is None]):
                 print('MESSAGE\t: Forced Re-authentication is happening.')
-                sys.exit('Authentication has failed. so we quit')
-                self.connection_prep()
+                time.sleep(2)
+                self.connection_prep(conn_close=True)
                 reqjson, auth_url = self.osauth()
                 self.make_request(jsonreq=reqjson, url=auth_url)
-                print('NOVA-API AUTH FAILURE -> REQUEST:'
-                      ' %s %s %s %s' % (resp.status,
-                                        resp.reason,
-                                        jsonreq,
-                                        authurl))
+                raise SystemProblem('NOVA-API AUTH FAILURE -> REQUEST:'
+                                    ' %s %s %s %s' % (resp.status,
+                                                      resp.reason,
+                                                      jsonreq,
+                                                      authurl))
+            elif resp.status == 404 and dfc is True:
+                pass
             elif resp.status == 413:
-                status_info = resp.getheaders()
-                _di = dict(status_info)
-                print(_di)
-                print('The System encountered an API limitation and will'
-                      ' continue in %s Seconds' % _di.get('retry_after', 5))
+                _di = dict(resp.getheaders())
                 time.sleep(int(_di.get('retry_after', 5)))
-            elif resp.status == 400:
-                print('MESSAGE\t: Opened File Error, re-Opening the'
-                      ' Socket to retry.')
-            elif resp.status == 408:
-                self.conn.close()
-                self.connection_prep()
+                self.connection_prep(conn_close=True)
+                raise SystemProblem('The System encountered an API limitation'
+                                    ' and will continue in %s Seconds'
+                                    % _di.get('retry_after', 5))
             elif resp.status == 502:
-                self.connection_prep(http=True)
-            elif resp.status >= 500:
-                print('FAILURE %s ==> REQUEST: %s %s %s' % (resp.status,
-                                                            resp.reason,
-                                                            authurl,
-                                                            jsonreq))
-                self.conn.close()
-                self.connection_prep()
-            else:
-                print('NOVA-API FAILURE -> REQUEST: %s %s %s %s' % (resp.status,
-                                                                    resp.reason,
-                                                                    authurl,
-                                                                    jsonreq))
+                self.connection_prep(conn_close=True, http=True)
+                raise SystemProblem('Failure using HTTPS, Changing to HTTP')
+            elif resp.status >= 300:
+                self.connection_prep(conn_close=True)
+                raise SystemProblem('NOVA-API FAILURE -> REQUEST: %s %s %s %s'
+                                    % (resp.status,
+                                       resp.reason,
+                                       authurl,
+                                       jsonreq))
+        except SystemProblem, exp:
+            print(exp)
+            return True
         except Exception, exp:
             sys.exit(exp)
-        finally:
-            self.connection_prep()
+        else:
+            return False
 
-    def connection_prep(self, conn_close=None, http=None):
+    def connection(self, url, http=False):
+        """
+        Open either an http or https connection for the provided URL
+        """
+        if http is False:
+            conn = httplib.HTTPSConnection(url)
+        else:
+            conn = httplib.HTTPConnection(url)
+        return conn
+
+    def connection_prep(self, conn_close=False, http=False):
         """
         After authentication, the connection_prep method opens a socket
         to the cloud files endpoint.
@@ -115,11 +156,10 @@ class NovaAuth(object):
             self.url = self.url_data[0]
             self.c_path = quote('/%s' % ('/'.join(self.url_data[1:])))
 
-        if http is None:
-            self.conn = httplib.HTTPSConnection(self.url)
+        if http is True:
+            self.conn = self.connection(url=self.url, http=True)
         else:
-            print('Attempting HTTP connection')
-            self.conn = httplib.HTTPConnection(self.url)
+            self.conn = self.connection(url=self.url)
 
         if self.tur_arg['os_verbose']:
             print('connecting to the API for %s ==> %s %s' % (self.c_path,
@@ -179,52 +219,32 @@ class NovaAuth(object):
         return jsonreq, url
 
     def make_request(self, jsonreq, url):
-        for retry in generators.retryloop(attempts=self.retry_atmp,
-                                          timeout=960,
-                                          delay=5):
-            conn = httplib.HTTPSConnection(url)
-
+        self.conn = self.connection(url=url)
+        for retry in gen.retryloop(attempts=self.retry_atmp,
+                                   timeout=960,
+                                   delay=5):
             if self.tur_arg['os_verbose']:
                 print('JSON REQUEST: %s' % jsonreq)
-                conn.set_debuglevel(1)
+                self.conn.set_debuglevel(1)
 
             headers = {'Content-Type': 'application/json'}
             tokenurl = '/%s/tokens' % self.tur_arg.get('os_version')
-            conn.request('POST', tokenurl, jsonreq, headers)
-
-            try:
-                # Compatibility with Python 2.6
-                if sys.version_info < (2, 7, 0):
-                    resp = conn.getresponse()
-                else:
-                    resp = conn.getresponse(buffering=True)
-            except httplib.BadStatusLine:
-                conn.close()
-                retry()
-
-            readresp = resp.read()
-            jrp = json.loads(readresp)
-            conn.close()
+            self.conn.request('POST', tokenurl, jsonreq, headers)
+            resp, resp_read = self.response_get(rty=retry,
+                                                ret_read=True,
+                                                mcr=True)
+            jrp = json.loads(resp_read)
 
             # Check that the status was a good one
             if resp.status >= 500:
-                print('Attempting HTTP connection')
-                conn = httplib.HTTPConnection(url)
+                print('500 Error => Attempting HTTP connection')
+                self.conn = self.connection(url=url, http=True)
                 retry()
-            elif resp.status >= 300 or resp.status == None:
-                self.result_exception(resp=resp,
-                                      headers=self.headers,
-                                      authurl=self.url,
-                                      jsonreq=self.c_path)
-                try:
-                    retry()
-                except generators.RetryError, exp:
-                    print('Authentication has FAILED "%s %s %s %s"'
-                          % (resp.status,
-                             resp.reason,
-                             readresp,
-                             exp))
-                    raise AuthenticationProblem('Auth Failed')
+            elif self.result_exception(resp=resp,
+                                       headers=headers,
+                                       authurl=url,
+                                       jsonreq=jsonreq):
+                retry()
             else:
                 if self.tur_arg['os_verbose']:
                     print('JSON decoded and pretty')
@@ -294,40 +314,26 @@ class NovaAuth(object):
 
         r_loc = '%s/%s' % (cdn_path, container_name)
         path = quote(r_loc)
-        c_headers = self.headers
-        c_headers.update({'X-CDN-Enabled': True,
-                          'X-TTL': self.tur_arg['cdn_ttl'],
-                          'X-Log-Retention': self.tur_arg['cdn_logs']})
-        for retry in generators.retryloop(attempts=self.retry_atmp,
-                                          delay=5):
+        c_headers = self.set_headers(cdn=True)
+        for retry in gen.retryloop(attempts=self.retry_atmp, delay=5):
             try:
-                conn = httplib.HTTPSConnection(cdnurl)
-                for retry in generators.retryloop(
-                    attempts=self.tur_arg['error_retry'],
-                    delay=5):
-                    conn.request('PUT', path, headers=c_headers)
-
-                    resp, check = self.response_type()
-                    if check is not True:
-                        retry()
-                    else:
-                        resp.read()
-
-                    status_codes = (resp.status, resp.reason, container_name)
-                    if self.tur_arg['os_verbose']:
-                        print('ENABLING CDN ON CONTAINER: %s %s %s'
-                              % status_codes)
-                    if resp.status >= 300 or resp.status == None:
-                        print('Failure happened, will retry %s %s %s'
-                              % status_codes)
-                        retry()
-                        continue
+                self.conn = self.connection(url=cdnurl)
+                self.conn.request('PUT', path, headers=c_headers)
+                resp = self.response_get(rty=retry)
+                if self.tur_arg['os_verbose']:
+                    print('ENABLING CDN ON CONTAINER: %s %s %s'
+                          % resp.status, resp.reason, container_name)
+                if self.result_exception(resp=resp,
+                                         headers=c_headers,
+                                         authurl=cdnurl,
+                                         jsonreq=path):
+                    retry()
             except Exception, exp:
                 print('ERROR\t: Shits broke son, here comes the'
-                      ' stack trace:\t %s' % (sys.exc_info()[1]))
+                      ' stack trace:\t %s' % traceback.format_exc())
                 print exp
             finally:
-                conn.close()
+                self.conn.close()
 
     def container_check(self, container_name):
         """
@@ -337,24 +343,18 @@ class NovaAuth(object):
         self.connection_prep()
         r_loc = '%s/%s' % (self.c_path, container_name)
         path = quote(r_loc)
-        for retry in generators.retryloop(attempts=self.retry_atmp,
-                                          delay=5):
-            c_headers = self.headers
+        for retry in gen.retryloop(attempts=self.retry_atmp, delay=5):
+            c_headers = self.set_headers()
             # Check to see if the container exists
             self.conn.request('HEAD', path, headers=c_headers)
-            resp, check = self.response_type()
-            if check is not True:
-                retry()
-            else:
-                resp.read()
+            resp = self.response_get(rty=retry)
             # Check that the status was a good one
             if resp.status == 404:
                 print('Container Not Found')
-            elif resp.status >= 300 or resp.status == None:
-                self.result_exception(resp=resp,
-                                      headers=c_headers,
-                                      authurl=self.url,
-                                      jsonreq=path)
+            elif self.result_exception(resp=resp,
+                                       headers=c_headers,
+                                       authurl=self.url,
+                                       jsonreq=path):
                 retry()
             return resp
 
@@ -366,14 +366,11 @@ class NovaAuth(object):
         and the container exists the method will put the metadata
         onto the object.
         """
-        r_loc = '%s/%s' % (self.c_path, container_name)
-        path = quote(r_loc)
-        try:
-            for retry in generators.retryloop(attempts=self.retry_atmp,
-                                              delay=5):
-                c_headers = self.headers
-                if self.tur_arg['container_headers']:
-                    c_headers.update(self.tur_arg['container_headers'])
+        for retry in gen.retryloop(attempts=self.retry_atmp, delay=5):
+            try:
+                r_loc = '%s/%s' % (self.c_path, container_name)
+                path = quote(r_loc)
+                c_headers = self.set_headers(ctr=True)
 
                 resp = self.container_check(container_name)
                 status_codes = (resp.status, resp.reason, container_name)
@@ -382,174 +379,155 @@ class NovaAuth(object):
                 if resp.status == 404:
                     print('Creating Container ==> %s' % container_name)
                     self.conn.request('PUT', path, headers=c_headers)
-                    resp, check = self.response_type()
-                    if not check is True:
-                        retry()
-                    else:
-                        resp.read()
+                    resp = self.response_get(rty=retry)
                     if resp.status == 404:
                         print('Container Not Found %s' % resp.status)
-                    elif resp.status >= 300 or resp.status == None:
-                        self.result_exception(resp=resp,
-                                              headers=c_headers,
-                                              authurl=self.url,
-                                              jsonreq=path)
+                    elif self.result_exception(resp=resp,
+                                               headers=c_headers,
+                                               authurl=self.url,
+                                               jsonreq=path):
                         retry()
                     status_codes = (resp.status, resp.reason, container_name)
                     if self.tur_arg['os_verbose']:
                         print('CREATING CONTAINER: %s %s %s' % status_codes)
-                elif resp.status >= 300 or resp.status == None:
-                    self.result_exception(resp=resp,
-                                          headers=c_headers,
-                                          authurl=self.url,
-                                          jsonreq=path)
+                elif self.result_exception(resp=resp,
+                                           headers=c_headers,
+                                           authurl=self.url,
+                                           jsonreq=path):
                     retry()
-                else:
-                    if self.tur_arg['os_verbose']:
-                        print('Container Found %s %s %s' % status_codes)
-
-                    # Put headers on the object if custom headers were specified
-                    if self.tur_arg['object_headers']:
-                        self.conn.request('POST', path, headers=c_headers)
-
-                        resp, check = self.response_type()
-                        if check is not True:
-                            retry()
-                        else:
-                            resp.read()
-
-                        if resp.status >= 300:
-                            self.result_exception(resp=resp,
-                                                  headers=c_headers,
-                                                  authurl=self.url,
-                                                  jsonreq=path)
-                            retry()
-        except Exception, exp:
-            print('ERROR\t: Shits broke son, here comes the'
-                  ' stack trace:\t %s -> Exception\t: %s'
-                  % (sys.exc_info()[1], exp))
-
-    def object_deleter(self, file_path, container):
-        """
-        container_name = 'The name of the Container'
-        check a container to see if it exists
-        """
-        r_loc = '%s/%s/%s' % (self.c_path, container, file_path)
-        path = quote(r_loc)
-        for retry in generators.retryloop(attempts=self.retry_atmp,
-                                          delay=5):
-            c_headers = self.headers
-            # Check to see if the container exists
-            self.conn.request('DELETE', path, headers=c_headers)
-            resp, check = self.response_type()
-            if check is not True:
-                retry()
+            except Exception, exp:
+                print('ERROR\t: Shits broke son, here comes the'
+                      ' stack trace:\t %s -> Exception\t: %s'
+                      % (traceback.format_exc(), exp))
             else:
-                resp.read()
-
-            if resp.status == 401 or resp.status >= 500:
-                self.result_exception(resp=resp,
-                                      headers=c_headers,
-                                      authurl=self.url,
-                                      jsonreq=path)
-                retry()
-                continue
-
-            # Give us more data if we requested it
-            if self.tur_arg['os_verbose'] or self.tur_arg['debug']:
-                print 'INFO\t: %s %s %s' % (resp.status, resp.reason, file_path)
-                if self.tur_arg['debug']:
-                    print 'MESSAGE\t: Delete path = %s ==> %s' % (file_path,
-                                                                  container)
+                if self.tur_arg['os_verbose']:
+                    print('Container Found %s %s %s' % status_codes)
+                # Put headers on the object if custom headers used
+                if self.tur_arg['object_headers']:
+                    self.conn.request('POST', path, headers=c_headers)
+                    resp = self.response_get(rty=retry)
+                    if self.result_exception(resp=resp,
+                                             headers=c_headers,
+                                             authurl=self.url,
+                                             jsonreq=path):
+                        retry()
 
     def container_deleter(self, container):
         """
         container_name = 'The name of the Container'
         check a container to see if it exists
         """
-        self.connection_prep()
-        r_loc = '%s/%s' % (self.c_path, container)
-        path = quote(r_loc)
-        for retry in generators.retryloop(attempts=self.retry_atmp,
-                                          delay=5):
-            c_headers = self.headers
+        for retry in gen.retryloop(attempts=self.retry_atmp, delay=5):
+            r_loc = '%s/%s' % (self.c_path, container)
+            path = quote(r_loc)
+            c_headers = self.set_headers()
             # Check to see if the container exists
             self.conn.request('DELETE', path, headers=c_headers)
-            resp, check = self.response_type()
-            if check is not True:
+            resp = self.response_get(rty=retry)
+            if self.result_exception(resp=resp,
+                                     headers=c_headers,
+                                     authurl=self.url,
+                                     jsonreq=path,
+                                     dfc=True):
                 retry()
-            else:
-                resp.read()
-
-            if resp.status >= 300 or resp.status == None:
-                self.result_exception(resp=resp,
-                                      headers=c_headers,
-                                      authurl=self.url,
-                                      jsonreq=path)
-                retry()
-
             # Give us more data if we requested it
-            if self.tur_arg['os_verbose'] or self.tur_arg['debug']:
-                print 'INFO\t: %s %s %s' % (resp.status, resp.reason, container)
+            if any([self.tur_arg['os_verbose'], self.tur_arg['debug']]):
+                print 'INFO\t: %s %s %s' % (resp.status,
+                                            resp.reason,
+                                            container)
                 if self.tur_arg['debug']:
                     print 'MESSAGE\t: Delete path = %s' % (container)
-        self.connection_prep(conn_close=True)
 
-    def get_object_list(self, container_name):
+    def object_putter(self, fpath, rpath, fname, fheaders, retry):
+        with open(fpath, 'rb') as fopen:
+            self.conn.request('PUT',
+                              rpath,
+                              body=fopen,
+                              headers=fheaders)
+        resp = self.response_get(rty=retry)
+        if self.result_exception(resp=resp,
+                                 headers=fheaders,
+                                 authurl=self.url,
+                                 jsonreq=rpath):
+            retry()
+        elif self.tur_arg['verbose']:
+            print 'INFO\t: %s %s %s' % (resp.status,
+                                        resp.reason,
+                                        fname)
+
+    def object_deleter(self, file_path, container):
+        """
+        container_name = 'The name of the Container'
+        check a container to see if it exists
+        """
+        for retry in gen.retryloop(attempts=self.retry_atmp, delay=5):
+            self.connection_prep()
+            r_loc = '%s/%s/%s' % (self.c_path, container, file_path)
+            remote_path = quote(r_loc)
+            f_headers = self.set_headers()
+            self.conn.request('DELETE', remote_path, headers=f_headers)
+            resp = self.response_get(rty=retry)
+            if self.result_exception(resp=resp,
+                                     headers=f_headers,
+                                     authurl=self.url,
+                                     jsonreq=remote_path,
+                                     dfc=True):
+                retry()
+            # Give us more data if we requested it
+            if any([self.tur_arg['os_verbose'], self.tur_arg['debug']]):
+                print 'INFO\t: %s %s %s' % (resp.status,
+                                            resp.reason,
+                                            file_path)
+                if self.tur_arg['debug']:
+                    print 'MESSAGE\t: Delete path = %s ==> %s' % (file_path,
+                                                                  container)
+
+    def get_object_list(self, container_name, lastobj=None):
         """
         Builds a long list of files found in a container
         """
-        lastobj = None
-        try:
-            for retry in generators.retryloop(
-                attempts=self.tur_arg['error_retry'], delay=5, backoff=2):
-                try:
-                    self.connection_prep()
+        for retry in gen.retryloop(attempts=self.retry_atmp,
+                                   delay=5,
+                                   backoff=2):
+            try:
+                self.connection_prep()
+                f_headers = self.set_headers()
+                # Determine how many files are in the container
+                r_loc = '%s/%s' % (self.c_path, container_name)
+                filepath = quote(r_loc)
+                self.conn.request('HEAD', filepath, headers=f_headers)
 
-                    # Set the headers if some custom ones were specified
-                    c_headers = self.headers
-                    if self.tur_arg['object_headers']:
-                        c_headers.update(self.tur_arg['object_headers'])
+                resp = self.response_get(rty=retry)
+                if self.result_exception(resp=resp,
+                                         headers=f_headers,
+                                         authurl=self.url,
+                                         jsonreq=filepath):
+                    retry()
+                count = int(resp.getheader('X-Container-Object-Count'))
 
-                    # Determine how many files are in the container
-                    r_loc = '%s/%s' % (self.c_path, container_name)
-                    filepath = quote(r_loc)
-                    self.conn.request('HEAD', filepath, headers=c_headers)
+                # Build the List
+                file_list = []
 
-                    resp, check = self.response_type()
-                    if check is not True:
-                        retry()
-                    else:
-                        resp.read()
+                # Set the number of loops that we are going to do
+                jobs = count / 10000 + 1
+                filepath = '%s/?limit=10000&format=json' % filepath
+                filepath_m = filepath
+                f_headers.update({'Content-type': 'application/json'})
 
-                    if resp.status >= 300:
-                        self.result_exception(resp=resp,
-                                              headers=c_headers,
-                                              authurl=self.url,
-                                              jsonreq=filepath)
-                    count = int(resp.getheader('X-Container-Object-Count'))
-
-                    # Build the List
-                    file_list = []
-
-                    # Set the number of loops that we are going to do
-                    jobs = count / 10000 + 1
-                    filepath = '%s/?limit=10000&format=json' % filepath
-                    filepath_m = filepath
-                    f_headers = self.headers
-                    f_headers.update({'Content-type': 'application/json'})
-
-                    for _ in xrange(jobs):
-                        self.conn.request('GET', filepath, headers=f_headers)
-                        resp, check = self.response_type()
-                        if check is not True:
-                            retry()
-                        if resp.status >= 300:
-                            self.result_exception(resp=resp,
-                                                  headers=c_headers,
-                                                  authurl=self.url,
-                                                  jsonreq=filepath)
-                        _rr = json.loads(resp.read())
+                for _ in xrange(jobs):
+                    for nest_rty in gen.retryloop(attempts=self.retry_atmp,
+                                                  delay=5):
+                        self.conn.request('GET',
+                                          filepath,
+                                          headers=f_headers)
+                        resp, resp_read = self.response_get(rty=retry,
+                                                            ret_read=True)
+                        if self.result_exception(resp=resp,
+                                                 headers=f_headers,
+                                                 authurl=self.url,
+                                                 jsonreq=filepath):
+                            nest_rty()
+                        _rr = json.loads(resp_read)
                         for obj in _rr:
                             file_list.append(obj['name'])
 
@@ -558,286 +536,176 @@ class NovaAuth(object):
                             lastobj = file_list[-1]
                             filepath = '%s&marker=%s' % (filepath_m,
                                                          quote(lastobj))
-
-                    # Give us more data if we requested it
-                    if self.tur_arg['os_verbose'] or self.tur_arg['debug']:
-                        print 'INFO\t: %s %s %s' % (resp.status,
-                                                    resp.reason,
-                                                    file_list)
-                        if self.tur_arg['debug']:
-                            print('MESSAGE\t: Path => %s'
-                                  % (filepath))
-                            print(_rr)
-                    self.connection_prep(conn_close=True)
-                    return file_list
-
-                except Exception, exp:
-                    print exp
-                    print traceback.format_exc()
-                    print('Exception from within an Download Action')
-        except KeyboardInterrupt:
-            pass
+                # Give us more data if we requested it
+                if any([self.tur_arg['os_verbose'],
+                        self.tur_arg['debug']]):
+                    print 'INFO\t: %s %s %s' % (resp.status,
+                                                resp.reason,
+                                                file_list)
+                    if self.tur_arg['debug']:
+                        print('MESSAGE\t: Path => %s\nMESSAGE\t: %s'
+                              % (filepath, _rr))
+            except KeyboardInterrupt:
+                pass
+            except Exception, exp:
+                print exp
+                print traceback.format_exc()
+                print('Exception from within an Download Action')
+            else:
+                return file_list
 
     def get_downloader(self, file_path, file_name, container):
         """
         This is the simple download Method. There is no file level checking
         at the target. The files are simply downloaded.
         """
-        try:
-            for retry in generators.retryloop(attempts=self.retry_atmp,
-                                              delay=5,
-                                              backoff=1):
-                try:
-                    # Set the headers if some custom ones were specified
-                    f_headers = self.headers
-                    if self.tur_arg['object_headers']:
-                        f_headers.update(self.tur_arg['object_headers'])
-
-                    # Get a file list ready for action
-                    r_loc = '%s/%s/%s' % (self.c_path, container, file_path)
-                    filepath = quote(r_loc)
-                    self.conn.request('GET', filepath, headers=f_headers)
-                    resp, check = self.response_type()
-                    if check is not True:
-                        retry()
-                    _rr = resp.read()
-                    # Check that the status was a good one
-                    if resp.status >= 300 or resp.status == None:
-                        self.result_exception(resp=resp,
-                                              headers=f_headers,
-                                              authurl=self.url,
-                                              jsonreq=filepath,
-                                              file_path=file_path)
-                        retry()
-
-                    # Open our source file
-                    with open(file_name, 'wb') as f_name:
-                        f_name.write(_rr)
-                    f_name.close()
-
-                    # Give us more data if we requested it
-                    if self.tur_arg['os_verbose'] or self.tur_arg['debug']:
-                        print 'INFO\t: %s %s %s' % (resp.status,
-                                                    resp.reason,
-                                                    file_name)
-                        if self.tur_arg['debug']:
-                            print('MESSAGE\t: Upload path = %s ==> %s'
-                                  % (file_path, filepath))
-
-                except Exception, exp:
-                    print(exp)
-                    print('Exception from within an Download Action, placing'
-                          ' the failed Download back in Queue')
-                    self.work_q.put(file_path)
-        except IOError:
-            print('ERROR\t: path "%s" does not exist or is a broken symlink'
-                  % file_name)
-        except ValueError:
-            print('ERROR\t: The data for "%s" got all jacked up, so it'
-                  ' got skipped' % file_name)
-        except KeyboardInterrupt:
-            pass
+        for retry in gen.retryloop(attempts=self.retry_atmp,
+                                   delay=5,
+                                   backoff=1):
+            try:
+                f_headers = self.set_headers()
+                # Get a file list ready for action
+                remote_path = '%s/%s/%s' % (self.c_path, container, file_path)
+                filepath = quote(remote_path)
+                self.conn.request('GET', filepath, headers=f_headers)
+                resp, resp_read = self.response_get(rty=retry,
+                                                    ret_read=True)
+                # Check that the status was a good one
+                if self.result_exception(resp=resp,
+                                         headers=f_headers,
+                                         authurl=self.url,
+                                         jsonreq=filepath):
+                    retry()
+                # Open our source file
+                with open(file_name, 'wb') as f_name:
+                    f_name.write(resp_read)
+                # Give us more data if we requested it
+                if any([self.tur_arg['verbose'],
+                        self.tur_arg['debug']]):
+                    print 'INFO\t: %s %s %s' % (resp.status,
+                                                resp.reason,
+                                                file_name)
+                    if self.tur_arg['debug']:
+                        print('MESSAGE\t: Upload path = %s ==> %s'
+                              % (file_path, filepath))
+            except IOError:
+                print('ERROR\t: path "%s" does not exist or is a broken'
+                      ' symlink' % file_name)
+            except ValueError:
+                print('ERROR\t: The data for "%s" got all jacked up, so it'
+                      ' got skipped' % file_name)
+            except KeyboardInterrupt:
+                pass
+            except Exception, exp:
+                print('ERROR\t: Exception from within an Download Action\n',
+                      '\t  placing the failed Download back in Queue\n',
+                      'ERROR\t: %s' % exp)
+                self.work_q.put(file_path)
 
     def put_uploader(self, file_path, file_name, container):
         """
         This is the simple upload Method. There is no file level checking'
         ' at the target. The files are simply uploaded.
         """
-        try:
-            for retry in generators.retryloop(attempts=self.retry_atmp,
-                                              delay=5,
-                                              backoff=2):
-                try:
-                    # Set the headers if some custom ones were specified
-                    f_headers = self.headers
-                    if self.tur_arg['object_headers']:
-                        f_headers.update(self.tur_arg['object_headers'])
-
-                    # Get the path ready for action
-                    r_loc = '%s/%s/%s' % (self.c_path, container, file_name)
-                    filepath = quote(r_loc)
-
-                    # Open our source file
-                    with open(file_path, 'rb') as f_path:
-                        self.conn.request('PUT', filepath,
-                                          body=f_path,
-                                          headers=f_headers)
-                    f_path.close()
-                    resp, check = self.response_type()
-                    if check is not True:
-                        retry()
-                    else:
-                        resp.read()
-
-                    # Check that the status was a good one
-                    if resp.status >= 300 or resp.status == None:
-                        self.result_exception(resp=resp,
-                                              headers=f_headers,
-                                              authurl=self.url,
-                                              jsonreq=filepath,
-                                              file_path=file_path)
-                        retry()
-
-                    # Give us more data if we requested it
-                    if self.tur_arg['os_verbose'] or self.tur_arg['debug']:
-                        print('INFO\t: %s %s %s' % (resp.status,
-                                                    resp.reason,
-                                                    file_name))
-                        if self.tur_arg['debug']:
-                            print('MESSAGE\t: Upload path = %s ==> %s'
-                                  % (file_path, filepath))
-
-                except Exception, exp:
-                    print('\nFile Failed to be uploaded %s. Error ==> %s'
-                          % (file_path, exp))
-        except IOError:
-            print('ERROR\t: path "%s" does not exist or is a broken symlink'
-                  % file_path)
-        except ValueError:
-            print('ERROR\t: The data for "%s" got all jacked up,'
-                  ' so it got skipped' % file_path)
-        except KeyboardInterrupt:
-            pass
+        for retry in gen.retryloop(attempts=self.retry_atmp,
+                                   delay=5,
+                                   backoff=2):
+            try:
+                f_headers = self.set_headers()
+                # Get the path ready for action
+                r_loc = '%s/%s/%s' % (self.c_path, container, file_name)
+                remote_path = quote(r_loc)
+                self.object_putter(fpath=file_path,
+                                   rpath=remote_path,
+                                   fname=file_name,
+                                   fheaders=f_headers,
+                                   retry=retry)
+            except IOError:
+                print('ERROR\t: path "%s" does not exist or is a broken'
+                      ' symlink' % file_path)
+            except ValueError:
+                print('ERROR\t: The data for "%s" got all jacked up,'
+                      ' so it got skipped' % file_path)
+            except KeyboardInterrupt:
+                pass
+            except Exception, exp:
+                print('\nFile Failed to be uploaded %s. Error ==> %s\n\n%s'
+                      % (file_path, exp, traceback.format_exc()))
+            else:
+                if self.tur_arg['debug']:
+                    print('MESSAGE\t: Upload path = %s ==> %s'
+                          % (file_path, remote_path))
 
     def sync_uploader(self, file_path, file_name, container):
         """
         This is the Sync method which uploads files to the swift repository'
         if they are not already found. If a file "name" is found locally and
-        in the swift repository an MD5 comparison is done between the two files.
-        If the MD5 is miss-matched the local file is uploaded to the repository.
-        If custom meta data is specified, and the object exists the method will
-        put the metadata onto the object.
+        in the swift repository an MD5 comparison is done between the two
+        files. If the MD5 is miss-matched the local file is uploaded to the
+        repository. If custom meta data is specified, and the object exists the
+        method will put the metadata onto the object.
         """
-        #noinspection PyBroadException
-        try:
-            for retry in generators.retryloop(attempts=self.retry_atmp,
-                                              delay=5):
-                try:
-                    # Set the headers if some custom ones were specified
-                    f_headers = self.headers
-                    if self.tur_arg['object_headers']:
-                        f_headers.update(self.tur_arg['object_headers'])
+        for retry in gen.retryloop(attempts=self.retry_atmp,
+                                   delay=5):
+            try:
+                f_headers = self.set_headers()
+                # Get the path ready for action
+                r_loc = '%s/%s/%s' % (self.c_path, container, file_name)
+                remote_path = quote(r_loc)
 
-                    # Get the path ready for action
-                    r_loc = '%s/%s/%s' % (self.c_path, container, file_name)
-                    filepath = quote(r_loc)
-
-                    self.conn.request('HEAD', filepath, headers=f_headers)
-
-                    resp, check = self.response_type()
-                    if check is not True:
-                        retry()
-                    else:
-                        resp.read()
-
-                    if resp.status == 404:
-                        with open(file_path, 'rb') as f_path:
-                            self.conn.request('PUT',
-                                              filepath,
-                                              body=f_path,
-                                              headers=f_headers)
-                        f_path.close()
-                        try:
-                            # Compatibility with Python 2.6
-                            if sys.version_info < (2, 7, 0):
-                                resp = self.conn.getresponse()
-                            else:
-                                resp = self.conn.getresponse(buffering=True)
-                        except httplib.BadStatusLine:
-                            self.conn.close()
-                            self.connection_prep()
-                            retry()
-                        resp.read()
-                        if resp.status >= 300 or resp.status == None:
-                            self.result_exception(resp=resp,
-                                                  headers=f_headers,
-                                                  authurl=filepath,
-                                                  jsonreq=r_loc,
-                                                  file_path=file_path)
-                            retry()
-
+                self.conn.request('HEAD', remote_path, headers=f_headers)
+                resp = self.response_get(rty=retry)
+                if resp.status == 404:
+                    self.object_putter(fpath=file_path,
+                                       rpath=remote_path,
+                                       fname=file_name,
+                                       fheaders=f_headers,
+                                       retry=retry)
+                else:
+                    rmd5sum = resp.getheader('etag')
+                    md5 = hashlib.md5()
+                    with open(file_path, 'rb') as f_hash:
+                        for chunk in iter(lambda: f_hash.read(
+                                128 * md5.block_size), ''):
+                            md5.update(chunk)
+                    lmd5sum = md5.hexdigest()
+                    if rmd5sum != lmd5sum:
                         if self.tur_arg['verbose']:
-                            print 'INFO\t: %s %s %s' % (resp.status,
-                                                        resp.reason,
-                                                        file_name)
-                    elif resp.status >= 300 or resp.status == None:
-                        self.result_exception(resp=resp,
-                                              headers=f_headers,
-                                              authurl=filepath,
-                                              jsonreq=r_loc,
-                                              file_path=file_path)
-                        retry()
+                            print('MESSAGE\t: CheckSumm Mis-Match %(lmd5)s'
+                                  ' != %(rmd5)s\n\t  File Upload : %(rs)s'
+                                  ' %(rr)s %(sjf)s' % {'lmd5': lmd5sum,
+                                                       'rmd5': rmd5sum,
+                                                       'rs': resp.status,
+                                                       'rr': resp.reason,
+                                                       'sjf': file_name})
+                        self.object_putter(fpath=file_path,
+                                           rpath=remote_path,
+                                           fname=file_name,
+                                           fheaders=f_headers,
+                                           retry=retry)
                     else:
-                        remotemd5sum = resp.getheader('etag')
-                        md5 = hashlib.md5()
-                        with open(file_path, 'rb') as f_hash:
-                            for chunk in iter(lambda:
-                                f_hash.read(128 * md5.block_size),
-                                ''):
-                                md5.update(chunk)
-                        f_hash.close()
-                        localmd5sum = md5.hexdigest()
-
-                        if remotemd5sum != localmd5sum:
-                            with open(file_path, 'rb') as f_path:
-                                self.conn.request('PUT',
-                                                  filepath,
-                                                  body=f_path,
-                                                  headers=f_headers)
-                            f_path.close()
-                            resp, check = self.response_type()
-                            if check is not True:
-                                retry()
-                            else:
-                                resp.read()
-                            if resp.status >= 300:
-                                self.result_exception(resp=resp,
-                                                      headers=f_headers,
-                                                      authurl=filepath,
-                                                      jsonreq=r_loc,
-                                                      file_path=file_path)
-                                retry()
-
-                            if self.tur_arg['verbose']:
-                                proc_dict = {'lmd5': localmd5sum,
-                                             'rmd5': remotemd5sum,
-                                             'rs': resp.status,
-                                             'rr': resp.reason,
-                                             'sjf': file_name}
-                                print('MESSAGE\t: CheckSumm Mis-Match %(lmd5)s'
-                                      ' != %(rmd5)s\n\t  File Upload : %(rs)s'
-                                      ' %(rr)s %(sjf)s' % proc_dict)
-                        else:
-                            if self.tur_arg['verbose']:
-                                print 'MESSAGE\t: CheckSum Match', localmd5sum
-
-                            # Put headers on the object if custom headers
-                            if self.tur_arg['object_headers']:
-                                self.conn.request('POST',
-                                                  filepath,
-                                                  headers=f_headers)
-
-                                resp, check = self.response_type()
-                                if check is not True:
-                                    retry()
-                                else:
-                                    resp.read()
-
-                                if resp.status >= 300:
-                                    self.result_exception(resp=resp,
-                                                          headers=self.headers,
-                                                          authurl=filepath,
-                                                          jsonreq=r_loc,
-                                                          file_path=file_path)
-                                    retry()
-                except Exception, exp:
-                    print('\nFile Failed to be uploaded %s. Error ==> %s'
-                          % (file_path, exp))
-        except IOError:
-            print('ERROR\t: path "%s" does not exist or is a broken symlink'
-                  % file_path)
-        except ValueError:
-            print('ERROR\t: The data for "%s" got all jacked up,'
-                  ' so it got skipped' % file_path)
-        except KeyboardInterrupt:
-            pass
+                        if self.tur_arg['verbose']:
+                            print 'MESSAGE\t: CheckSum Match', lmd5sum
+            except IOError:
+                print('ERROR\t: path "%s" does not exist or is a broken'
+                      ' symlink' % file_path)
+            except ValueError:
+                print('ERROR\t: The data for "%s" got all jacked up,'
+                      ' so it got skipped' % file_path)
+            except KeyboardInterrupt:
+                pass
+            except Exception, exp:
+                print('\nFile Failed to be uploaded %s. Error ==> %s\n\n%s'
+                      % (file_path, exp, traceback.format_exc()))
+            else:
+                # Put headers on the object if custom headers
+                if self.tur_arg['object_headers']:
+                    self.conn.request('POST',
+                                      remote_path,
+                                      headers=f_headers)
+                    resp = self.response_get(rty=retry)
+                    if self.result_exception(resp=resp,
+                                             headers=self.headers,
+                                             authurl=self.url,
+                                             jsonreq=remote_path):
+                        retry()

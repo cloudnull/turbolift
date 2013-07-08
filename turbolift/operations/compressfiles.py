@@ -1,12 +1,12 @@
-# ==============================================================================
+# =============================================================================
 # Copyright [2013] [Kevin Carter]
 # License Information :
 # This software has no warranty, it is provided 'as is'. It is your
-# responsibility to validate the behavior of the routines and its accuracy using
-# the code provided. Consult the GNU General Public license for further details
-# (see GNU General Public License).
+# responsibility to validate the behavior of the routines and its accuracy
+# using the code provided. Consult the GNU General Public license for further
+# details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
-# ==============================================================================
+# =============================================================================
 import tarfile
 import sys
 import os
@@ -57,14 +57,13 @@ class Compressor(object):
                 ver_array = []
                 for member_info in tar_len.getmembers():
                     ver_array.append(member_info.name)
+                    busy_chars = ['|', '/', '-', '\\']
                     for _cr in busy_chars:
-                        sys.stdout.write("\rComputing Number of files - [ %s ] "
+                        sys.stdout.write('\rComputing archive files - [ %s ] '
                                          % _cr)
                         sys.stdout.flush()
                         time.sleep(.01)
                 print 'ARCHIVE CONTENTS : %s files' % len(ver_array)
-            return tmp_file
-
         except KeyboardInterrupt:
             print('Caught KeyboardInterrupt, terminating workers\n'
                   'MESSAGE\t: Removing Local Copy of the Archive')
@@ -83,3 +82,5 @@ class Compressor(object):
                       ' delete. here some data you should read'
                       % tmp_file)
                 print(exp)
+        else:
+            return tmp_file

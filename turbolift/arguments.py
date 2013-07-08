@@ -1,13 +1,12 @@
-# ==============================================================================
+# =============================================================================
 # Copyright [2013] [Kevin Carter]
 # License Information :
 # This software has no warranty, it is provided 'as is'. It is your
-# responsibility to validate the behavior of the routines and its accuracy using
-# the code provided. Consult the GNU General Public license for further details
-# (see GNU General Public License).
+# responsibility to validate the behavior of the routines and its accuracy
+# using the code provided. Consult the GNU General Public license for further
+# details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
-# ==============================================================================
-
+# =============================================================================
 import argparse
 import sys
 import os
@@ -20,13 +19,11 @@ def get_values():
     Look for flags, these are all of the available options for Turbolift.
     """
     parser = argparse.ArgumentParser(
-        formatter_class=lambda prog:
-            argparse.HelpFormatter(prog, max_help_position=50),
-                                     usage='%(prog)s',
-                                     description=('Uploads lots of Files'
-                                                  ' Quickly Cloud Files'
-                                                  ' %(prog)s'),
-                                     epilog=info.VINFO)
+        formatter_class=lambda prog: argparse.HelpFormatter(
+            prog, max_help_position=50),
+        usage='%(prog)s',
+        description=('Uploads lots of Files Quickly Cloud Files %(prog)s'),
+        epilog=info.VINFO)
 
     # Setup for the positional Arguments
     subparser = parser.add_subparsers(title='Infrastructure Spawner',
@@ -164,7 +161,7 @@ def get_values():
                            metavar='[REGION]',
                            help='Defaults to env[OS_REGION_NAME]',
                            default=os.environ.get('OS_REGION_NAME', None))
-    authgroup.add_argument('--os-auth-url', 
+    authgroup.add_argument('--os-auth-url',
                            metavar='[AUTH_URL]',
                            help='Defaults to env[OS_AUTH_URL]',
                            default=os.environ.get('OS_AUTH_URL', None))
@@ -172,24 +169,24 @@ def get_values():
                            choices=['dfw', 'ord', 'lon', 'syd'],
                            help='Rackspace Cloud Authentication',
                            default=None)
-    authgroup.add_argument('--os-version', 
+    authgroup.add_argument('--os-version',
                            metavar='[VERSION_NUM]',
                            default=os.getenv('OS_VERSION', 'v2.0'),
                            help='env[OS_VERSION]')
-    authgroup.add_argument('--os-swift-version', 
+    authgroup.add_argument('--os-swift-version',
                            metavar='[OS_SWIFT_VERSION]',
                            default=os.getenv('OS_SWIFT_VERSION', 'v1'),
                            help='env[OS_VERSION]')
     authgroup.add_argument('--use-http',
-                            action='store_true',
-                            default=None,
-                            help=('Forces the NOVA API to Use HTTP'
-                                  ' instead of HTTPS'))
+                           action='store_true',
+                           default=None,
+                           help=('Forces the NOVA API to Use HTTP'
+                                 ' instead of HTTPS'))
     authgroup.add_argument('--os-verbose',
-                            action='store_true',
-                            default=None,
-                            help=('Make the OpenStack Authentication'
-                                  ' Verbose'))
+                           action='store_true',
+                           default=None,
+                           help=('Make the OpenStack Authentication'
+                                 ' Verbose'))
 
     # Archive Arguments
     archaction.add_argument('--tar-name',
@@ -233,6 +230,7 @@ def get_values():
                            help='Upload Concurrency')
     optionals.add_argument('--no-sort',
                            action='store_true',
+                           default=False,
                            help=('By default when getting the list of files'
                                  ' to upload Turbolift will sort the files'
                                  ' by size. If you have a lot of files this'
@@ -260,24 +258,24 @@ def get_values():
 
     # Optional Headers
     headers.add_argument('--base-headers',
-                             metavar='[KEY=VALUE]',
-                             default=[],
-                             action='append',
-                             help=('These are the basic headers used for'
-                                   ' all Turbolift operations. Anything'
-                                   ' added here will modify ALL Turbolift'
-                                   ' Operations which leverage the API.'))
+                         metavar='[KEY=VALUE]',
+                         default=[],
+                         action='append',
+                         help=('These are the basic headers used for'
+                               ' all Turbolift operations. Anything'
+                               ' added here will modify ALL Turbolift'
+                               ' Operations which leverage the API.'))
     headers.add_argument('--object-headers',
-                             metavar='[KEY=VALUE]',
-                             default=[],
-                             action='append',
-                             help=('These Headers only effect Objects'
-                                   ' (files).'))
+                         metavar='[KEY=VALUE]',
+                         default=[],
+                         action='append',
+                         help=('These Headers only effect Objects'
+                               ' (files).'))
     headers.add_argument('--container-headers',
-                             metavar='[KEY=VALUE]',
-                             default=[],
-                             action='append',
-                             help='These headers only effect Containers')
+                         metavar='[KEY=VALUE]',
+                         default=[],
+                         action='append',
+                         help='These headers only effect Containers')
 
     if len(sys.argv) == 1:
         parser.print_help()
@@ -342,9 +340,9 @@ def get_values():
               ' multi-thread Archiving, the max Concurrency is 1')
     elif set_args.get('cc', 0) > 150:
         try:
-            print('MESSAGE\t: You have set the Concurrency Override to "%s"'
-                  ' This is a lot of Processes and could fork bomb your'
-                  ' system or cause other nastiness.' % set_args['cc'])
+            print('MESSAGE\t: You have set the Concurrency Override to "%s"\n'
+                  '\t  This is a lot of Processes and could fork bomb your\n'
+                  '\t  system or cause other nastiness.\n' % set_args['cc'])
             raw_input('\t  You have been warned, Press Enter to Continue\n')
         except Exception:
             sys.exit('Shutting Down...')

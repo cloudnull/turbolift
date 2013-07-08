@@ -43,6 +43,8 @@ Installation :
     cd turbolift
     python setup.py install
 
+Installation NOTICE :
+  If you are installing on a system that is not Running Python => 2.6 but < 3.0, please review the document `INSTALL_EMBED.rst`. This is a tested installation Turbolift on Ubuntu 8.04, which ships with Python 2.5. The guide is a simple walk through for compiling stand alone python and installing Turbolift in that stand alone installation. 
 
 Python Modules Needed, for full operation :
   NOTE : All of the modules needed should be part of the "standard" Library as of Python 2.6.  The setup file will
