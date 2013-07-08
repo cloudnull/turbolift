@@ -230,6 +230,7 @@ def get_values():
                            help='Upload Concurrency')
     optionals.add_argument('--no-sort',
                            action='store_true',
+                           default=False,
                            help=('By default when getting the list of files'
                                  ' to upload Turbolift will sort the files'
                                  ' by size. If you have a lot of files this'
@@ -339,9 +340,9 @@ def get_values():
               ' multi-thread Archiving, the max Concurrency is 1')
     elif set_args.get('cc', 0) > 150:
         try:
-            print('MESSAGE\t: You have set the Concurrency Override to "%s"'
-                  ' This is a lot of Processes and could fork bomb your'
-                  ' system or cause other nastiness.' % set_args['cc'])
+            print('MESSAGE\t: You have set the Concurrency Override to "%s"\n'
+                  '\t  This is a lot of Processes and could fork bomb your\n'
+                  '\t  system or cause other nastiness.\n' % set_args['cc'])
             raw_input('\t  You have been warned, Press Enter to Continue\n')
         except Exception:
             sys.exit('Shutting Down...')
