@@ -565,8 +565,8 @@ class NovaAuth(object):
             try:
                 f_headers = self.set_headers()
                 # Get a file list ready for action
-                r_loc = '%s/%s/%s' % (self.c_path, container, file_path)
-                filepath = quote(r_loc)
+                remote_path = '%s/%s/%s' % (self.c_path, container, file_path)
+                filepath = quote(remote_path)
                 self.conn.request('GET', filepath, headers=f_headers)
                 resp, resp_read = self.response_get(rty=retry,
                                                     ret_read=True)
@@ -580,7 +580,7 @@ class NovaAuth(object):
                 with open(file_name, 'wb') as f_name:
                     f_name.write(resp_read)
                 # Give us more data if we requested it
-                if any([self.tur_arg['os_verbose'],
+                if any([self.tur_arg['verbose'],
                         self.tur_arg['debug']]):
                     print 'INFO\t: %s %s %s' % (resp.status,
                                                 resp.reason,

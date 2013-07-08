@@ -77,15 +77,17 @@ class BaseCamp(object):
         directory into a container. Using this method will craete a new
         container for all directories found from within a path.
         """
-        if os.path.exists(self.tur_arg.get('source')):
-            gen_p = getdirsandfiles.GetDirsAndFiles(self.tur_arg)
-            pay_load = gen_p.get_dir_and_files()
-            self.tur_arg['fc'] = len(pay_load.values())
-            self.set_concurency()
-            cfactions.CloudFilesActions(tur_arg=self.tur_arg,
-                                        pay_load=pay_load.items()).job_prep()
-        else:
-            raise NoSource('You did not give me a source for the upload')
+        for source in self.tur_arg.get('source'):
+            if os.path.exists(source):
+                gen_p = getdirsandfiles.GetDirsAndFiles(self.tur_arg)
+                pay_load = gen_p.get_dir_and_files()
+                self.tur_arg['fc'] = len(pay_load.values())
+                self.set_concurency()
+                jobset = cfactions.CloudFilesActions(tur_arg=self.tur_arg,
+                                                     pay_load=pay_load.items())
+                jobset.job_prep()
+            else:
+                raise NoSource('You did not give me a source for the upload')
 
     def archive(self):
         """
