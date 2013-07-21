@@ -33,6 +33,7 @@ Functions of the Application :
 
 Prerequisites :
   * For all the things to work right please make sure you have ``python-dev`` and ``build-essential`` installed. which provides you GCC / Make and all of the Standard Library Modules.
+  * Debian requires the ``python-setuptools`` package.
   * Python => 2.6 but < 3.0
   * A File or some Files you want uploaded
 
