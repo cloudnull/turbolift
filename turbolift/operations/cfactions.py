@@ -42,9 +42,11 @@ class CloudFilesActions:
             # Prep Nova for Upload
             self.oscmd = novacommands.NovaAuth(self.args, work_q)
 
-            if any([self.args.get('con_per_dir'), self.args.get('archive')]):
+            if self.args.get('con_per_dir'):
                 head, sep, tail = val[0].partition(key)
                 self.base_path = '%s%s' % (head, sep)
+            elif self.args.get('archive'):
+                self.base_path = '%s%s' % (os.getenv('HOME'), os.sep)
             elif self.args.get('delete'):
                 self.base_path = None
             elif self.args.get('download'):

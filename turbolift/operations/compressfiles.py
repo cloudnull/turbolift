@@ -30,17 +30,21 @@ class Compressor(object):
             # create a tar archive
             print('MESSAGE\t: Creating a Compressed Archive, This may'
                   ' take a minute.')
-            date_format = '%a%b%d-%H.%M.%S.%Y.'
+            date_format = '%a%b%d.%H.%M.%S.%Y'
             today = datetime.datetime.today()
             _ts = today.strftime(date_format)
             home_dir = '%s%s' % (os.getenv('HOME'), os.sep)
-
+            noname_loc = '%s_%s' % ('Archive', _ts)
+            print 'I Could be == %s' % noname_loc
+            print 'I am == %s' % self.tur_arg['tar_name']
             if self.tur_arg.get('tar_name'):
-                tmp_file = '%s%s.tgz' % (home_dir,
-                                         self.tur_arg.get('tar_name'))
+                set_name = self.tur_arg.get('tar_name', noname_loc)
             else:
-                file_name = '%s%s.tgz' % (self.tur_arg['container'], _ts)
-                tmp_file = '%s%s' % (home_dir, file_name)
+                set_name = noname_loc
+            print 'info %s' % set_name
+            file_name = '%s.tgz' % set_name
+            print file_name
+            tmp_file = '%s%s' % (home_dir, file_name)
 
             tar = tarfile.open(tmp_file, 'w:gz')
             for name in self.filelist:
@@ -58,12 +62,6 @@ class Compressor(object):
                 ver_array = []
                 for member_info in tar_len.getmembers():
                     ver_array.append(member_info.name)
-                    busy_chars = ['|', '/', '-', '\\']
-                    for _cr in busy_chars:
-                        sys.stdout.write('\rComputing archive files - [ %s ] '
-                                         % _cr)
-                        sys.stdout.flush()
-                        time.sleep(.01)
                 print 'ARCHIVE CONTENTS : %s files' % len(ver_array)
         except KeyboardInterrupt:
             print('Caught KeyboardInterrupt, terminating workers\n'
