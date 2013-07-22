@@ -12,10 +12,13 @@ import setuptools
 import sys
 from turbolift import info
 
+REQUIRES = []
 
 if sys.version_info < (2, 6, 0):
     sys.stderr.write("Turbolift Presently requires Python 2.6.0 or greater \n")
     sys.exit('\nUpgrade python because you version of it is VERY deprecated\n')
+elif sys.version_info < (2, 7, 0):
+    REQUIRES.append('argparse')
 
 with open('README') as r_file:
     LDINFO = r_file.read()
@@ -31,9 +34,7 @@ setuptools.setup(
     packages=['turbolift',
               'turbolift.operations'],
     url=info.__url__,
-    install_requires=['argparse',
-                      'datetime',
-                      'hashlib'],
+    install_requires=REQUIRES,
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Information Technology',
