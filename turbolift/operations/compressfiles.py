@@ -33,12 +33,13 @@ class Compressor(object):
             date_format = '%a%b%d-%H.%M.%S.%Y.'
             today = datetime.datetime.today()
             _ts = today.strftime(date_format)
+            home_dir = '%s%s' % (os.getenv('HOME'), os.sep)
 
             if self.tur_arg.get('tar_name'):
-                tmp_file = '%s%s.tgz' % (_ts, self.tur_arg['tar_name'])
+                tmp_file = '%s%s.tgz' % (home_dir,
+                                         self.tur_arg.get('tar_name'))
             else:
-                home_dir = '%s%s' % (os.getenv('HOME'), os.sep)
-                file_name = '%s%s.tgz' % (_ts, self.tur_arg['container'])
+                file_name = '%s%s.tgz' % (self.tur_arg['container'], _ts)
                 tmp_file = '%s%s' % (home_dir, file_name)
 
             tar = tarfile.open(tmp_file, 'w:gz')
