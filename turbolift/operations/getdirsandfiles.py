@@ -14,15 +14,19 @@ import operator
 
 class GetDirsAndFiles(object):
     def __init__(self, tur_arg):
+        """
+        :param tur_arg:
+        """
+
         self.tur_arg = tur_arg
         self.dname = []
         self.cpd = {}
 
     def get_dir_and_files(self):
-        """
-        Find all files and folders in all directories, this creates a
-        dictionary for all directories with a list for all of the files
-        found in all of the directories.
+        """Find all files and folders in all directories.
+
+        this creates a dictionary for all directories with a list for all of
+        the files found in all of the directories.
         """
         for source in self.tur_arg['source']:
             if not source.endswith(os.sep):

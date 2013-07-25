@@ -10,11 +10,20 @@
 
 
 class IndicatorThread(object):
+    """Creates a visual indicator while normally performing actions."""
+
     def __init__(self, work_q=None, system=True):
+        """
+        :param work_q:
+        :param system:
+        """
+
         self.work_q = work_q
         self.system = system
 
     def indicator(self):
+        """Produce the spinner"""
+
         import sys
         import time
         while self.system:
@@ -37,9 +46,8 @@ class IndicatorThread(object):
                 self.system = self.system
 
     def indicator_thread(self):
-        """
-        indicate that we are performing work
-        """
+        """indicate that we are performing work in a thread."""
+
         from multiprocessing import Process
         job = Process(target=self.indicator)
         job.start()

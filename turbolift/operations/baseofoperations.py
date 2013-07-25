@@ -12,40 +12,47 @@ import sys
 import os
 import traceback
 
-from turbolift.operations import getdirsandfiles, compressfiles, getfilenames
-from turbolift.operations import cfactions, novacommands, generators
-
-
-class NoSource(Exception):
-    pass
+from turbolift.operations import (
+    getdirsandfiles,
+    compressfiles,
+    getfilenames,
+    cfactions,
+    novacommands,
+    generators,
+    exceptions
+)
 
 
 class BaseCamp(object):
-    def __init__(self, tur_arg):
-        """
-        To access the BaseCamp class you will need to provide "tur_arg" which
-        is a Dictionary for all of the parsed arguments.
+    """Begin the process of uploading, downloading, or deleting files"""
 
-        BaseCamp acts as a simple metthod for seperating out methods from one
+    def __init__(self, tur_arg):
+        """To access the BaseCamp class you will need to provide "tur_arg"
+
+        "tur_arg" which is a Dictionary for all of the parsed arguments.
+        BaseCamp acts as a simple method for separating out methods from one
         another. With base camp all start points are engaged.
+        :param tur_arg:
         """
+
         self.tur_arg = generators.manager_dict(tur_arg)
         try:
             self.nova = novacommands.NovaAuth(tur_arg=self.tur_arg)
-            reqjson, auth_url = self.nova.osauth()
-            self.nova.make_request(jsonreq=reqjson, url=auth_url)
+            req_json, auth_url = self.nova.osauth()
+            self.nova.make_request(jsonreq=req_json, url=auth_url)
         except Exception:
             print(traceback.format_exc())
             sys.exit('Authentication against the NOVA API had issues,'
                      ' so I died')
 
-    def set_concurency(self):
-        """
-        Concurency is a user specified variable when the arguments are parsed.
+    def set_concurrency(self):
+        """Concurrency is a user specified variable when the arguments parsed.
+
         However if the number of things Turbo lift has to do is less than the
         desired concurency, then turbolift will lower the concurency rate to
         the number of operations.
         """
+
         if self.tur_arg.get('cc', 0) > self.tur_arg.get('fc', 1):
             print('MESSAGE\t: There are less things to do than the number of\n'
                   '\t  concurrent processes specified by either an override\n'
@@ -60,47 +67,50 @@ class BaseCamp(object):
                   % (self.tur_arg['multipools']))
 
     def basic_file_structure(self):
+        """This is a simple method for understanding the locations...
+
+        ...for all of the files that we are going to uploading
         """
-        This is a simple method for understanding the locations for all of
-        the files that we are going to uploading
-        """
+
         self.gfn = getfilenames.FileNames(self.tur_arg).get_filenames()
         self.tur_arg['fc'] = len(self.gfn)
         if self.tur_arg.get('verbose'):
             print('MESSAGE\t: "%s" files have been found.'
                   % self.tur_arg['fc'])
-        self.set_concurency()
+        self.set_concurrency()
 
     def con_per_dir(self):
+        """con_per_dir method is designed to upload a directory to a container.
+
+        Using this method will create a new container for all directories
+        found from within a path.
         """
-        con_per_dir is a method desigend to upload all of the contents of a
-        directory into a container. Using this method will craete a new
-        container for all directories found from within a path.
-        """
+
         for source in self.tur_arg.get('source'):
             if os.path.exists(source):
                 gen_p = getdirsandfiles.GetDirsAndFiles(self.tur_arg)
                 pay_load = gen_p.get_dir_and_files()
                 self.tur_arg['fc'] = len(pay_load.values())
-                self.set_concurency()
+                self.set_concurrency()
                 jobset = cfactions.CloudFilesActions(tur_arg=self.tur_arg,
                                                      pay_load=pay_load.items())
                 jobset.job_prep()
             else:
-                raise NoSource('You did not give me a source for the upload')
+                raise exceptions.NoSource('You did not give me a source for'
+                                          ' the upload')
 
     def archive(self):
+        """The archive function was made to simply build a Tarball.
+
+        With this method multiple "sources" can be used as they will simply
+        preserve the upload source from within the tarball.
         """
-        The archive function was made to simply build a Tarball of all of the
-        contents found from within a given path. With this method multiple
-        "sources" can be used as they will simply preserve the upload source
-        from within the tarball.
-        """
+
         from turbolift.operations import IndicatorThread
         for source in self.tur_arg['source']:
             if not os.path.exists(source):
-                raise NoSource('Source Provided is broken or does not exist %s'
-                               % source)
+                raise exceptions.NoSource('Source Provided is broken or does'
+                                          ' not exist %s' % source)
         self.basic_file_structure()
         self.tur_arg['multipools'] = 1
 
@@ -127,10 +137,12 @@ class BaseCamp(object):
                       % _cf)
 
     def file_upload(self):
+        """This is the first and most basic upload method.
+
+        Uses file_upload is to simply upload all files and folders to a
+        specified container.
         """
-        This is the first and most basic method, using file_upload is to simply
-        upload all files and folders to a specified container.
-        """
+
         if os.path.exists(self.tur_arg.get('source')):
             self.basic_file_structure()
             self.pay_load = {self.tur_arg['container']: self.gfn}
@@ -144,20 +156,19 @@ class BaseCamp(object):
                 tur_arg=self.tur_arg,
                 pay_load=self.pay_load.items()).job_prep()
         else:
-            raise NoSource('You did not give me a source for the upload')
+            raise exceptions.NoSource('You did not give me a source for'
+                                      ' the upload')
 
     def delete_download(self):
-        """
-        Downloads all of the files in a container or
-        Deletes all of the files in a container
-        """
+        """Downloads or Deletes all of the files in a container"""
+
         resp = self.nova.container_check(self.tur_arg.get('container'))
         if resp.status == 404:
             sys.exit('The Container you want to use does not exist')
         cfl = self.nova.get_object_list(self.tur_arg.get('container'))
         self.tur_arg['fc'] = len(cfl)
         print('Processing "%s" Objects' % self.tur_arg['fc'])
-        self.set_concurency()
+        self.set_concurrency()
         self.pay_load = {self.tur_arg['container']: cfl}
 
         if self.tur_arg.get('debug'):
@@ -173,7 +184,8 @@ class BaseCamp(object):
             self.check_deleted()
 
     def check_deleted(self):
-        # Pull a file list, if 0 delete container
+        """Pull a file list, if 0 delete container"""
+
         cfl = self.nova.get_object_list(self.tur_arg['container'])
         self.tur_arg['fc'] = len(cfl)
         if self.tur_arg.get('fc', 0) > 0:
@@ -190,7 +202,6 @@ class BaseCamp(object):
                 if not any([resp.status == 404,
                             resp.status == 204]):
                     container = self.tur_arg['container']
-                    print('NOVA-API FAILURE ==> INFO: %s %s %s' % (resp.status,
-                                                                   resp.reason,
-                                                                   container))
+                    print('NOVA-API FAILURE ==> INFO: %s %s %s'
+                          % (resp.status, resp.reason, container))
                     sys.exit('There was an issue removing the container.')

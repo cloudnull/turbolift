@@ -63,7 +63,7 @@ class NovaAuth(object):
         return headers
 
     def response_type(self, mcr=False):
-        """Understand the reposnce type and provide for the connection.
+        """Understand the response type and provide for the connection.
 
         :param mcr:
         """
@@ -87,7 +87,7 @@ class NovaAuth(object):
                 return resp, True
 
     def response_get(self, rty, ret_read=False, mcr=False):
-        """Get the reposnse informantion and return it.
+        """Get the response information and return it.
 
         :param rty:
         :param ret_read:

@@ -16,9 +16,8 @@ from turbolift import arguments
 
 
 def run_turbolift():
-    """
-    This is the run section of the application Turbolift.
-    """
+    """This is the run section of the application Turbolift."""
+
     freeze_support()
     tur_arg = arguments.get_values()
     try:

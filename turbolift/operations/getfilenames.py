@@ -11,21 +11,21 @@
 import os
 import sys
 import operator
-
-
-class NoFileProvided(Exception):
-    pass
+from turbolift.operations import exceptions
 
 
 class FileNames(object):
     def __init__(self, tur_arg):
+        """:param tur_arg: """
+
         self.tur_arg = tur_arg
 
     def get_filenames(self):
+        """Find all files specified in the "source" path.
+
+        This creates a list for all of files using the full path.
         """
-        Find all files specified in the "source" path, then create a list for
-        all of files using the full path.
-        """
+
         filelist = []
         final_files = []
 
@@ -63,8 +63,9 @@ class FileNames(object):
                     if os.path.exists(_full_path):
                         final_files.append(_full_path)
                     else:
-                        raise NoFileProvided('No Real Path was Found for %s'
-                                             % _full_path)
+                        raise exceptions.NoFileProvided('No Real Path was'
+                                                        ' Found for %s'
+                                                        % _full_path)
                 else:
                     print('ERROR\t: path %s does not exist, is not a'
                           ' directory, or is a broken symlink' % directorypath)

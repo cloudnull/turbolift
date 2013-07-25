@@ -12,29 +12,33 @@ import sys
 import os
 import errno
 
-# Local Files to Import
-from turbolift.operations import generators, novacommands, IndicatorThread
-
-
-class DirectoryFailure(Exception):
-    pass
+from turbolift.operations import (
+    generators,
+    novacommands,
+    IndicatorThread,
+    exceptions
+)
 
 
 class CloudFilesActions:
-    """
-    The CloudFilesActions class was created to facilitate the mode of upload/
-    download/delete based on file types and user Arguments.
-    """
+    """The CloudFilesActions class facilitate upload / download / delete."""
+
     def __init__(self, tur_arg, pay_load):
+        """
+        :param tur_arg:
+        :param pay_load:
+        """
+
         # Set the default Arguments
         self.args = tur_arg
         self.pay_load = pay_load
         self.multipools = int(self.args.get('multipools', 1))
 
     def job_prep(self):
-        """
-        This is a job setup function, the job prep will parse the payload
-        and determine the best course of action
+        """This is a job setup function.
+
+        The job prep will parse the payload and determine the best course of
+        action
         """
         for key, val in self.pay_load:
             self.container = key
@@ -96,11 +100,13 @@ class CloudFilesActions:
                 thd.terminate()
 
     def run_function(self, work_q):
-        """
-        The run_function starts the threads and begins performing actions which
+        """The run_function starts the threads and begins performing actions.
+
         have been placed into the "work_q". While the queue is not empty the
         run_function will attempt to perform actions.
+        :param work_q:
         """
+
         while True:
             try:
                 wfile = work_q.get(timeout=2)
@@ -157,12 +163,13 @@ class CloudFilesActions:
                 work_q.task_done()
 
     def mkdir_p(self, path):
+        """'mkdir -p' in Python
+
+        Original Code came from :
+        stackoverflow.com/questions/600268/mkdir-p-functionality-in-python
+        :param path:
         """
-        'mkdir -p' in Python
-        Requires a path
-        """
-        # Original Code came from :
-        # stackoverflow.com/questions/600268/mkdir-p-functionality-in-python
+
         try:
             if not os.path.isdir(path):
                 os.makedirs(path)
@@ -170,7 +177,7 @@ class CloudFilesActions:
             if exc.errno == errno.EEXIST and os.path.isdir(path):
                 pass
             else:
-                raise DirectoryFailure(
+                raise exceptions.DirectoryFailure(
                     'The path provided "%s" is occupied and not be used as a '
                     'directory. System was halted on Download, becaue The '
                     'provided path is a file and can not be turned into a '

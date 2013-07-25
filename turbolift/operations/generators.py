@@ -7,21 +7,20 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
+
 import time
 
-# Local Modules
 from turbolift import info
+from turbolift.operations import exceptions
 
 
 def manager_list(_bl=None):
-    """
-    OPTIONAL Variable :
-    bl = 'Base List'
+    """Create a shared list using multiprocessing Managers
 
-    Create a shared list using multiprocessing Managers
     If you use the "bl" variable you can specify a prebuilt list
-    The default is that bl=None
+    :param _bl:
     """
+
     import multiprocessing
     manager = multiprocessing.Manager()
     if _bl:
@@ -32,13 +31,12 @@ def manager_list(_bl=None):
 
 
 def manager_dict(_bd=None):
-    """
-    OPTIONAL Variable :
-    bd = 'Base Dictionary'
-    Create a shared dictionary using multiprocessing Managers
+    """Create a shared dictionary using multiprocessing Managers.
+
     If you use the "bd" variable you can specify a prebuilt dict
-    the default is that bd=None
+    :param _bd:
     """
+
     import multiprocessing
     manager = multiprocessing.Manager()
     if _bd:
@@ -49,12 +47,12 @@ def manager_dict(_bd=None):
 
 
 def manager_queue(iters):
-    """
-    iters="The iterable variables"
+    """Uses a manager Queue, from multiprocessing.
 
-    Uses a manager Queue, from multiprocessing.
     All jobs will be added to the queue for processing.
+    :param iters:
     """
+
     import multiprocessing
     manager = multiprocessing.Manager()
     worker_q = manager.Queue()
@@ -64,20 +62,20 @@ def manager_queue(iters):
 
 
 def worker_proc(job_action, multipools, work_q):
-    """
-    job_action="What function will be used",
-    multipools="The number Threads we are working on"
-    num_jobs="The total Number of Jobs we need to do"
-    Requires the job_action and num_jobs variables for functionality.
+    """Requires the job_action and num_jobs variables for functionality.
+
     All threads produced by the worker are limited by the number of
     concurrency specified by the user. The Threads are all made active prior
     to them processing jobs.
+    :param job_action: What function will be used
+    :param multipools: The number Threads we are working on
+    :param work_q: The total Number of Jobs we need to do
     """
+
     import multiprocessing
 
     # Enable for multiprocessing Debug
     # multiprocessing.log_to_stderr(level='DEBUG')
-
     proc_name = 'Turbolift-%s-Worker' % info.__appname__
     processes = []
     for _ in xrange(multipools):
@@ -95,24 +93,28 @@ def worker_proc(job_action, multipools, work_q):
         _jo.join()
 
 
-# ACTIVE STATE retry loop
-# http://code.activestate.com/recipes/578163-retry-loop/
-class RetryError(Exception):
-    pass
-
-
 def retryloop(attempts, timeout=None, delay=None, backoff=1):
-    """
-    Enter the amount of retries you want to perform.
+    """Enter the amount of retries you want to perform.
+
     The timeout allows the application to quit on "X".
     delay allows the loop to wait on fail. Useful for making REST calls.
+
+    ACTIVE STATE retry loop
+    http://code.activestate.com/recipes/578163-retry-loop/
+
     Example:
         Function for retring an action.
         for retry in retryloop(attempts=10, timeout=30, delay=1, backoff=1):
             something
             if somecondition:
                 retry()
+
+    :param attempts:
+    :param timeout:
+    :param delay:
+    :param backoff:
     """
+
     starttime = time.time()
     success = set()
     for _ in range(attempts):
@@ -126,4 +128,4 @@ def retryloop(attempts, timeout=None, delay=None, backoff=1):
         if delay:
             time.sleep(delay)
             delay = delay * backoff
-    raise RetryError
+    raise exceptions.RetryError

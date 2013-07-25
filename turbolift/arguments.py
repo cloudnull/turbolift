@@ -15,9 +15,8 @@ from turbolift import info
 
 
 def get_values():
-    """
-    Look for flags, these are all of the available options for Turbolift.
-    """
+    """Look for flags, these are all of the available options for Turbolift."""
+
     parser = argparse.ArgumentParser(
         formatter_class=lambda prog: argparse.HelpFormatter(
             prog, max_help_position=50),
@@ -289,7 +288,7 @@ def get_values():
     if set_args.get('system_config'):
         from turbolift.operations import systemconfig
         set_args = (
-            systemconfig.ConfigureationSetup(set_args).config_args())
+            systemconfig.ConfigurationSetup(set_args).config_args())
 
     # Interperate the Parsed Arguments
     set_args['defaultcc'] = set_args['cc']

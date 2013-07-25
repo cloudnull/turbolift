@@ -7,25 +7,30 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
+
 import tarfile
 import sys
 import os
 import datetime
-import time
 
 
 class Compressor(object):
     def __init__(self, tur_arg, filelist):
+        """
+        :param tur_arg:
+        :param filelist:
+        """
+
         self.tur_arg = tur_arg
         self.filelist = filelist
 
-    #noinspection PyBroadException
     def compress_files(self):
+        """If the archive function is used, create a compressed archive.
+
+        From all of files found from the "source" argument. This function
+        allows for multiple sources to be added to the compressed archive.
         """
-        If the archive function is used, create a compressed archive from all
-        of files found from the "source" argument. This function allows for
-        multiple sources to be added to the compressed archive.
-        """
+
         try:
             # create a tar archive
             print('MESSAGE\t: Creating a Compressed Archive, This may'

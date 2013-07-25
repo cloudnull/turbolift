@@ -14,13 +14,19 @@ import ConfigParser
 import codecs
 
 
-class ConfigureationSetup(object):
+class ConfigurationSetup(object):
+    """Setup the config."""
+
     def __init__(self, args):
+        """:param args:"""
+
         self.args = args
         self.config_file = args['system_config']
         self.check_perms()
 
     def check_perms(self):
+        """check parameters"""
+
         # If config file is specified, check that it exists
         if self.config_file:
             confpath = self.config_file
@@ -29,7 +35,8 @@ class ConfigureationSetup(object):
                       % os.path.realpath(confpath))
 
     def config_args(self):
-        # setup the parser to for safe config parsing with a no value argument
+        """setup the parser for safe config parsing with a no value argument"""
+
         # Added per - https://github.com/cloudnull/turbolift/issues/2
         if sys.version_info >= (2, 7, 0):
             parser = ConfigParser.SafeConfigParser(allow_no_value=True)
