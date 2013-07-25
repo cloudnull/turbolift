@@ -7,6 +7,7 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
+
 import sys
 import time
 import json
@@ -14,32 +15,39 @@ import hashlib
 import httplib
 import traceback
 from urllib import quote
-from turbolift.operations import generators as gen
-
-
-class AuthenticationProblem(Exception):
-    pass
-
-
-class SystemProblem(Exception):
-    pass
+from turbolift.operations import generators as gen, exceptions
 
 
 class NovaAuth(object):
+    """Authenticate and perform actions with the Openstack API"""
+
     def __init__(self, tur_arg, work_q=None):
-        """
-        NovaAuth is a class that handels all aspects of the turbolift
-        experience Here you will be able to authenticate agains the API, create
+        """NovaAuth is a class that handels all aspects of turbolift.
+
+        Here you will be able to authenticate agains the API, create
         containers and upload content
+        :param tur_arg:
+        :param work_q:
         """
+
         self.tur_arg = tur_arg
         self.work_q = work_q
         self.retry_atmp = self.tur_arg.get('error_retry', 1)
 
+        # Define Variables used in Class
+        self.conn = None
+        self.c_path = None
+        self.headers = None
+        self.url = None
+        self.url_data = None
+
     def set_headers(self, ctr=False, cdn=False):
+        """Set the headers used in the Cloud Files Request.
+
+        :param ctr:
+        :param cdn:
         """
-        Set the headers used in the Cloud Files Request
-        """
+
         # Set the headers if some custom ones were specified
         headers = self.headers
         if ctr is True:
@@ -55,9 +63,11 @@ class NovaAuth(object):
         return headers
 
     def response_type(self, mcr=False):
+        """Understand the reposnce type and provide for the connection.
+
+        :param mcr:
         """
-        Understand the reposnce type and provide for the connection
-        """
+
         for retry in gen.retryloop(attempts=self.retry_atmp,
                                    timeout=960,
                                    delay=5):
@@ -71,14 +81,19 @@ class NovaAuth(object):
                     self.connection_prep(conn_close=True)
                     retry()
                 else:
-                    raise SystemProblem('Failed to perform Action %s' % exp)
+                    raise exceptions.SystemProblem('Failed to perform Action'
+                                                   ' %s' % exp)
             else:
                 return resp, True
 
     def response_get(self, rty, ret_read=False, mcr=False):
+        """Get the reposnse informantion and return it.
+
+        :param rty:
+        :param ret_read:
+        :param mcr:
         """
-        Get the reposnse informantion and return it.
-        """
+
         resp, check = self.response_type(mcr)
         if check is not True:
             rty()
@@ -89,11 +104,16 @@ class NovaAuth(object):
         else:
             return resp
 
-    def result_exception(self, resp, headers, authurl, jsonreq=None, dfc=None):
+    def result_exception(self, resp, authurl, jsonreq=None, dfc=None):
+        """If we encounter an exception in our upload.
+
+        we will look at how we can attempt to resolve the exception.
+        :param resp:
+        :param authurl:
+        :param jsonreq:
+        :param dfc:
         """
-        If we encounter an exception in our upload, we will look at how we
-        can attempt to resolve the exception.
-        """
+
         try:
             if any([resp.status == 401, resp.status is None]):
                 print('MESSAGE\t: Forced Re-authentication is happening.')
@@ -101,31 +121,35 @@ class NovaAuth(object):
                 self.connection_prep(conn_close=True)
                 reqjson, auth_url = self.osauth()
                 self.make_request(jsonreq=reqjson, url=auth_url)
-                raise SystemProblem('NOVA-API AUTH FAILURE -> REQUEST:'
-                                    ' %s %s %s %s' % (resp.status,
-                                                      resp.reason,
-                                                      jsonreq,
-                                                      authurl))
+                raise exceptions.SystemProblem('NOVA-API AUTH FAILURE'
+                                               ' -> REQUEST: %s %s %s %s'
+                                               % (resp.status,
+                                                  resp.reason,
+                                                  jsonreq,
+                                                  authurl))
             elif resp.status == 404 and dfc is True:
                 pass
             elif resp.status == 413:
                 _di = dict(resp.getheaders())
                 time.sleep(int(_di.get('retry_after', 5)))
                 self.connection_prep(conn_close=True)
-                raise SystemProblem('The System encountered an API limitation'
-                                    ' and will continue in %s Seconds'
-                                    % _di.get('retry_after', 5))
+                raise exceptions.SystemProblem('The System encountered an API'
+                                               ' limitation and will continue'
+                                               ' in %s Seconds'
+                                               % _di.get('retry_after', 5))
             elif resp.status == 502:
                 self.connection_prep(conn_close=True, http=True)
-                raise SystemProblem('Failure using HTTPS, Changing to HTTP')
+                raise exceptions.SystemProblem('Failure using HTTPS, Changing'
+                                               ' to HTTP')
             elif resp.status >= 300:
                 self.connection_prep(conn_close=True)
-                raise SystemProblem('NOVA-API FAILURE -> REQUEST: %s %s %s %s'
-                                    % (resp.status,
-                                       resp.reason,
-                                       authurl,
-                                       jsonreq))
-        except SystemProblem, exp:
+                raise exceptions.SystemProblem('NOVA-API FAILURE'
+                                               ' -> REQUEST: %s %s %s %s'
+                                               % (resp.status,
+                                                  resp.reason,
+                                                  authurl,
+                                                  jsonreq))
+        except exceptions.SystemProblem, exp:
             print(exp)
             return True
         except Exception, exp:
@@ -134,9 +158,12 @@ class NovaAuth(object):
             return False
 
     def connection(self, url, http=False):
+        """Open either an http or https connection for the provided URL
+
+        :param url:
+        :param http:
         """
-        Open either an http or https connection for the provided URL
-        """
+
         if http is False:
             conn = httplib.HTTPSConnection(url)
         else:
@@ -144,10 +171,12 @@ class NovaAuth(object):
         return conn
 
     def connection_prep(self, conn_close=False, http=False):
+        """After authentication, this opens a socket to the endpoint.
+
+        :param conn_close:
+        :param http:
         """
-        After authentication, the connection_prep method opens a socket
-        to the cloud files endpoint.
-        """
+
         if conn_close is True:
             self.conn.close()
         else:
@@ -169,13 +198,15 @@ class NovaAuth(object):
         return self.conn
 
     def osauth(self):
-        """
-        Authentication For Openstack API, Pulls the full Openstack Service
-        Catalog Credentials are the Users API Username and Key/Password
-        "osauth" has a Built in Rackspace Method for Authentication
+        """Authentication For Openstack API.
+
+        This pulls the full Openstack Service Catalog Credentials are the
+        Users API Username and Key/Password "osauth" has a Built in
+        Rackspace Method for Authentication
 
         Set a DC Endpoint and Authentication URL for the Open Stack environment
         """
+
         if any([self.tur_arg['os_rax_auth'] == 'LON']):
             self.tur_arg['os_region'] = self.tur_arg.get('os_rax_auth')
             if self.tur_arg['os_auth_url']:
@@ -219,6 +250,11 @@ class NovaAuth(object):
         return jsonreq, url
 
     def make_request(self, jsonreq, url):
+        """
+        :param jsonreq:
+        :param url:
+        """
+
         self.conn = self.connection(url=url)
         for retry in gen.retryloop(attempts=self.retry_atmp,
                                    timeout=960,
@@ -241,7 +277,6 @@ class NovaAuth(object):
                 self.conn = self.connection(url=url, http=True)
                 retry()
             elif self.result_exception(resp=resp,
-                                       headers=headers,
                                        authurl=url,
                                        jsonreq=jsonreq):
                 retry()
@@ -253,6 +288,10 @@ class NovaAuth(object):
             return self.parse_request(json_response=jrp)
 
     def parse_request(self, json_response):
+        """
+        :param json_response:
+        """
+
         try:
             jra = json_response.get('access')
             token = jra.get('token').get('id')
@@ -280,7 +319,7 @@ class NovaAuth(object):
                     self.tur_arg['simple_cdn_endpoint'] = cdn_split
 
             if not cfl and any([internal, external]):
-                raise AuthenticationProblem('No Endpoint Found')
+                raise exceptions.AuthenticationProblem('No Endpoint Found')
 
             if self.tur_arg.get('internal'):
                 self.tur_arg['endpoint'] = internal
@@ -302,12 +341,13 @@ class NovaAuth(object):
                   ' Check the endpoint and auth credentials.')
 
     def enable_cdn(self, container_name):
+        """Enable the CDN on a provided Container.
+
+        If custom meta data is specified, and the container exists the method
+        will put the metadata onto the object.
+        :param container_name: The name of the Container
         """
-        container_name = 'The name of the Container'
-        Enable the CDN on a provided Container. If custom meta data is
-        specified, and the container exists the
-        method will put the metadata onto the object.
-        """
+
         cdnurl_data = self.tur_arg['simple_cdn_endpoint'].split('/')
         cdnurl = cdnurl_data[0]
         cdn_path = quote('/%s' % ('/'.join(cdnurl_data[1:])))
@@ -324,7 +364,6 @@ class NovaAuth(object):
                     print('ENABLING CDN ON CONTAINER: %s %s %s'
                           % resp.status, resp.reason, container_name)
                 if self.result_exception(resp=resp,
-                                         headers=c_headers,
                                          authurl=cdnurl,
                                          jsonreq=path):
                     retry()
@@ -336,10 +375,11 @@ class NovaAuth(object):
                 self.conn.close()
 
     def container_check(self, container_name):
+        """check a container to see if it exists.
+
+        :param container_name: The name of the Container
         """
-        container_name = 'The name of the Container'
-        check a container to see if it exists
-        """
+
         self.connection_prep()
         r_loc = '%s/%s' % (self.c_path, container_name)
         path = quote(r_loc)
@@ -352,20 +392,19 @@ class NovaAuth(object):
             if resp.status == 404:
                 print('Container Not Found')
             elif self.result_exception(resp=resp,
-                                       headers=c_headers,
                                        authurl=self.url,
                                        jsonreq=path):
                 retry()
             return resp
 
     def container_create(self, container_name):
+        """Create a container if the container specified on the command.
+
+        If custom meta data is specified, and the container exists the method
+        will put the metadata onto the object.
+        :param container_name: The name of the Container
         """
-        container_name = 'The name of the Container'
-        Create a container if the container specified on the command
-        line did not already exist. If custom meta data is specified,
-        and the container exists the method will put the metadata
-        onto the object.
-        """
+
         for retry in gen.retryloop(attempts=self.retry_atmp, delay=5):
             try:
                 r_loc = '%s/%s' % (self.c_path, container_name)
@@ -383,7 +422,6 @@ class NovaAuth(object):
                     if resp.status == 404:
                         print('Container Not Found %s' % resp.status)
                     elif self.result_exception(resp=resp,
-                                               headers=c_headers,
                                                authurl=self.url,
                                                jsonreq=path):
                         retry()
@@ -391,7 +429,6 @@ class NovaAuth(object):
                     if self.tur_arg['os_verbose']:
                         print('CREATING CONTAINER: %s %s %s' % status_codes)
                 elif self.result_exception(resp=resp,
-                                           headers=c_headers,
                                            authurl=self.url,
                                            jsonreq=path):
                     retry()
@@ -407,16 +444,16 @@ class NovaAuth(object):
                     self.conn.request('POST', path, headers=c_headers)
                     resp = self.response_get(rty=retry)
                     if self.result_exception(resp=resp,
-                                             headers=c_headers,
                                              authurl=self.url,
                                              jsonreq=path):
                         retry()
 
     def container_deleter(self, container):
+        """check a container to see if it exists
+
+        :param container:
         """
-        container_name = 'The name of the Container'
-        check a container to see if it exists
-        """
+
         for retry in gen.retryloop(attempts=self.retry_atmp, delay=5):
             r_loc = '%s/%s' % (self.c_path, container)
             path = quote(r_loc)
@@ -425,7 +462,6 @@ class NovaAuth(object):
             self.conn.request('DELETE', path, headers=c_headers)
             resp = self.response_get(rty=retry)
             if self.result_exception(resp=resp,
-                                     headers=c_headers,
                                      authurl=self.url,
                                      jsonreq=path,
                                      dfc=True):
@@ -439,6 +475,15 @@ class NovaAuth(object):
                     print 'MESSAGE\t: Delete path = %s' % (container)
 
     def object_putter(self, fpath, rpath, fname, fheaders, retry):
+        """Place  object into the container.
+
+        :param fpath:
+        :param rpath:
+        :param fname:
+        :param fheaders:
+        :param retry:
+        """
+
         with open(fpath, 'rb') as fopen:
             self.conn.request('PUT',
                               rpath,
@@ -446,7 +491,6 @@ class NovaAuth(object):
                               headers=fheaders)
         resp = self.response_get(rty=retry)
         if self.result_exception(resp=resp,
-                                 headers=fheaders,
                                  authurl=self.url,
                                  jsonreq=rpath):
             retry()
@@ -456,10 +500,12 @@ class NovaAuth(object):
                                         fname)
 
     def object_deleter(self, file_path, container):
+        """check a container to see if it exists
+
+        :param file_path:
+        :param container:
         """
-        container_name = 'The name of the Container'
-        check a container to see if it exists
-        """
+
         for retry in gen.retryloop(attempts=self.retry_atmp, delay=5):
             self.connection_prep()
             r_loc = '%s/%s/%s' % (self.c_path, container, file_path)
@@ -468,7 +514,6 @@ class NovaAuth(object):
             self.conn.request('DELETE', remote_path, headers=f_headers)
             resp = self.response_get(rty=retry)
             if self.result_exception(resp=resp,
-                                     headers=f_headers,
                                      authurl=self.url,
                                      jsonreq=remote_path,
                                      dfc=True):
@@ -483,9 +528,12 @@ class NovaAuth(object):
                                                                   container)
 
     def get_object_list(self, container_name, lastobj=None):
+        """Builds a long list of files found in a container
+
+        :param container_name:
+        :param lastobj:
         """
-        Builds a long list of files found in a container
-        """
+
         for retry in gen.retryloop(attempts=self.retry_atmp,
                                    delay=5,
                                    backoff=2):
@@ -499,7 +547,6 @@ class NovaAuth(object):
 
                 resp = self.response_get(rty=retry)
                 if self.result_exception(resp=resp,
-                                         headers=f_headers,
                                          authurl=self.url,
                                          jsonreq=filepath):
                     retry()
@@ -523,7 +570,6 @@ class NovaAuth(object):
                         resp, resp_read = self.response_get(rty=retry,
                                                             ret_read=True)
                         if self.result_exception(resp=resp,
-                                                 headers=f_headers,
                                                  authurl=self.url,
                                                  jsonreq=filepath):
                             nest_rty()
@@ -555,10 +601,15 @@ class NovaAuth(object):
                 return file_list
 
     def get_downloader(self, file_path, file_name, container):
+        """This is the simple download Method.
+
+        There is no file level checking at the target. The files are simply
+        downloaded.
+        :param file_path:
+        :param file_name:
+        :param container:
         """
-        This is the simple download Method. There is no file level checking
-        at the target. The files are simply downloaded.
-        """
+
         for retry in gen.retryloop(attempts=self.retry_atmp,
                                    delay=5,
                                    backoff=1):
@@ -572,7 +623,6 @@ class NovaAuth(object):
                                                     ret_read=True)
                 # Check that the status was a good one
                 if self.result_exception(resp=resp,
-                                         headers=f_headers,
                                          authurl=self.url,
                                          jsonreq=filepath):
                     retry()
@@ -603,10 +653,15 @@ class NovaAuth(object):
                 self.work_q.put(file_path)
 
     def put_uploader(self, file_path, file_name, container):
+        """This is the simple upload Method.
+
+        There is no file level checking at the target.
+        The files are simply uploaded.
+        :param file_path:
+        :param file_name:
+        :param container:
         """
-        This is the simple upload Method. There is no file level checking'
-        ' at the target. The files are simply uploaded.
-        """
+
         for retry in gen.retryloop(attempts=self.retry_atmp,
                                    delay=5,
                                    backoff=2):
@@ -637,22 +692,29 @@ class NovaAuth(object):
                           % (file_path, remote_path))
 
     def sync_uploader(self, file_path, file_name, container):
-        """
-        This is the Sync method which uploads files to the swift repository'
+        """This is the Sync method which uploads files to the swift repository
+
         if they are not already found. If a file "name" is found locally and
         in the swift repository an MD5 comparison is done between the two
         files. If the MD5 is miss-matched the local file is uploaded to the
         repository. If custom meta data is specified, and the object exists the
         method will put the metadata onto the object.
+        :param file_path:
+        :param file_name:
+        :param container:
         """
-        for retry in gen.retryloop(attempts=self.retry_atmp,
-                                   delay=5):
+
+        def calc_hash():
+            """Read the hash."""
+
+            return data_hash.read(128 * md5.block_size)
+
+        for retry in gen.retryloop(attempts=self.retry_atmp, delay=5):
             try:
                 f_headers = self.set_headers()
                 # Get the path ready for action
                 r_loc = '%s/%s/%s' % (self.c_path, container, file_name)
                 remote_path = quote(r_loc)
-
                 self.conn.request('HEAD', remote_path, headers=f_headers)
                 resp = self.response_get(rty=retry)
                 if resp.status == 404:
@@ -664,10 +726,9 @@ class NovaAuth(object):
                 else:
                     rmd5sum = resp.getheader('etag')
                     md5 = hashlib.md5()
-                    with open(file_path, 'rb') as f_hash:
-                        for chunk in iter(lambda: f_hash.read(
-                                128 * md5.block_size), ''):
-                            md5.update(chunk)
+                    with open(file_path, 'rb') as data_hash:
+                        for chk in iter(calc_hash, ''):
+                            md5.update(chk)
                     lmd5sum = md5.hexdigest()
                     if rmd5sum != lmd5sum:
                         if self.tur_arg['verbose']:
@@ -705,7 +766,6 @@ class NovaAuth(object):
                                       headers=f_headers)
                     resp = self.response_get(rty=retry)
                     if self.result_exception(resp=resp,
-                                             headers=self.headers,
                                              authurl=self.url,
                                              jsonreq=remote_path):
                         retry()
