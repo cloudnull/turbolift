@@ -41,8 +41,7 @@ class FileNames(object):
                                         os.sep)
                     for root, sfs, files in os.walk(rootdir.encode('utf8')):
                         for _fl in files:
-                            inode = os.path.join(root.encode('utf8'),
-                                                 _fl.encode('utf8'))
+                            inode = os.path.join(root, _fl)
                             if os.path.exists(inode):
                                 filelist.append(inode)
                         if self.tur_arg.get('debug'):
