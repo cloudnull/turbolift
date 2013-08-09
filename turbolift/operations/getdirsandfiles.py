@@ -13,6 +13,8 @@ import operator
 
 
 class GetDirsAndFiles(object):
+    """Index all files and folders."""
+
     def __init__(self, tur_arg):
         """
         :param tur_arg:
@@ -45,7 +47,7 @@ class GetDirsAndFiles(object):
             for fname in os.listdir(dir_n):
                 if fname is not None:
                     inode = '%s%s%s' % (dir_n, os.sep, fname)
-                    if (os.path.isfile(inode) and os.path.exists(inode)):
+                    if all([os.path.isfile(inode), os.path.exists(inode)]):
                         _fs.append(inode)
             if self.tur_arg.get('no_sort'):
                 flist = _fs

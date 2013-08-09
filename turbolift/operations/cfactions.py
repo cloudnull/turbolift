@@ -66,7 +66,6 @@ class CloudFilesActions:
                 break_down = os.path.realpath(self.args.get('source'))
                 _fn = os.path.basename(break_down)
                 self.base_path = break_down.strip(_fn)
-            self.oscmd.connection_prep()
 
             # Prep our Container
             if any([self.args.get('download'), self.args.get('delete')]):
@@ -75,9 +74,6 @@ class CloudFilesActions:
                 self.oscmd.container_create(self.container)
                 if self.args.get('cdn_enabled'):
                     self.oscmd.enable_cdn(self.container)
-
-            # Thread into the job that we need to accomplish
-            self.oscmd.connection_prep()
 
             # If not verbose or Debug mode, show me a nice spinner
             _it = IndicatorThread(work_q=work_q)
@@ -92,10 +88,6 @@ class CloudFilesActions:
             generators.worker_proc(job_action=self.run_function,
                                    multipools=self.multipools,
                                    work_q=work_q)
-
-            # Close the connection because I am done
-            self.oscmd.connection_prep(conn_close=True)
-
             if thd:
                 thd.terminate()
 
