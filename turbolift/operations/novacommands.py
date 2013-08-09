@@ -22,9 +22,9 @@ class NovaAuth(object):
     """Authenticate and perform actions with the Openstack API"""
 
     def __init__(self, tur_arg, work_q=None):
-        """NovaAuth is a class that handels all aspects of turbolift.
+        """NovaAuth is a class that handel's all aspects of turbolift.
 
-        Here you will be able to authenticate agains the API, create
+        Here you will be able to authenticate against the API, create
         containers and upload content
         :param tur_arg:
         :param work_q:
@@ -33,9 +33,6 @@ class NovaAuth(object):
         self.tur_arg = tur_arg
         self.work_q = work_q
         self.retry_atmp = self.tur_arg.get('error_retry', 1)
-
-        # Define Variables used in Class
-        self.conn = None
         self.c_path = None
         self.headers = None
         self.url = None
@@ -78,7 +75,6 @@ class NovaAuth(object):
                     resp = self.conn.getresponse(buffering=True)
             except httplib.BadStatusLine, exp:
                 if mcr is False:
-                    self.connection_prep(conn_close=True)
                     retry()
                 else:
                     raise exceptions.SystemProblem('Failed to perform Action'
@@ -118,7 +114,6 @@ class NovaAuth(object):
             if any([resp.status == 401, resp.status is None]):
                 print('MESSAGE\t: Forced Re-authentication is happening.')
                 time.sleep(2)
-                self.connection_prep(conn_close=True)
                 reqjson, auth_url = self.osauth()
                 self.make_request(jsonreq=reqjson, url=auth_url)
                 raise exceptions.SystemProblem('NOVA-API AUTH FAILURE'
@@ -132,17 +127,14 @@ class NovaAuth(object):
             elif resp.status == 413:
                 _di = dict(resp.getheaders())
                 time.sleep(int(_di.get('retry_after', 5)))
-                self.connection_prep(conn_close=True)
                 raise exceptions.SystemProblem('The System encountered an API'
                                                ' limitation and will continue'
                                                ' in %s Seconds'
                                                % _di.get('retry_after', 5))
             elif resp.status == 502:
-                self.connection_prep(conn_close=True, http=True)
                 raise exceptions.SystemProblem('Failure using HTTPS, Changing'
                                                ' to HTTP')
             elif resp.status >= 300:
-                self.connection_prep(conn_close=True)
                 raise exceptions.SystemProblem('NOVA-API FAILURE'
                                                ' -> REQUEST: %s %s %s %s'
                                                % (resp.status,
@@ -170,20 +162,16 @@ class NovaAuth(object):
             conn = httplib.HTTPConnection(url)
         return conn
 
-    def connection_prep(self, conn_close=False, http=False):
+    def connection_prep(self, http=False):
         """After authentication, this opens a socket to the endpoint.
 
-        :param conn_close:
         :param http:
         """
 
-        if conn_close is True:
-            self.conn.close()
-        else:
-            self.headers = self.tur_arg['base_headers']
-            self.url_data = self.tur_arg['simple_endpoint'].split('/')
-            self.url = self.url_data[0]
-            self.c_path = quote('/%s' % ('/'.join(self.url_data[1:])))
+        self.headers = self.tur_arg['base_headers']
+        self.url_data = self.tur_arg['simple_endpoint'].split('/')
+        self.url = self.url_data[0]
+        self.c_path = quote('/%s' % ('/'.join(self.url_data[1:])))
 
         if http is True:
             self.conn = self.connection(url=self.url, http=True)
@@ -351,51 +339,57 @@ class NovaAuth(object):
         cdnurl_data = self.tur_arg['simple_cdn_endpoint'].split('/')
         cdnurl = cdnurl_data[0]
         cdn_path = quote('/%s' % ('/'.join(cdnurl_data[1:])))
-
         r_loc = '%s/%s' % (cdn_path, container_name)
         path = quote(r_loc)
         c_headers = self.set_headers(cdn=True)
         for retry in gen.retryloop(attempts=self.retry_atmp, delay=5):
             try:
-                self.conn = self.connection(url=cdnurl)
-                self.conn.request('PUT', path, headers=c_headers)
+                conn = self.connection(url=cdnurl)
+                conn.request('PUT', path, headers=c_headers)
                 resp = self.response_get(rty=retry)
                 if self.tur_arg['os_verbose']:
                     print('ENABLING CDN ON CONTAINER: %s %s %s'
-                          % resp.status, resp.reason, container_name)
+                          % (resp.status, resp.reason, container_name))
                 if self.result_exception(resp=resp,
                                          authurl=cdnurl,
                                          jsonreq=path):
-                    retry()
+                    raise exceptions.SystemProblem(resp)
+            except exceptions.SystemProblem:
+                retry()
             except Exception, exp:
                 print('ERROR\t: Shits broke son, here comes the'
                       ' stack trace:\t %s' % traceback.format_exc())
                 print exp
             finally:
-                self.conn.close()
+                conn.close()
 
     def container_check(self, container_name):
         """check a container to see if it exists.
 
         :param container_name: The name of the Container
         """
-
-        self.connection_prep()
-        r_loc = '%s/%s' % (self.c_path, container_name)
-        path = quote(r_loc)
-        for retry in gen.retryloop(attempts=self.retry_atmp, delay=5):
-            c_headers = self.set_headers()
-            # Check to see if the container exists
-            self.conn.request('HEAD', path, headers=c_headers)
-            resp = self.response_get(rty=retry)
-            # Check that the status was a good one
-            if resp.status == 404:
-                print('Container Not Found')
-            elif self.result_exception(resp=resp,
-                                       authurl=self.url,
-                                       jsonreq=path):
-                retry()
+        try:
+            conn = self.connection_prep()
+            r_loc = '%s/%s' % (self.c_path, container_name)
+            path = quote(r_loc)
+            for retry in gen.retryloop(attempts=self.retry_atmp, delay=5):
+                c_headers = self.set_headers()
+                # Check to see if the container exists
+                conn.request('HEAD', path, headers=c_headers)
+                resp = self.response_get(rty=retry)
+                # Check that the status was a good one
+                if resp.status == 404:
+                    print('Container Not Found')
+                elif self.result_exception(resp=resp,
+                                           authurl=self.url,
+                                           jsonreq=path):
+                    raise exceptions.SystemProblem(resp)
+        except exceptions.SystemProblem:
+            retry()
+        else:
             return resp
+        finally:
+            conn.close()
 
     def container_create(self, container_name):
         """Create a container if the container specified on the command.
@@ -407,6 +401,7 @@ class NovaAuth(object):
 
         for retry in gen.retryloop(attempts=self.retry_atmp, delay=5):
             try:
+                conn = self.connection_prep()
                 r_loc = '%s/%s' % (self.c_path, container_name)
                 path = quote(r_loc)
                 c_headers = self.set_headers(ctr=True)
@@ -417,21 +412,23 @@ class NovaAuth(object):
                 # Check that the status was a good one
                 if resp.status == 404:
                     print('Creating Container ==> %s' % container_name)
-                    self.conn.request('PUT', path, headers=c_headers)
+                    conn.request('PUT', path, headers=c_headers)
                     resp = self.response_get(rty=retry)
                     if resp.status == 404:
                         print('Container Not Found %s' % resp.status)
                     elif self.result_exception(resp=resp,
                                                authurl=self.url,
                                                jsonreq=path):
-                        retry()
+                        raise exceptions.SystemProblem(resp)
                     status_codes = (resp.status, resp.reason, container_name)
                     if self.tur_arg['os_verbose']:
                         print('CREATING CONTAINER: %s %s %s' % status_codes)
                 elif self.result_exception(resp=resp,
                                            authurl=self.url,
                                            jsonreq=path):
-                    retry()
+                    raise exceptions.SystemProblem(resp)
+            except exceptions.SystemProblem:
+                retry()
             except Exception, exp:
                 print('ERROR\t: Shits broke son, here comes the'
                       ' stack trace:\t %s -> Exception\t: %s'
@@ -441,12 +438,14 @@ class NovaAuth(object):
                     print('Container Found %s %s %s' % status_codes)
                 # Put headers on the object if custom headers used
                 if self.tur_arg['object_headers']:
-                    self.conn.request('POST', path, headers=c_headers)
+                    conn.request('POST', path, headers=c_headers)
                     resp = self.response_get(rty=retry)
                     if self.result_exception(resp=resp,
                                              authurl=self.url,
                                              jsonreq=path):
                         retry()
+            finally:
+                conn.close()
 
     def container_deleter(self, container):
         """check a container to see if it exists
@@ -455,24 +454,31 @@ class NovaAuth(object):
         """
 
         for retry in gen.retryloop(attempts=self.retry_atmp, delay=5):
-            r_loc = '%s/%s' % (self.c_path, container)
-            path = quote(r_loc)
-            c_headers = self.set_headers()
-            # Check to see if the container exists
-            self.conn.request('DELETE', path, headers=c_headers)
-            resp = self.response_get(rty=retry)
-            if self.result_exception(resp=resp,
-                                     authurl=self.url,
-                                     jsonreq=path,
-                                     dfc=True):
+            try:
+                conn = self.connection_prep()
+                r_loc = '%s/%s' % (self.c_path, container)
+                path = quote(r_loc)
+                c_headers = self.set_headers()
+                # Check to see if the container exists
+                conn.request('DELETE', path, headers=c_headers)
+                resp = self.response_get(rty=retry)
+                if self.result_exception(resp=resp,
+                                         authurl=self.url,
+                                         jsonreq=path,
+                                         dfc=True):
+                    raise exceptions.SystemProblem(resp)
+            except exceptions.SystemProblem:
                 retry()
-            # Give us more data if we requested it
-            if any([self.tur_arg['os_verbose'], self.tur_arg['debug']]):
-                print 'INFO\t: %s %s %s' % (resp.status,
-                                            resp.reason,
-                                            container)
-                if self.tur_arg['debug']:
-                    print 'MESSAGE\t: Delete path = %s' % (container)
+            else:
+                # Give us more data if we requested it
+                if any([self.tur_arg['os_verbose'], self.tur_arg['debug']]):
+                    print 'INFO\t: %s %s %s' % (resp.status,
+                                                resp.reason,
+                                                container)
+                    if self.tur_arg['debug']:
+                        print 'MESSAGE\t: Delete path = %s' % container
+            finally:
+                conn.close()
 
     def object_putter(self, fpath, rpath, fname, fheaders, retry):
         """Place  object into the container.
@@ -484,20 +490,27 @@ class NovaAuth(object):
         :param retry:
         """
 
-        with open(fpath, 'rb') as fopen:
-            self.conn.request('PUT',
-                              rpath,
-                              body=fopen,
-                              headers=fheaders)
-        resp = self.response_get(rty=retry)
-        if self.result_exception(resp=resp,
-                                 authurl=self.url,
-                                 jsonreq=rpath):
+        try:
+            conn = self.connection_prep()
+            with open(fpath, 'rb') as fopen:
+                conn.request('PUT',
+                             rpath,
+                             body=fopen,
+                             headers=fheaders)
+            resp = self.response_get(rty=retry)
+            if self.result_exception(resp=resp,
+                                     authurl=self.url,
+                                     jsonreq=rpath):
+                raise exceptions.SystemProblem(resp)
+        except exceptions.SystemProblem:
             retry()
-        elif self.tur_arg['verbose']:
-            print 'INFO\t: %s %s %s' % (resp.status,
-                                        resp.reason,
-                                        fname)
+        else:
+            if self.tur_arg['verbose']:
+                print 'INFO\t: %s %s %s' % (resp.status,
+                                            resp.reason,
+                                            fname)
+        finally:
+            conn.close()
 
     def object_deleter(self, file_path, container):
         """check a container to see if it exists
@@ -507,25 +520,31 @@ class NovaAuth(object):
         """
 
         for retry in gen.retryloop(attempts=self.retry_atmp, delay=5):
-            self.connection_prep()
-            r_loc = '%s/%s/%s' % (self.c_path, container, file_path)
-            remote_path = quote(r_loc)
-            f_headers = self.set_headers()
-            self.conn.request('DELETE', remote_path, headers=f_headers)
-            resp = self.response_get(rty=retry)
-            if self.result_exception(resp=resp,
-                                     authurl=self.url,
-                                     jsonreq=remote_path,
-                                     dfc=True):
+            try:
+                conn = self.connection_prep()
+                r_loc = '%s/%s/%s' % (self.c_path, container, file_path)
+                remote_path = quote(r_loc)
+                f_headers = self.set_headers()
+                conn.request('DELETE', remote_path, headers=f_headers)
+                resp = self.response_get(rty=retry)
+                if self.result_exception(resp=resp,
+                                         authurl=self.url,
+                                         jsonreq=remote_path,
+                                         dfc=True):
+                    raise exceptions.SystemProblem(resp)
+            except exceptions.SystemProblem:
                 retry()
-            # Give us more data if we requested it
-            if any([self.tur_arg['os_verbose'], self.tur_arg['debug']]):
-                print 'INFO\t: %s %s %s' % (resp.status,
-                                            resp.reason,
-                                            file_path)
-                if self.tur_arg['debug']:
-                    print 'MESSAGE\t: Delete path = %s ==> %s' % (file_path,
-                                                                  container)
+            else:
+                # Give us more data if we requested it
+                if any([self.tur_arg['os_verbose'], self.tur_arg['debug']]):
+                    print 'INFO\t: %s %s %s' % (resp.status,
+                                                resp.reason,
+                                                file_path)
+                    if self.tur_arg['debug']:
+                        print('MESSAGE\t: Delete path = %s ==> %s'
+                              % (file_path, container))
+            finally:
+                conn.close()
 
     def get_object_list(self, container_name, lastobj=None):
         """Builds a long list of files found in a container
@@ -538,18 +557,19 @@ class NovaAuth(object):
                                    delay=5,
                                    backoff=2):
             try:
-                self.connection_prep()
+                conn = self.connection_prep()
                 f_headers = self.set_headers()
+
                 # Determine how many files are in the container
                 r_loc = '%s/%s' % (self.c_path, container_name)
                 filepath = quote(r_loc)
-                self.conn.request('HEAD', filepath, headers=f_headers)
+                conn.request('HEAD', filepath, headers=f_headers)
 
                 resp = self.response_get(rty=retry)
                 if self.result_exception(resp=resp,
                                          authurl=self.url,
                                          jsonreq=filepath):
-                    retry()
+                    raise exceptions.SystemProblem(resp)
                 count = int(resp.getheader('X-Container-Object-Count'))
 
                 # Build the List
@@ -564,15 +584,15 @@ class NovaAuth(object):
                 for _ in xrange(jobs):
                     for nest_rty in gen.retryloop(attempts=self.retry_atmp,
                                                   delay=5):
-                        self.conn.request('GET',
-                                          filepath,
-                                          headers=f_headers)
+                        conn.request('GET',
+                                     filepath,
+                                     headers=f_headers)
                         resp, resp_read = self.response_get(rty=retry,
                                                             ret_read=True)
                         if self.result_exception(resp=resp,
                                                  authurl=self.url,
                                                  jsonreq=filepath):
-                            nest_rty()
+                            raise exceptions.NoSource(resp)
                         _rr = json.loads(resp_read)
                         for obj in _rr:
                             file_list.append(obj['name'])
@@ -582,6 +602,16 @@ class NovaAuth(object):
                             lastobj = file_list[-1]
                             filepath = '%s&marker=%s' % (filepath_m,
                                                          quote(lastobj))
+            except exceptions.NoSource:
+                nest_rty()
+            except exceptions.SystemProblem:
+                retry()
+            except KeyboardInterrupt:
+                pass
+            except Exception, exp:
+                print('Exception from within an Download Action\n%s\n%s'
+                      % (traceback.format_exc(), exp))
+            else:
                 # Give us more data if we requested it
                 if any([self.tur_arg['os_verbose'],
                         self.tur_arg['debug']]):
@@ -591,14 +621,9 @@ class NovaAuth(object):
                     if self.tur_arg['debug']:
                         print('MESSAGE\t: Path => %s\nMESSAGE\t: %s'
                               % (filepath, _rr))
-            except KeyboardInterrupt:
-                pass
-            except Exception, exp:
-                print exp
-                print traceback.format_exc()
-                print('Exception from within an Download Action')
-            else:
                 return file_list
+            finally:
+                conn.close()
 
     def get_downloader(self, file_path, file_name, container):
         """This is the simple download Method.
@@ -614,30 +639,23 @@ class NovaAuth(object):
                                    delay=5,
                                    backoff=1):
             try:
+                conn = self.connection_prep()
                 f_headers = self.set_headers()
                 # Get a file list ready for action
                 remote_path = '%s/%s/%s' % (self.c_path, container, file_path)
                 filepath = quote(remote_path)
-                self.conn.request('GET', filepath, headers=f_headers)
-                resp, resp_read = self.response_get(rty=retry,
-                                                    ret_read=True)
+                conn.request('GET', filepath, headers=f_headers)
+                resp, resp_read = self.response_get(rty=retry, ret_read=True)
                 # Check that the status was a good one
                 if self.result_exception(resp=resp,
                                          authurl=self.url,
                                          jsonreq=filepath):
-                    retry()
+                    raise exceptions.SystemProblem(resp)
                 # Open our source file
                 with open(file_name, 'wb') as f_name:
                     f_name.write(resp_read)
-                # Give us more data if we requested it
-                if any([self.tur_arg['verbose'],
-                        self.tur_arg['debug']]):
-                    print 'INFO\t: %s %s %s' % (resp.status,
-                                                resp.reason,
-                                                file_name)
-                    if self.tur_arg['debug']:
-                        print('MESSAGE\t: Upload path = %s ==> %s'
-                              % (file_path, filepath))
+            except exceptions.SystemProblem:
+                retry()
             except IOError:
                 print('ERROR\t: path "%s" does not exist or is a broken'
                       ' symlink' % file_name)
@@ -651,6 +669,18 @@ class NovaAuth(object):
                       '\t  placing the failed Download back in Queue\n',
                       'ERROR\t: %s' % exp)
                 self.work_q.put(file_path)
+            else:
+                # Give us more data if we requested it
+                if any([self.tur_arg['verbose'],
+                        self.tur_arg['debug']]):
+                    print 'INFO\t: %s %s %s' % (resp.status,
+                                                resp.reason,
+                                                file_name)
+                    if self.tur_arg['debug']:
+                        print('MESSAGE\t: Upload path = %s ==> %s'
+                              % (file_path, filepath))
+            finally:
+                conn.close()
 
     def put_uploader(self, file_path, file_name, container):
         """This is the simple upload Method.
@@ -711,11 +741,12 @@ class NovaAuth(object):
 
         for retry in gen.retryloop(attempts=self.retry_atmp, delay=5):
             try:
+                conn = self.connection_prep()
                 f_headers = self.set_headers()
                 # Get the path ready for action
                 r_loc = '%s/%s/%s' % (self.c_path, container, file_name)
                 remote_path = quote(r_loc)
-                self.conn.request('HEAD', remote_path, headers=f_headers)
+                conn.request('HEAD', remote_path, headers=f_headers)
                 resp = self.response_get(rty=retry)
                 if resp.status == 404:
                     self.object_putter(fpath=file_path,
@@ -761,11 +792,13 @@ class NovaAuth(object):
             else:
                 # Put headers on the object if custom headers
                 if self.tur_arg['object_headers']:
-                    self.conn.request('POST',
-                                      remote_path,
-                                      headers=f_headers)
+                    conn.request('POST',
+                                 remote_path,
+                                 headers=f_headers)
                     resp = self.response_get(rty=retry)
                     if self.result_exception(resp=resp,
                                              authurl=self.url,
                                              jsonreq=remote_path):
                         retry()
+            finally:
+                conn.close()

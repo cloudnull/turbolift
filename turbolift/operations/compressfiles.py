@@ -15,8 +15,11 @@ import datetime
 
 
 class Compressor(object):
+    """Compress files and folders into a tar ball."""
+
     def __init__(self, tur_arg, filelist):
-        """
+        """Begin the compression of files and folders.
+
         :param tur_arg:
         :param filelist:
         """
@@ -30,7 +33,7 @@ class Compressor(object):
         From all of files found from the "source" argument. This function
         allows for multiple sources to be added to the compressed archive.
         """
-
+        tmp_file = None
         try:
             # create a tar archive
             print('MESSAGE\t: Creating a Compressed Archive, This may'
