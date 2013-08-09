@@ -59,20 +59,18 @@ class NovaAuth(object):
                 headers.update(self.tur_arg['object_headers'])
         return headers
 
-    def response_type(self, mcr=False):
+    def response_type(self, conn, mcr=False):
         """Understand the response type and provide for the connection.
 
         :param mcr:
+        :param conn:
         """
 
         for retry in gen.retryloop(attempts=self.retry_atmp,
                                    timeout=960,
                                    delay=5):
             try:
-                if sys.version_info < (2, 7, 0):
-                    resp = self.conn.getresponse()
-                else:
-                    resp = self.conn.getresponse(buffering=True)
+                resp = conn.getresponse()
             except httplib.BadStatusLine, exp:
                 if mcr is False:
                     retry()
@@ -82,7 +80,7 @@ class NovaAuth(object):
             else:
                 return resp, True
 
-    def response_get(self, rty, ret_read=False, mcr=False):
+    def response_get(self, conn, rty, ret_read=False, mcr=False):
         """Get the response information and return it.
 
         :param rty:
@@ -90,7 +88,7 @@ class NovaAuth(object):
         :param mcr:
         """
 
-        resp, check = self.response_type(mcr)
+        resp, check = self.response_type(conn=conn, mcr=mcr)
         if check is not True:
             rty()
         else:
@@ -174,16 +172,16 @@ class NovaAuth(object):
         self.c_path = quote('/%s' % ('/'.join(self.url_data[1:])))
 
         if http is True:
-            self.conn = self.connection(url=self.url, http=True)
+            conn = self.connection(url=self.url, http=True)
         else:
-            self.conn = self.connection(url=self.url)
+            conn = self.connection(url=self.url)
 
         if self.tur_arg['os_verbose']:
             print('connecting to the API for %s ==> %s %s' % (self.c_path,
                                                               self.headers,
                                                               self.c_path))
-            self.conn.set_debuglevel(1)
-        return self.conn
+            conn.set_debuglevel(1)
+        return conn
 
     def osauth(self):
         """Authentication For Openstack API.
@@ -243,37 +241,44 @@ class NovaAuth(object):
         :param url:
         """
 
-        self.conn = self.connection(url=url)
-        for retry in gen.retryloop(attempts=self.retry_atmp,
-                                   timeout=960,
-                                   delay=5):
-            if self.tur_arg['os_verbose']:
-                print('JSON REQUEST: %s' % jsonreq)
-                self.conn.set_debuglevel(1)
-
-            headers = {'Content-Type': 'application/json'}
-            tokenurl = '/%s/tokens' % self.tur_arg.get('os_version')
-            self.conn.request('POST', tokenurl, jsonreq, headers)
-            resp, resp_read = self.response_get(rty=retry,
-                                                ret_read=True,
-                                                mcr=True)
-            jrp = json.loads(resp_read)
-
-            # Check that the status was a good one
-            if resp.status >= 500:
-                print('500 Error => Attempting HTTP connection')
-                self.conn = self.connection(url=url, http=True)
-                retry()
-            elif self.result_exception(resp=resp,
-                                       authurl=url,
-                                       jsonreq=jsonreq):
-                retry()
-            else:
+        try:
+            conn = self.connection(url=url)
+            for retry in gen.retryloop(attempts=self.retry_atmp,
+                                       timeout=960,
+                                       delay=5):
                 if self.tur_arg['os_verbose']:
-                    print('JSON decoded and pretty')
-                    print json.dumps(jrp, indent=2)
+                    print('JSON REQUEST: %s' % jsonreq)
+                    conn.set_debuglevel(1)
+
+                headers = {'Content-Type': 'application/json'}
+                tokenurl = '/%s/tokens' % self.tur_arg.get('os_version')
+                conn.request('POST', tokenurl, jsonreq, headers)
+                resp, resp_read = self.response_get(conn=conn,
+                                                    rty=retry,
+                                                    ret_read=True,
+                                                    mcr=True)
+                jrp = json.loads(resp_read)
+
+                # Check that the status was a good one
+                if resp.status >= 500:
+                    print('500 Error => Attempting HTTP connection')
+                    conn = self.connection(url=url, http=True)
+                    raise exceptions.SystemProblem(resp)
+                elif self.result_exception(resp=resp,
+                                           authurl=url,
+                                           jsonreq=jsonreq):
+                    raise exceptions.SystemProblem(resp)
+                else:
+                    if self.tur_arg['os_verbose']:
+                        print('JSON decoded and pretty')
+                        print json.dumps(jrp, indent=2)
+        except exceptions.SystemProblem:
+            retry()
+        else:
             # Send Response to Parser
             return self.parse_request(json_response=jrp)
+        finally:
+            conn.close()
 
     def parse_request(self, json_response):
         """
@@ -346,7 +351,7 @@ class NovaAuth(object):
             try:
                 conn = self.connection(url=cdnurl)
                 conn.request('PUT', path, headers=c_headers)
-                resp = self.response_get(rty=retry)
+                resp = self.response_get(conn=conn, rty=retry)
                 if self.tur_arg['os_verbose']:
                     print('ENABLING CDN ON CONTAINER: %s %s %s'
                           % (resp.status, resp.reason, container_name))
@@ -376,7 +381,7 @@ class NovaAuth(object):
                 c_headers = self.set_headers()
                 # Check to see if the container exists
                 conn.request('HEAD', path, headers=c_headers)
-                resp = self.response_get(rty=retry)
+                resp = self.response_get(conn=conn, rty=retry)
                 # Check that the status was a good one
                 if resp.status == 404:
                     print('Container Not Found')
@@ -413,7 +418,7 @@ class NovaAuth(object):
                 if resp.status == 404:
                     print('Creating Container ==> %s' % container_name)
                     conn.request('PUT', path, headers=c_headers)
-                    resp = self.response_get(rty=retry)
+                    resp = self.response_get(conn=conn, rty=retry)
                     if resp.status == 404:
                         print('Container Not Found %s' % resp.status)
                     elif self.result_exception(resp=resp,
@@ -439,7 +444,7 @@ class NovaAuth(object):
                 # Put headers on the object if custom headers used
                 if self.tur_arg['object_headers']:
                     conn.request('POST', path, headers=c_headers)
-                    resp = self.response_get(rty=retry)
+                    resp = self.response_get(conn=conn, rty=retry)
                     if self.result_exception(resp=resp,
                                              authurl=self.url,
                                              jsonreq=path):
@@ -461,7 +466,7 @@ class NovaAuth(object):
                 c_headers = self.set_headers()
                 # Check to see if the container exists
                 conn.request('DELETE', path, headers=c_headers)
-                resp = self.response_get(rty=retry)
+                resp = self.response_get(conn=conn, rty=retry)
                 if self.result_exception(resp=resp,
                                          authurl=self.url,
                                          jsonreq=path,
@@ -497,7 +502,7 @@ class NovaAuth(object):
                              rpath,
                              body=fopen,
                              headers=fheaders)
-            resp = self.response_get(rty=retry)
+            resp = self.response_get(conn=conn, rty=retry)
             if self.result_exception(resp=resp,
                                      authurl=self.url,
                                      jsonreq=rpath):
@@ -526,7 +531,7 @@ class NovaAuth(object):
                 remote_path = quote(r_loc)
                 f_headers = self.set_headers()
                 conn.request('DELETE', remote_path, headers=f_headers)
-                resp = self.response_get(rty=retry)
+                resp = self.response_get(conn=conn, rty=retry)
                 if self.result_exception(resp=resp,
                                          authurl=self.url,
                                          jsonreq=remote_path,
@@ -565,7 +570,7 @@ class NovaAuth(object):
                 filepath = quote(r_loc)
                 conn.request('HEAD', filepath, headers=f_headers)
 
-                resp = self.response_get(rty=retry)
+                resp = self.response_get(conn=conn, rty=retry)
                 if self.result_exception(resp=resp,
                                          authurl=self.url,
                                          jsonreq=filepath):
@@ -587,7 +592,8 @@ class NovaAuth(object):
                         conn.request('GET',
                                      filepath,
                                      headers=f_headers)
-                        resp, resp_read = self.response_get(rty=retry,
+                        resp, resp_read = self.response_get(conn=conn,
+                                                            rty=retry,
                                                             ret_read=True)
                         if self.result_exception(resp=resp,
                                                  authurl=self.url,
@@ -645,7 +651,9 @@ class NovaAuth(object):
                 remote_path = '%s/%s/%s' % (self.c_path, container, file_path)
                 filepath = quote(remote_path)
                 conn.request('GET', filepath, headers=f_headers)
-                resp, resp_read = self.response_get(rty=retry, ret_read=True)
+                resp, resp_read = self.response_get(conn=conn,
+                                                    rty=retry,
+                                                    ret_read=True)
                 # Check that the status was a good one
                 if self.result_exception(resp=resp,
                                          authurl=self.url,
@@ -747,7 +755,7 @@ class NovaAuth(object):
                 r_loc = '%s/%s/%s' % (self.c_path, container, file_name)
                 remote_path = quote(r_loc)
                 conn.request('HEAD', remote_path, headers=f_headers)
-                resp = self.response_get(rty=retry)
+                resp = self.response_get(conn=conn, rty=retry)
                 if resp.status == 404:
                     self.object_putter(fpath=file_path,
                                        rpath=remote_path,
@@ -795,7 +803,7 @@ class NovaAuth(object):
                     conn.request('POST',
                                  remote_path,
                                  headers=f_headers)
-                    resp = self.response_get(rty=retry)
+                    resp = self.response_get(conn=conn, rty=retry)
                     if self.result_exception(resp=resp,
                                              authurl=self.url,
                                              jsonreq=remote_path):
