@@ -8,15 +8,16 @@
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
 
-import os
 import operator
+import os
 
 
 class GetDirsAndFiles(object):
     """Index all files and folders."""
 
     def __init__(self, tur_arg):
-        """
+        """Index files and Directories.
+
         :param tur_arg:
         """
 

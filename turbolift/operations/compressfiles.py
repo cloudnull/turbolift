@@ -7,11 +7,10 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
-
-import tarfile
-import sys
-import os
 import datetime
+import os
+import sys
+import tarfile
 
 
 class Compressor(object):
@@ -43,15 +42,15 @@ class Compressor(object):
             _ts = today.strftime(date_format)
             home_dir = '%s%s' % (os.getenv('HOME'), os.sep)
             noname_loc = '%s_%s' % ('Archive', _ts)
-            print 'I Could be == %s' % noname_loc
-            print 'I am == %s' % self.tur_arg['tar_name']
+            print('I Could be == %s' % noname_loc)
+            print('I am == %s' % self.tur_arg['tar_name'])
             if self.tur_arg.get('tar_name'):
                 set_name = self.tur_arg.get('tar_name', noname_loc)
             else:
                 set_name = noname_loc
-            print 'info %s' % set_name
+            print('info %s' % set_name)
             file_name = '%s.tgz' % set_name
-            print file_name
+            print(file_name)
             tmp_file = '%s%s' % (home_dir, file_name)
 
             tar = tarfile.open(tmp_file, 'w:gz')
@@ -63,21 +62,21 @@ class Compressor(object):
             self.tur_arg['source'] = tmp_file
 
             if self.tur_arg['verbose']:
-                print 'ARCHIVE\t:', tmp_file
+                print('ARCHIVE\t:', tmp_file)
 
             if self.tur_arg['verify']:
                 tar_len = tarfile.open(tmp_file, 'r')
                 ver_array = []
                 for member_info in tar_len.getmembers():
                     ver_array.append(member_info.name)
-                print 'ARCHIVE CONTENTS : %s files' % len(ver_array)
+                print('ARCHIVE CONTENTS : %s files' % len(ver_array))
         except KeyboardInterrupt:
             print('Caught KeyboardInterrupt, terminating workers\n'
                   'MESSAGE\t: Removing Local Copy of the Archive')
             if os.path.exists(tmp_file):
                 os.remove(tmp_file)
             sys.exit('I have stopped at your command')
-        except Exception, exp:
+        except Exception as exp:
             print('ERROR\t: Removing Local Copy of the Archive')
             if os.path.exists(tmp_file):
                 os.remove(tmp_file)

@@ -8,17 +8,17 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
-from multiprocessing import freeze_support
+import multiprocessing
 
 # Local Files to Import
-from turbolift.operations import baseofoperations
 from turbolift import arguments
+from turbolift.operations import baseofoperations
 
 
 def run_turbolift():
     """This is the run section of the application Turbolift."""
 
-    freeze_support()
+    multiprocessing.freeze_support()
     tur_arg = arguments.get_values()
     try:
         ops = baseofoperations.BaseCamp(tur_arg)
@@ -36,8 +36,8 @@ def run_turbolift():
             ops.delete_download()
 
     except KeyboardInterrupt:
-        print 'Caught KeyboardInterrupt, I\'M ON FIRE!!!!'
+        print('Caught KeyboardInterrupt, I\'M ON FIRE!!!!')
 
 if __name__ == "__main__":
-    freeze_support()
+    multiprocessing.freeze_support()
     run_turbolift()

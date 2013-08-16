@@ -8,24 +8,27 @@
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
 
-import sys
-import os
-import ConfigParser
 import codecs
+import ConfigParser
+import os
+import sys
 
 
 class ConfigurationSetup(object):
     """Setup the config."""
 
     def __init__(self, args):
-        """:param args:"""
+        """Setup Turbolift Configuration.
+
+        :param args:
+        """
 
         self.args = args
         self.config_file = args['system_config']
         self.check_perms()
 
     def check_perms(self):
-        """check parameters"""
+        """check parameters."""
 
         # If config file is specified, check that it exists
         if self.config_file:
@@ -35,7 +38,7 @@ class ConfigurationSetup(object):
                       % os.path.realpath(confpath))
 
     def config_args(self):
-        """setup the parser for safe config parsing with a no value argument"""
+        """setup the parser for safe config parsing with a no value."""
 
         # Added per - https://github.com/cloudnull/turbolift/issues/2
         if sys.version_info >= (2, 7, 0):

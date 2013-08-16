@@ -7,27 +7,24 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
-
-import sys
 import os
+import sys
 import traceback
 
-from turbolift.operations import (
-    getdirsandfiles,
-    compressfiles,
-    getfilenames,
-    cfactions,
-    novacommands,
-    generators,
-    exceptions
-)
+from turbolift.operations import cfactions
+from turbolift.operations import compressfiles
+from turbolift.operations import exceptions
+from turbolift.operations import generators
+from turbolift.operations import getdirsandfiles
+from turbolift.operations import getfilenames
+from turbolift.operations import novacommands
 
 
 class BaseCamp(object):
-    """Begin the process of uploading, downloading, or deleting files"""
+    """Begin the process of uploading, downloading, or deleting files."""
 
     def __init__(self, tur_arg):
-        """To access the BaseCamp class you will need to provide "tur_arg"
+        """To access the BaseCamp class you will need to provide "tur_arg".
 
         "tur_arg" which is a Dictionary for all of the parsed arguments.
         BaseCamp acts as a simple method for separating out methods from one
@@ -35,6 +32,8 @@ class BaseCamp(object):
         :param tur_arg:
         """
 
+        self.pay_load = None
+        self.gfn = None
         self.tur_arg = generators.manager_dict(tur_arg)
         try:
             self.nova = novacommands.NovaAuth(tur_arg=self.tur_arg)
@@ -67,7 +66,7 @@ class BaseCamp(object):
                   % (self.tur_arg['multipools']))
 
     def basic_file_structure(self):
-        """This is a simple method for understanding the locations...
+        """This is a simple method for understanding the locations.
 
         ...for all of the files that we are going to uploading
         """
@@ -120,16 +119,16 @@ class BaseCamp(object):
                                        self.gfn).compress_files()
         _it.terminate()
         cfs = os.path.getsize(_cf)
-        print 'MESSAGE\t: Uploading... %s bytes' % cfs
+        print('MESSAGE\t: Uploading... %s bytes' % cfs)
         pay_load = {self.tur_arg['container']: [_cf]}
         cfactions.CloudFilesActions(tur_arg=self.tur_arg,
                                     pay_load=pay_load.items()).job_prep()
 
         # Nuke the left over file if there was one.
         if self.tur_arg.get('no_cleanup'):
-            print 'MESSAGE\t: Archive Location = %s' % _cf
+            print('MESSAGE\t: Archive Location = %s' % _cf)
         else:
-            print 'MESSAGE\t: Removing Local Copy of the Archive'
+            print('MESSAGE\t: Removing Local Copy of the Archive')
             if os.path.exists(_cf):
                 os.remove(_cf)
             else:
