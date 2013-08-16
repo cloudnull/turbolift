@@ -7,13 +7,15 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
+import multiprocessing
 
 
 class IndicatorThread(object):
     """Creates a visual indicator while normally performing actions."""
 
     def __init__(self, work_q=None, system=True):
-        """
+        """System Operations Available on Load.
+
         :param work_q:
         :param system:
         """
@@ -22,7 +24,7 @@ class IndicatorThread(object):
         self.system = system
 
     def indicator(self):
-        """Produce the spinner"""
+        """Produce the spinner."""
 
         import sys
         import time
@@ -30,7 +32,7 @@ class IndicatorThread(object):
             busy_chars = ['|', '/', '-', '\\']
             for _cr in busy_chars:
                 # Fixes Errors with OS X due to no sem_getvalue support
-                if not self.work_q is None:
+                if self.work_q is not None:
                     if not sys.platform.startswith('darwin'):
                         _qz = ('Number of Jobs Left [ %s ]'
                                % self.work_q.qsize())
@@ -48,7 +50,6 @@ class IndicatorThread(object):
     def indicator_thread(self):
         """indicate that we are performing work in a thread."""
 
-        from multiprocessing import Process
-        job = Process(target=self.indicator)
+        job = multiprocessing.Process(target=self.indicator)
         job.start()
         return job

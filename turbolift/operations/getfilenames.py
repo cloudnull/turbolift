@@ -8,15 +8,19 @@
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
 
+import operator
 import os
 import sys
-import operator
+
 from turbolift.operations import exceptions
 
 
 class FileNames(object):
     def __init__(self, tur_arg):
-        """:param tur_arg: """
+        """Index File Names.
+
+        :param tur_arg:
+        """
 
         self.tur_arg = tur_arg
 
@@ -45,7 +49,7 @@ class FileNames(object):
                             if os.path.exists(inode):
                                 filelist.append(inode)
                         if self.tur_arg.get('debug'):
-                            print 'File List\t: %s' % files
+                            print('File List\t: %s' % files)
                     if self.tur_arg.get('no_sort') is True:
                         final_files = filelist
                     else:
@@ -70,6 +74,6 @@ class FileNames(object):
                           ' directory, or is a broken symlink' % directorypath)
                     sys.exit('MESSAGE\t: Try Again but this time with a valid'
                              ' directory path')
-            except Exception, exp:
+            except Exception as exp:
                 sys.exit('Died for some reason... and here it is\n%s' % exp)
         return final_files

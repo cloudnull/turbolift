@@ -8,18 +8,21 @@
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
 
-import sys
-import time
-import json
 import hashlib
 import httplib
+import json
+import sys
+import time
 import traceback
-from urllib import quote
-from turbolift.operations import generators as gen, exceptions
+import urllib
+import urlparse
+
+from turbolift.operations import exceptions
+from turbolift.operations import generators as gen
 
 
 class NovaAuth(object):
-    """Authenticate and perform actions with the Openstack API"""
+    """Authenticate and perform actions with the Openstack API."""
 
     def __init__(self, tur_arg, work_q=None):
         """NovaAuth is a class that handel's all aspects of turbolift.
@@ -71,7 +74,7 @@ class NovaAuth(object):
                                    delay=5):
             try:
                 resp = conn.getresponse()
-            except httplib.BadStatusLine, exp:
+            except httplib.BadStatusLine as exp:
                 if mcr is False:
                     retry()
                 else:
@@ -83,6 +86,7 @@ class NovaAuth(object):
     def response_get(self, conn, rty, ret_read=False, mcr=False):
         """Get the response information and return it.
 
+        :param conn:
         :param rty:
         :param ret_read:
         :param mcr:
@@ -93,10 +97,10 @@ class NovaAuth(object):
             rty()
         else:
             resp_read = resp.read()
-        if ret_read is True:
-            return resp, resp_read
-        else:
-            return resp
+            if ret_read is True:
+                return resp, resp_read
+            else:
+                return resp
 
     def result_exception(self, resp, authurl, jsonreq=None, dfc=None):
         """If we encounter an exception in our upload.
@@ -139,10 +143,10 @@ class NovaAuth(object):
                                                   resp.reason,
                                                   authurl,
                                                   jsonreq))
-        except exceptions.SystemProblem, exp:
+        except exceptions.SystemProblem as exp:
             print(exp)
             return True
-        except Exception, exp:
+        except Exception as exp:
             sys.exit(exp)
         else:
             return False
@@ -169,7 +173,7 @@ class NovaAuth(object):
         self.headers = self.tur_arg['base_headers']
         self.url_data = self.tur_arg['simple_endpoint'].split('/')
         self.url = self.url_data[0]
-        self.c_path = quote('/%s' % ('/'.join(self.url_data[1:])))
+        self.c_path = urllib.quote('/%s' % ('/'.join(self.url_data[1:])))
 
         if http is True:
             conn = self.connection(url=self.url, http=True)
@@ -196,23 +200,23 @@ class NovaAuth(object):
         if any([self.tur_arg['os_rax_auth'] == 'LON']):
             self.tur_arg['os_region'] = self.tur_arg.get('os_rax_auth')
             if self.tur_arg['os_auth_url']:
-                authurl = self.tur_arg.get('os_auth_url')
+                aurl = self.tur_arg.get('os_auth_url')
             else:
-                authurl = 'lon.identity.api.rackspacecloud.com'
+                aurl = 'lon.identity.api.rackspacecloud.com'
         elif any([self.tur_arg['os_rax_auth'] == 'DFW',
                   self.tur_arg['os_rax_auth'] == 'ORD',
                   self.tur_arg['os_rax_auth'] == 'SYD']):
             self.tur_arg['os_region'] = self.tur_arg.get('os_rax_auth')
             if self.tur_arg.get('os_auth_url'):
-                authurl = self.tur_arg.get('os_auth_url')
+                aurl = self.tur_arg.get('os_auth_url')
             else:
-                authurl = 'identity.api.rackspacecloud.com'
+                aurl = 'identity.api.rackspacecloud.com'
         else:
             if not self.tur_arg['os_region']:
                 sys.exit('FAIL\t: You have to specify '
                          'a Region along with an Auth URL')
             if self.tur_arg['os_auth_url']:
-                authurl = self.tur_arg.get('os_auth_url')
+                aurl = self.tur_arg.get('os_auth_url')
             else:
                 sys.exit('FAIL\t: You have to specify an Auth URL'
                          ' along with the Region')
@@ -226,17 +230,19 @@ class NovaAuth(object):
         else:
             prefix = 'passwordCredentials'
             setup['password'] = self.tur_arg.get('os_password')
-            authurl = self.tur_arg.get('os_auth_url')
+            aurl = self.tur_arg.get('os_auth_url')
+
         jsonreq = json.dumps({'auth': {prefix: setup}})
 
         # remove the prefix for the Authentication URL
-        authurl = authurl.strip('http?s://')
-        url_data = authurl.split('/')
-        url = url_data[0]
-        return jsonreq, url
+        if any([aurl.startswith('http://'), aurl.startswith('https://')]):
+            return jsonreq, urlparse.urlparse(aurl).netloc
+        else:
+            return jsonreq, aurl.split('/')[0]
 
     def make_request(self, jsonreq, url):
-        """
+        """Make an API request.
+
         :param jsonreq:
         :param url:
         """
@@ -271,7 +277,7 @@ class NovaAuth(object):
                 else:
                     if self.tur_arg['os_verbose']:
                         print('JSON decoded and pretty')
-                        print json.dumps(jrp, indent=2)
+                        print(json.dumps(jrp, indent=2))
         except exceptions.SystemProblem:
             retry()
         else:
@@ -281,7 +287,8 @@ class NovaAuth(object):
             conn.close()
 
     def parse_request(self, json_response):
-        """
+        """Parse the return from an API request.
+
         :param json_response:
         """
 
@@ -343,9 +350,9 @@ class NovaAuth(object):
 
         cdnurl_data = self.tur_arg['simple_cdn_endpoint'].split('/')
         cdnurl = cdnurl_data[0]
-        cdn_path = quote('/%s' % ('/'.join(cdnurl_data[1:])))
+        cdn_path = urllib.quote('/%s' % ('/'.join(cdnurl_data[1:])))
         r_loc = '%s/%s' % (cdn_path, container_name)
-        path = quote(r_loc)
+        path = urllib.quote(r_loc)
         c_headers = self.set_headers(cdn=True)
         for retry in gen.retryloop(attempts=self.retry_atmp, delay=5):
             try:
@@ -361,10 +368,10 @@ class NovaAuth(object):
                     raise exceptions.SystemProblem(resp)
             except exceptions.SystemProblem:
                 retry()
-            except Exception, exp:
+            except Exception as exp:
                 print('ERROR\t: Shits broke son, here comes the'
                       ' stack trace:\t %s' % traceback.format_exc())
-                print exp
+                print(exp)
             finally:
                 conn.close()
 
@@ -376,7 +383,7 @@ class NovaAuth(object):
         try:
             conn = self.connection_prep()
             r_loc = '%s/%s' % (self.c_path, container_name)
-            path = quote(r_loc)
+            path = urllib.quote(r_loc)
             for retry in gen.retryloop(attempts=self.retry_atmp, delay=5):
                 c_headers = self.set_headers()
                 # Check to see if the container exists
@@ -408,7 +415,7 @@ class NovaAuth(object):
             try:
                 conn = self.connection_prep()
                 r_loc = '%s/%s' % (self.c_path, container_name)
-                path = quote(r_loc)
+                path = urllib.quote(r_loc)
                 c_headers = self.set_headers(ctr=True)
 
                 resp = self.container_check(container_name)
@@ -434,7 +441,7 @@ class NovaAuth(object):
                     raise exceptions.SystemProblem(resp)
             except exceptions.SystemProblem:
                 retry()
-            except Exception, exp:
+            except Exception as exp:
                 print('ERROR\t: Shits broke son, here comes the'
                       ' stack trace:\t %s -> Exception\t: %s'
                       % (traceback.format_exc(), exp))
@@ -462,7 +469,7 @@ class NovaAuth(object):
             try:
                 conn = self.connection_prep()
                 r_loc = '%s/%s' % (self.c_path, container)
-                path = quote(r_loc)
+                path = urllib.quote(r_loc)
                 c_headers = self.set_headers()
                 # Check to see if the container exists
                 conn.request('DELETE', path, headers=c_headers)
@@ -477,11 +484,11 @@ class NovaAuth(object):
             else:
                 # Give us more data if we requested it
                 if any([self.tur_arg['os_verbose'], self.tur_arg['debug']]):
-                    print 'INFO\t: %s %s %s' % (resp.status,
+                    print('INFO\t: %s %s %s' % (resp.status,
                                                 resp.reason,
-                                                container)
+                                                container))
                     if self.tur_arg['debug']:
-                        print 'MESSAGE\t: Delete path = %s' % container
+                        print('MESSAGE\t: Delete path = %s' % container)
             finally:
                 conn.close()
 
@@ -511,9 +518,9 @@ class NovaAuth(object):
             retry()
         else:
             if self.tur_arg['verbose']:
-                print 'INFO\t: %s %s %s' % (resp.status,
+                print('INFO\t: %s %s %s' % (resp.status,
                                             resp.reason,
-                                            fname)
+                                            fname))
         finally:
             conn.close()
 
@@ -528,7 +535,7 @@ class NovaAuth(object):
             try:
                 conn = self.connection_prep()
                 r_loc = '%s/%s/%s' % (self.c_path, container, file_path)
-                remote_path = quote(r_loc)
+                remote_path = urllib.quote(r_loc)
                 f_headers = self.set_headers()
                 conn.request('DELETE', remote_path, headers=f_headers)
                 resp = self.response_get(conn=conn, rty=retry)
@@ -542,9 +549,9 @@ class NovaAuth(object):
             else:
                 # Give us more data if we requested it
                 if any([self.tur_arg['os_verbose'], self.tur_arg['debug']]):
-                    print 'INFO\t: %s %s %s' % (resp.status,
+                    print('INFO\t: %s %s %s' % (resp.status,
                                                 resp.reason,
-                                                file_path)
+                                                file_path))
                     if self.tur_arg['debug']:
                         print('MESSAGE\t: Delete path = %s ==> %s'
                               % (file_path, container))
@@ -567,7 +574,7 @@ class NovaAuth(object):
 
                 # Determine how many files are in the container
                 r_loc = '%s/%s' % (self.c_path, container_name)
-                filepath = quote(r_loc)
+                filepath = urllib.quote(r_loc)
                 conn.request('HEAD', filepath, headers=f_headers)
 
                 resp = self.response_get(conn=conn, rty=retry)
@@ -606,24 +613,26 @@ class NovaAuth(object):
                         if count - 10000 > 0:
                             count = count - 10000
                             lastobj = file_list[-1]
-                            filepath = '%s&marker=%s' % (filepath_m,
-                                                         quote(lastobj))
+                            filepath = (
+                                '%s&marker=%s' % (filepath_m,
+                                                  urllib.quote(lastobj))
+                            )
             except exceptions.NoSource:
                 nest_rty()
             except exceptions.SystemProblem:
                 retry()
             except KeyboardInterrupt:
                 pass
-            except Exception, exp:
+            except Exception as exp:
                 print('Exception from within an Download Action\n%s\n%s'
                       % (traceback.format_exc(), exp))
             else:
                 # Give us more data if we requested it
                 if any([self.tur_arg['os_verbose'],
                         self.tur_arg['debug']]):
-                    print 'INFO\t: %s %s %s' % (resp.status,
+                    print('INFO\t: %s %s %s' % (resp.status,
                                                 resp.reason,
-                                                file_list)
+                                                file_list))
                     if self.tur_arg['debug']:
                         print('MESSAGE\t: Path => %s\nMESSAGE\t: %s'
                               % (filepath, _rr))
@@ -649,7 +658,7 @@ class NovaAuth(object):
                 f_headers = self.set_headers()
                 # Get a file list ready for action
                 remote_path = '%s/%s/%s' % (self.c_path, container, file_path)
-                filepath = quote(remote_path)
+                filepath = urllib.quote(remote_path)
                 conn.request('GET', filepath, headers=f_headers)
                 resp, resp_read = self.response_get(conn=conn,
                                                     rty=retry,
@@ -672,7 +681,7 @@ class NovaAuth(object):
                       ' got skipped' % file_name)
             except KeyboardInterrupt:
                 pass
-            except Exception, exp:
+            except Exception as exp:
                 print('ERROR\t: Exception from within an Download Action\n',
                       '\t  placing the failed Download back in Queue\n',
                       'ERROR\t: %s' % exp)
@@ -681,9 +690,9 @@ class NovaAuth(object):
                 # Give us more data if we requested it
                 if any([self.tur_arg['verbose'],
                         self.tur_arg['debug']]):
-                    print 'INFO\t: %s %s %s' % (resp.status,
+                    print('INFO\t: %s %s %s' % (resp.status,
                                                 resp.reason,
-                                                file_name)
+                                                file_name))
                     if self.tur_arg['debug']:
                         print('MESSAGE\t: Upload path = %s ==> %s'
                               % (file_path, filepath))
@@ -707,7 +716,7 @@ class NovaAuth(object):
                 f_headers = self.set_headers()
                 # Get the path ready for action
                 r_loc = '%s/%s/%s' % (self.c_path, container, file_name)
-                remote_path = quote(r_loc)
+                remote_path = urllib.quote(r_loc)
                 self.object_putter(fpath=file_path,
                                    rpath=remote_path,
                                    fname=file_name,
@@ -721,7 +730,7 @@ class NovaAuth(object):
                       ' so it got skipped' % file_path)
             except KeyboardInterrupt:
                 pass
-            except Exception, exp:
+            except Exception as exp:
                 print('\nFile Failed to be uploaded %s. Error ==> %s\n\n%s'
                       % (file_path, exp, traceback.format_exc()))
             else:
@@ -753,7 +762,7 @@ class NovaAuth(object):
                 f_headers = self.set_headers()
                 # Get the path ready for action
                 r_loc = '%s/%s/%s' % (self.c_path, container, file_name)
-                remote_path = quote(r_loc)
+                remote_path = urllib.quote(r_loc)
                 conn.request('HEAD', remote_path, headers=f_headers)
                 resp = self.response_get(conn=conn, rty=retry)
                 if resp.status == 404:
@@ -785,7 +794,7 @@ class NovaAuth(object):
                                            retry=retry)
                     else:
                         if self.tur_arg['verbose']:
-                            print 'MESSAGE\t: CheckSum Match', lmd5sum
+                            print('MESSAGE\t: CheckSum Match', lmd5sum)
             except IOError:
                 print('ERROR\t: path "%s" does not exist or is a broken'
                       ' symlink' % file_path)
@@ -794,7 +803,7 @@ class NovaAuth(object):
                       ' so it got skipped' % file_path)
             except KeyboardInterrupt:
                 pass
-            except Exception, exp:
+            except Exception as exp:
                 print('\nFile Failed to be uploaded %s. Error ==> %s\n\n%s'
                       % (file_path, exp, traceback.format_exc()))
             else:

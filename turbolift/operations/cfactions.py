@@ -8,28 +8,30 @@
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
 
-import sys
-import os
 import errno
+import os
+import sys
 
-from turbolift.operations import (
-    generators,
-    novacommands,
-    IndicatorThread,
-    exceptions
-)
+from turbolift.operations import exceptions
+from turbolift.operations import generators
+from turbolift.operations import IndicatorThread
+from turbolift.operations import novacommands
 
 
 class CloudFilesActions:
     """The CloudFilesActions class facilitate upload / download / delete."""
 
     def __init__(self, tur_arg, pay_load):
-        """
+        """Prepair to run all cloudfiles actions.
+
         :param tur_arg:
         :param pay_load:
         """
 
         # Set the default Arguments
+        self.container = None
+        self.base_path = None
+        self.oscmd = None
         self.args = tur_arg
         self.pay_load = pay_load
         self.multipools = int(self.args.get('multipools', 1))
@@ -109,7 +111,7 @@ class CloudFilesActions:
                     break
 
                 if self.args.get('debug'):
-                    print "Item = %s\n" % wfile,
+                    print("Item = %s\n" % wfile)
 
                 # Options that use the TSYNC Method
                 if any([self.args.get('tsync'),
@@ -125,7 +127,7 @@ class CloudFilesActions:
                             src = "%s%s" % (src, os.sep)
                         file_name = "%s%s" % (src, file_name)
                     if self.args.get('debug'):
-                        print "Destination Name = %s\n" % file_name,
+                        print("Destination Name = %s\n" % file_name)
                 elif self.base_path is None:
                     pass
                 else:

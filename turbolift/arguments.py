@@ -8,8 +8,8 @@
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
 import argparse
-import sys
 import os
+import sys
 
 from turbolift import info
 
@@ -346,7 +346,8 @@ def get_values():
         except Exception:
             sys.exit('Shutting Down...')
     elif set_args.get('cc', 0) != set_args.get('defaultcc', 0):
-        print 'MESSAGE\t: Setting a Concurrency Override of', set_args['cc']
+        print('MESSAGE\t: Setting a Concurrency Override of',
+              set_args.get('cc'))
 
     if set_args.get('debug'):
         set_args['os_verbose'] = True
