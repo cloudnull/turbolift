@@ -130,6 +130,11 @@ def get_values():
                                            ' given container creating a'
                                            ' target Directory if it does'
                                            ' not exist'))
+    dwnaction.add_argument('--dl-sync',
+                           action='store_true',
+                           help=('Looks at local file and if a difference is'
+                                 ' detected the file is downloaded.'),
+                           default=False)
     dwnaction.set_defaults(download=True)
 
     delaction = subparser.add_parser('delete',

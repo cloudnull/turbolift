@@ -16,6 +16,7 @@ import time
 import traceback
 import urllib
 import urlparse
+import os
 
 from turbolift.operations import exceptions
 from turbolift.operations import generators as gen
@@ -285,6 +286,50 @@ class NovaAuth(object):
             return self.parse_request(json_response=jrp)
         finally:
             conn.close()
+
+    def md5_checker(self, resp, local_file):
+        """Check for different Md5 in CloudFiles vs Local File.
+
+        If the md5 sum is different, return True else False
+
+        :param resp:
+        :param local_file:
+        :return True|False:
+        """
+
+        def calc_hash():
+            """Read the hash.
+
+            :return data_hash.read():
+            """
+
+            return data_hash.read(128 * md5.block_size)
+
+        if os.path.isfile(local_file) is True:
+            rmd5sum = resp.getheader('etag')
+            md5 = hashlib.md5()
+            with open(local_file, 'rb') as data_hash:
+                for chk in iter(calc_hash, ''):
+                    md5.update(chk)
+            lmd5sum = md5.hexdigest()
+            if rmd5sum != lmd5sum:
+                if self.tur_arg['verbose']:
+                    print('MESSAGE\t: CheckSumm Mis-Match %(lmd5)s'
+                          ' != %(rmd5)s\n\t  File : %(rs)s %(rr)s'
+                          ' - Local File %(lf)s' % {'lmd5': lmd5sum,
+                                                    'rmd5': rmd5sum,
+                                                    'rs': resp.status,
+                                                    'rr': resp.reason,
+                                                    'lf': local_file})
+                return True
+            else:
+                if self.tur_arg['verbose']:
+                    print('MESSAGE\t: CheckSum Match', lmd5sum)
+                return False
+        else:
+            if self.tur_arg['verbose']:
+                print('MESSAGE\t: Local File Not Found %s' % local_file)
+            return True
 
     def parse_request(self, json_response):
         """Parse the return from an API request.
@@ -645,10 +690,44 @@ class NovaAuth(object):
 
         There is no file level checking at the target. The files are simply
         downloaded.
+
         :param file_path:
         :param file_name:
         :param container:
         """
+
+        def get_action(conn, filepath, local_file, headers, url, retry):
+            """Get a target file and save it locally.
+
+            :param conn:
+            :param filepath:
+            :param file_name:
+            :param headers:
+            :param url:
+            :param retry:
+            """
+
+            conn.request('GET', filepath, headers=headers)
+            resp, resp_read = self.response_get(conn=conn,
+                                                rty=retry,
+                                                ret_read=True)
+            # Check that the status was a good one
+            if self.result_exception(resp=resp,
+                                     authurl=url,
+                                     jsonreq=filepath):
+                raise exceptions.SystemProblem(resp)
+            # Open our source file and write it
+            with open(local_file, 'wb') as f_name:
+                f_name.write(resp_read)
+
+            # Give us more data if we requested it
+            if self.tur_arg.get('verbose'):
+                print('INFO\t: %s %s %s' % (resp.status,
+                                            resp.reason,
+                                            local_file))
+            if self.tur_arg.get('debug'):
+                print('MESSAGE\t: Download path = %s ==> %s'
+                      % (file_name, filepath))
 
         for retry in gen.retryloop(attempts=self.retry_atmp,
                                    delay=5,
@@ -659,18 +738,26 @@ class NovaAuth(object):
                 # Get a file list ready for action
                 remote_path = '%s/%s/%s' % (self.c_path, container, file_path)
                 filepath = urllib.quote(remote_path)
-                conn.request('GET', filepath, headers=f_headers)
-                resp, resp_read = self.response_get(conn=conn,
-                                                    rty=retry,
-                                                    ret_read=True)
-                # Check that the status was a good one
-                if self.result_exception(resp=resp,
-                                         authurl=self.url,
-                                         jsonreq=filepath):
-                    raise exceptions.SystemProblem(resp)
-                # Open our source file
-                with open(file_name, 'wb') as f_name:
-                    f_name.write(resp_read)
+
+                if self.tur_arg.get('dl_sync') is True:
+                    conn.request('HEAD', remote_path, headers=f_headers)
+                    resp = self.response_get(conn=conn, rty=retry)
+                    if self.md5_checker(resp=resp,
+                                        local_file=file_name) is True:
+                        get_action(conn=conn,
+                                   filepath=filepath,
+                                   local_file=file_name,
+                                   headers=f_headers,
+                                   url=self.url,
+                                   retry=retry)
+                else:
+                    get_action(conn=conn,
+                               filepath=filepath,
+                               local_file=file_name,
+                               headers=f_headers,
+                               url=self.url,
+                               retry=retry)
+
             except exceptions.SystemProblem:
                 retry()
             except IOError:
@@ -682,20 +769,9 @@ class NovaAuth(object):
             except KeyboardInterrupt:
                 pass
             except Exception as exp:
-                print('ERROR\t: Exception from within an Download Action\n',
-                      '\t  placing the failed Download back in Queue\n',
-                      'ERROR\t: %s' % exp)
-                self.work_q.put(file_path)
-            else:
-                # Give us more data if we requested it
-                if any([self.tur_arg['verbose'],
-                        self.tur_arg['debug']]):
-                    print('INFO\t: %s %s %s' % (resp.status,
-                                                resp.reason,
-                                                file_name))
-                    if self.tur_arg['debug']:
-                        print('MESSAGE\t: Upload path = %s ==> %s'
-                              % (file_path, filepath))
+                print traceback.format_exc()
+                print('ERROR\t: Exception from within an Download Action '
+                      'Message == %s' % exp)
             finally:
                 conn.close()
 
@@ -746,55 +822,31 @@ class NovaAuth(object):
         files. If the MD5 is miss-matched the local file is uploaded to the
         repository. If custom meta data is specified, and the object exists the
         method will put the metadata onto the object.
+
         :param file_path:
         :param file_name:
         :param container:
         """
 
-        def calc_hash():
-            """Read the hash."""
-
-            return data_hash.read(128 * md5.block_size)
-
         for retry in gen.retryloop(attempts=self.retry_atmp, delay=5):
             try:
                 conn = self.connection_prep()
                 f_headers = self.set_headers()
+
                 # Get the path ready for action
                 r_loc = '%s/%s/%s' % (self.c_path, container, file_name)
                 remote_path = urllib.quote(r_loc)
                 conn.request('HEAD', remote_path, headers=f_headers)
                 resp = self.response_get(conn=conn, rty=retry)
-                if resp.status == 404:
+                if any([resp.status == 404,
+                        self.md5_checker(resp=resp,
+                                         local_file=file_path) is True]):
+                    # If different or not found, perform Upload.
                     self.object_putter(fpath=file_path,
                                        rpath=remote_path,
                                        fname=file_name,
                                        fheaders=f_headers,
                                        retry=retry)
-                else:
-                    rmd5sum = resp.getheader('etag')
-                    md5 = hashlib.md5()
-                    with open(file_path, 'rb') as data_hash:
-                        for chk in iter(calc_hash, ''):
-                            md5.update(chk)
-                    lmd5sum = md5.hexdigest()
-                    if rmd5sum != lmd5sum:
-                        if self.tur_arg['verbose']:
-                            print('MESSAGE\t: CheckSumm Mis-Match %(lmd5)s'
-                                  ' != %(rmd5)s\n\t  File Upload : %(rs)s'
-                                  ' %(rr)s %(sjf)s' % {'lmd5': lmd5sum,
-                                                       'rmd5': rmd5sum,
-                                                       'rs': resp.status,
-                                                       'rr': resp.reason,
-                                                       'sjf': file_name})
-                        self.object_putter(fpath=file_path,
-                                           rpath=remote_path,
-                                           fname=file_name,
-                                           fheaders=f_headers,
-                                           retry=retry)
-                    else:
-                        if self.tur_arg['verbose']:
-                            print('MESSAGE\t: CheckSum Match', lmd5sum)
             except IOError:
                 print('ERROR\t: path "%s" does not exist or is a broken'
                       ' symlink' % file_path)
