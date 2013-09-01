@@ -21,6 +21,7 @@ from turbolift.arguments import headers
 from turbolift.arguments import optionals
 from turbolift.arguments import tsync
 from turbolift.arguments import upload
+from turbolift.arguments import command
 
 
 def setup_parser():
@@ -160,6 +161,10 @@ def args_setup():
                           source_args=source,
                           container_args=container,
                           cdn_args=cdn)
+    command.command_actions(subparser=subparser,
+                            source_args=source,
+                            container_args=container,
+                            cdn_args=cdn)
     return parser
 
 
