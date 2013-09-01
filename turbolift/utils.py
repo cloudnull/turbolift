@@ -7,10 +7,35 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
+
+
+def json_encode(read):
+    """Return a json encoded object.
+
+    :param read:
+    :return:
+    """
+
+    import json
+
+    return json.loads(read)
+
+
+def unique_list_dicts(dlist, key):
+    """Return a list of dictionaries which have sorted for only unique entries.
+
+    :param dlist:
+    :param key:
+    :return list:
+    """
+
+    return dict((val[key], val) for val in dlist).values()
+
+
 def dict_pop_none(dictionary):
     """Parse all keys in a dictionary for Values that are None.
 
-    :param default_args: all parsed arguments
+    :param dictionary: all parsed arguments
     :returns dict: all arguments which are not None.
     """
 
@@ -106,6 +131,21 @@ def basic_queue(iters=None):
     return worker_q
 
 
+def get_from_q(queue):
+    """Returns the file or a sentinel value.
+
+    :param queue:
+    :return item|None:
+    """
+
+    from multiprocessing.queues import Empty
+
+    try:
+        return queue.get(timeout=2)
+    except Empty:
+        return None
+
+
 def emergency_exit(msg):
     """Exit process.
 
@@ -116,6 +156,33 @@ def emergency_exit(msg):
     import sys
 
     return sys.exit(msg)
+
+
+def set_concurrency(args, file_count):
+    """Concurrency is a user specified variable when the arguments parsed.
+
+    :param args:
+
+    However if the number of things Turbo lift has to do is less than the
+    desired concurency, then turbolift will lower the concurency rate to
+    the number of operations.
+    """
+
+    def verbose(ccr):
+        if args.get('verbose'):
+            print('MESSAGE\t: We are creating %s Processes\n' % ccr)
+        return ccr
+
+    _cc = args.get('cc')
+
+    if _cc > file_count:
+        print('MESSAGE\t: There are less things to do than the number of\n'
+              '\t  concurrent processes specified by either an override\n'
+              '\t  or the system defaults. I am leveling the number of\n'
+              '\t  concurrent processes to the number of jobs to perform.')
+        return verbose(ccr=file_count)
+    else:
+        return verbose(ccr=_cc)
 
 
 def worker_proc(job_action, num_jobs, concurrency, queue, t_args=None):
@@ -133,47 +200,18 @@ def worker_proc(job_action, num_jobs, concurrency, queue, t_args=None):
     import multiprocessing
 
     sem = multiprocessing.Semaphore(concurrency)
-    pool = ActivePool()
     jobs = [multiprocessing.Process(target=job_action,
-                                    args=(queue, t_args, pool, sem))
+                                    args=(queue, t_args))
             for _ in xrange(concurrency)]
-    start = [job.start() for job in jobs]
-    join = [job.join() for job in jobs if job.is_alive()]
 
+    for _job in jobs:
+        _job.Daemon = True
+        _job.start()
 
-def set_lock():
-    """Return a Multiprocessing Lock"""
+    for job in jobs:
+        job.join()
 
-    import multiprocessing
-
-    return multiprocessing.Lock()
-
-
-class ActivePool(object):
-    """Management pool for threads."""
-
-    def __init__(self):
-        """Create a management pool for threads using locks."""
-
-        import multiprocessing
-
-        super(ActivePool, self).__init__()
-        self.active = []
-        self.lock = set_lock()
-
-    def makeActive(self, name, log, job=None):
-        """Add a resource to the management pool."""
-
-        with self.lock:
-            self.active.append(name)
-            log.debug('Running: upload %s', self.active)
-
-    def makeInactive(self, name, log):
-        """Remove a resouce from the mangement pool."""
-
-        with self.lock:
-            self.active.remove(name)
-            log.debug('Running: upload %s', self.active)
+    print('\nWaiting for in-process Jobs to finish')
 
 
 def mkdir_p(path):
@@ -205,11 +243,26 @@ def mkdir_p(path):
 
 
 def get_sfile(ufile, source):
+    """Return the source file
+
+    :param ufile:
+    :param source:
+    :return file_name:
+    """
+
     import os
 
-    base, sfile = ufile.split(source)
-    return os.sep.join(sfile.split(os.sep)[1:])
+    from turbolift.worker import ARGS
 
+    if ARGS.get('preserve-path'):
+        return source
+    if os.path.isfile(source):
+        return os.path.basename(source)
+    elif source is '.':
+        return os.getcwd()
+    else:
+        base, sfile = ufile.split(source)
+        return os.sep.join(sfile.split(os.sep)[1:])
 
 
 def get_local_source(args):
@@ -221,11 +274,11 @@ def get_local_source(args):
 
     import os
 
-    _localpath = os.path.realpath(args.get('source'))
-    if os.path.isdir(_localpath):
-        return _localpath.rstrip(os.sep)
+    _local_path = os.path.expanduser(args.get('source'))
+    if os.path.isdir(_local_path):
+        return _local_path.rstrip(os.sep)
     else:
-        return os.path.split(_localpath)[0].rstrip(os.sep)
+        return os.path.split(_local_path)[0].rstrip(os.sep)
 
 
 def open_connection(url):
@@ -237,6 +290,8 @@ def open_connection(url):
 
     import httplib
 
+    from turbolift.worker import ARGS
+
     try:
         if url.scheme == 'https':
             conn = httplib.HTTPSConnection(url.netloc)
@@ -246,22 +301,9 @@ def open_connection(url):
         msg = 'ERROR: Making connection to %s\nREASON:\t %s' % (url, exc)
         raise httplib.CannotSendRequest(msg)
     else:
+        if ARGS.get('debug'):
+            conn.set_debuglevel(1)
         return conn
-
-
-def get_from_q(queue):
-    """
-
-    :param queue:
-    :return item|None: Returns the file or a sentinel value.
-    """
-
-    from multiprocessing.queues import Empty
-
-    try:
-        return queue.get(timeout=2)
-    except Empty:
-        return None
 
 
 def response_get(conn):
@@ -274,6 +316,7 @@ def response_get(conn):
     """
 
     import httplib
+    import time
 
     import turbolift as clds
     from turbolift.worker import ARGS
@@ -282,40 +325,15 @@ def response_get(conn):
                            timeout=960,
                            delay=1):
         try:
+            time.sleep(.2)
             resp = conn.getresponse()
+            read = resp.read()
         except httplib.BadStatusLine as exp:
             retry()
-        except clds.RetryError as exp:
-            raise clds.SystemProblem('Failed to perform Action %s' % exp)
+        except httplib.ResponseNotReady:
+            retry()
         else:
-            return resp
-
-
-def set_concurrency(args, file_count):
-    """Concurrency is a user specified variable when the arguments parsed.
-
-    :param args:
-
-    However if the number of things Turbo lift has to do is less than the
-    desired concurency, then turbolift will lower the concurency rate to
-    the number of operations.
-    """
-
-    def verbose(ccr):
-        if args.get('verbose'):
-            print('MESSAGE\t: We are creating %s Processes\n' % ccr)
-        return ccr
-
-    _cc = args.get('cc')
-
-    if _cc > file_count:
-        print('MESSAGE\t: There are less things to do than the number of\n'
-              '\t  concurrent processes specified by either an override\n'
-              '\t  or the system defaults. I am leveling the number of\n'
-              '\t  concurrent processes to the number of jobs to perform.')
-        return verbose(ccr=file_count)
-    else:
-        return verbose(ccr=_cc)
+            return resp, read
 
 
 def retryloop(attempts, timeout=None, delay=None, backoff=1):
@@ -432,6 +450,17 @@ def prep_payload(auth, container, source, args):
             'url': url}
 
 
+def get_new_token():
+    """Authenticate and return only a new token.
+
+    :return token:
+    """
+
+    import turbolift.authentication.authentication as auth
+
+    return auth.authenticate()[0]
+
+
 def stupid_hack(max=10, wait=None):
     """Return a random time between 1 - 10 Seconds."""
 
@@ -443,17 +472,6 @@ def stupid_hack(max=10, wait=None):
         time.sleep(wait)
     else:
         time.sleep(random.randrange(1, max))
-
-
-def get_new_token():
-    """Authenticate and return only a new token.
-
-    :return token:
-    """
-
-    import turbolift.authentication.authentication as auth
-
-    return auth.authenticate()[0]
 
 
 class IndicatorThread(object):
@@ -481,7 +499,7 @@ class IndicatorThread(object):
                 # Fixes Errors with OS X due to no sem_getvalue support
                 if self.work_q is not None:
                     if not sys.platform.startswith('darwin'):
-                        _qz = ('Number of Jobs Left = %s '
+                        _qz = ('Number of Jobs Left in Queue = %s '
                                % self.work_q.qsize())
                     else:
                         _qz = "The System Can't Count... Please Wait."
