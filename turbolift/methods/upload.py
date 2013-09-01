@@ -11,6 +11,7 @@ import os
 import sys
 
 import turbolift as clds
+from turbolift import methods
 from turbolift import utils
 from turbolift.clouderator import actions
 from turbolift.worker import ARGS
@@ -26,13 +27,11 @@ class upload(object):
         self.action = None
 
     def start(self):
-        """This is the first and most basic upload method.
+        """This is the upload method.
 
         Uses file_upload is to simply upload all files and folders to a
         specified container.
         """
-
-        from turbolift import methods
 
         # Index Local Files for Upload
         f_indexed = methods.get_local_files()
@@ -56,7 +55,6 @@ class upload(object):
         self.go = actions.cloud_actions(payload=payload)
         self.go._container_create(url=payload['url'],
                                   container=payload['c_name'])
-
         self.action = getattr(self.go, 'object_putter')
 
         if ARGS.get('verbose'):
@@ -65,33 +63,18 @@ class upload(object):
         if ARGS.get('debug'):
             LOG.debug('PAYLOAD\t: "%s"', payload)
 
-        if not ARGS.get('verbose'):
-            itd = utils.IndicatorThread(
-                work_q=work_q
-            ).indicator_thread()
-
-        try:
+        with methods.spinner(work_q=work_q):
             utils.worker_proc(job_action=self.uploaderator,
                               num_jobs=num_files,
                               concurrency=concurrency,
                               t_args=payload,
                               queue=work_q)
-        except KeyboardInterrupt:
-            utils.emergency_exit(
-                msg='Caught KeyboardInterrupt, I\'M ON FIRE!!!!'
-            )
-        else:
-            if not ARGS.get('verbose'):
-                itd.terminate()
-            print('All Done!')
 
-    def uploaderator(self, work_q, payload, pool, sem):
+    def uploaderator(self, work_q, payload):
         """Upload files to CloudFiles -Swift-.
 
         :param work_q:
         :param payload:
-        :param pool:
-        :param sem:
         """
 
         # Get work from the Queue
@@ -103,13 +86,11 @@ class upload(object):
             try:
                 source = payload['source']
                 container = payload['c_name']
-
-                with sem:
-                    pool.makeActive(name=wfile, log=LOG)
-                    self.go.object_putter(url=payload['url'],
-                                          container=container,
-                                          source=source,
-                                          u_file=wfile)
-                    pool.makeInactive(name=wfile, log=LOG)
+                self.go.object_putter(url=payload['url'],
+                                      container=container,
+                                      source=source,
+                                      u_file=wfile)
             except EOFError:
                 utils.emergency_exit('Died...')
+            except KeyboardInterrupt:
+                utils.emergency_exit('You killed the process...')
