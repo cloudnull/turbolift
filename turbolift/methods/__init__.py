@@ -7,10 +7,13 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
+from contextlib import contextmanager
 import operator
 import os
 import sys
+import traceback
 
+from turbolift import info
 import turbolift as clds
 from turbolift import utils
 from turbolift.worker import LOG
@@ -35,24 +38,6 @@ def get_local_files():
         else:
             return False
 
-    def sorter(index):
-        """Return a sorted list based on files size.
-
-        :param index:
-        :return:
-        """
-
-        return sorted(u_index, key=operator.itemgetter(1), reverse=True)
-
-    def sizeer(sfile):
-        """Get file size and return it.
-
-        :param sfile:
-        :return:
-        """
-
-        return os.path.getsize(sfile)
-
     def indexer(location):
         """Return a list of indexed files.
 
@@ -60,35 +45,87 @@ def get_local_files():
         :return:
         """
 
-        _location = os.path.realpath(location.encode('utf8'))
-        if os.path.isdir(_location):
-            root_dir = '%s%s' % (_location, os.sep)
+        location = os.path.expanduser(location.encode('utf8'))
+        if os.path.isdir(location):
+            root_dir = '%s' % location
             r_walk = os.walk(root_dir)
             indexes = [(root, fls) for root, sfs, fls in r_walk]
             return [utils.jpath(root=inx[0], inode=ind)
                     for inx in indexes for ind in inx[1]]
         elif os.path.isfile(location):
-            filename = os.path.split(_location)
-            return filename
+            return [location]
         else:
-            raise clds.NoFileProvided('No Path was Found for %s' % _location)
+            raise clds.NoFileProvided('No Path was Found for %s' % location)
 
     try:
         d_paths = ARGS.get('source')
         if not isinstance(d_paths, list):
             d_paths = [d_paths]
 
+        # Local Index Pathh
         c_index = [indexer(location=d_path) for d_path in d_paths]
 
-        if ARGS.get('no_sort') is not None:
-            f_index = [item for subl in c_index
-                       for item in subl if not_list(item=item)]
-        else:
-            u_index = [(item, sizeer(sfile=item)) for subl in c_index
-                       for item in subl if not_list(item=item)]
-            f_index = [item[0] for item in sorter(index=u_index)]
+        # make sure my files are only files, and compare it with the not_list
+        f_index = [item for subl in c_index
+                   for item in subl if not_list(item=item)]
     except Exception as exp:
         raise clds.SystemProblem('Died for some reason. MESSAGE:\t%s' % exp)
     else:
         LOG.debug('FILE LIST:\t%s', f_index)
         return f_index
+
+
+@contextmanager
+def spinner(work_q=None):
+    from turbolift.worker import ARGS
+    from turbolift import utils
+
+    if not ARGS.get('verbose'):
+        itd = utils.IndicatorThread(
+            work_q=work_q
+        ).indicator_thread()
+
+    yield
+
+    if not ARGS.get('verbose'):
+        itd.terminate()
+
+    print('Operation Complete.')
+
+
+@contextmanager
+def operation(retry, conn=None):
+    try:
+        yield retry
+    except clds.RetryError:
+        print(
+            '\nFailed to perform action after "%s" times'
+            % ARGS.get('error_retry')
+        )
+        LOG.error('Retry has failed.\nMessage: %s', traceback.format_exc())
+    except clds.NoSource as exp:
+        LOG.error('No Source.\nMessage: %s => %s', traceback.format_exc())
+        retry()
+    except clds.SystemProblem as exp:
+        LOG.error('System Problems Found. Message %s', exp)
+        print(
+            '\nSystem Problems Found %s' % exp
+        )
+        retry()
+    except KeyboardInterrupt:
+        utils.emergency_exit('You killed me with the power of CTRL-C')
+    except IOError as exp:
+        print(
+            '\nIO ERROR: %s. MESSAGE %s will retry.' % (exp, info.__appname__)
+        )
+        LOG.error('IO ERROR. Message: %s', exp)
+        retry()
+    except Exception as exp:
+        print(
+            '\nFailed Operation. %s will retry' % info.__appname__
+        )
+        LOG.error('General Exception Traceback %s', traceback.format_exc())
+        retry()
+    finally:
+        if conn is not None:
+            conn.close()
