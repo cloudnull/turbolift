@@ -13,12 +13,13 @@ __contact__ = "Kevin Carter"
 __email__ = "kevin@bkintegration.com"
 __copyright__ = "2013 All Rights Reserved"
 __license__ = "GPLv3+"
-__date__ = "2013-07-08"
-__version__ = "1.4.8"
+__date__ = "2013-08-21"
+__version__ = "1.5.0"
 __status__ = "Production"
 __appname__ = "Turbolift"
 __description__ = 'OpenStack Swift -Cloud Files- Uploader'
 __url__ = 'https://github.com/cloudnull/turbolift.git'
+__rax_regions__ = ['dfw', 'ord', 'iad', 'lon', 'syd']
 
 # The Version Of the Application
 __VN__ = '%s' % __version__
