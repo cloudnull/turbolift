@@ -8,9 +8,11 @@
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
 from contextlib import contextmanager
+import datetime
 import operator
 import os
 import sys
+import tarfile
 import traceback
 
 from turbolift import info
@@ -80,17 +82,17 @@ def spinner(work_q=None):
     from turbolift.worker import ARGS
     from turbolift import utils
 
-    if not ARGS.get('verbose'):
+    # Start Spinning
+    if not ARGS.get('verbose') or ARGS.get('quiet'):
         itd = utils.IndicatorThread(
             work_q=work_q
         ).indicator_thread()
 
     yield
 
-    if not ARGS.get('verbose'):
+    # Start Spinning
+    if not ARGS.get('verbose') or ARGS.get('quiet'):
         itd.terminate()
-
-    print('Operation Complete.')
 
 
 @contextmanager
@@ -98,34 +100,111 @@ def operation(retry, conn=None):
     try:
         yield retry
     except clds.RetryError:
-        print(
-            '\nFailed to perform action after "%s" times'
-            % ARGS.get('error_retry')
+        utils.reporter(
+            msg=('Failed to perform action after "%s" times\nTB: %s'
+                 % (ARGS.get('error_retry'), traceback.format_exc())),
+            lvl='error'
         )
-        LOG.error('Retry has failed.\nMessage: %s', traceback.format_exc())
     except clds.NoSource as exp:
-        LOG.error('No Source.\nMessage: %s => %s', traceback.format_exc())
+        utils.reporter(
+            msg=('No Source. Message: %s\nTB: %s'
+                 % (traceback.format_exc(), exp)),
+            lvl='error'
+        )
         retry()
     except clds.SystemProblem as exp:
-        LOG.error('System Problems Found. Message %s', exp)
-        print(
-            '\nSystem Problems Found %s' % exp
+        utils.reporter(
+            msg='System Problems Found %s' % exp,
+            lvl='error'
         )
         retry()
     except KeyboardInterrupt:
-        utils.emergency_exit('You killed me with the power of CTRL-C')
+        utils.emergency_kill(reclaim=True)
     except IOError as exp:
-        print(
-            '\nIO ERROR: %s. MESSAGE %s will retry.' % (exp, info.__appname__)
+        utils.reporter(
+            msg=('IO ERROR: %s. MESSAGE %s will retry.'
+                 % (exp, info.__appname__)),
+            lvl='error'
         )
         LOG.error('IO ERROR. Message: %s', exp)
         retry()
     except Exception as exp:
-        print(
-            '\nFailed Operation. %s will retry' % info.__appname__
+        utils.reporter(
+            msg=('Failed Operation. %s will retry.\nTB: %s'
+                 % (info.__appname__, traceback.format_exc())),
+            lvl='error'
         )
-        LOG.error('General Exception Traceback %s', traceback.format_exc())
         retry()
     finally:
         if conn is not None:
             conn.close()
+
+
+def compress_files(file_list):
+    """If the archive function is used, create a compressed archive.
+
+    :param file_list:
+
+    This function allows for multiple sources to be added to the
+    compressed archive.
+    """
+
+    tmp_file = None
+    try:
+        # Set date and time
+        date_format = '%a%b%d.%H.%M.%S.%Y'
+        today = datetime.datetime.today()
+        _ts = today.strftime(date_format)
+
+        # Get Home Directory
+        home_dir = os.getenv('HOME')
+
+        # Set the name of the archive.
+        set_name = ARGS.get('tar_name', '%s_%s' % ('Archive', _ts))
+        file_name = '%s.tgz' % set_name
+
+        # Set the working File.
+        tmp_file = os.path.join(home_dir, file_name)
+
+        # Begin creating the Archive.
+        tar = tarfile.open(tmp_file, 'w:gz')
+        for name in file_list:
+            tar.add(name)
+        tar.close()
+
+        utils.reporter(msg='ARCHIVE CREATED: %s' % tmp_file, prt=False)
+
+        if ARGS.get('verify'):
+            tar_len = tarfile.open(tmp_file, 'r')
+            ver_array = []
+            for member_info in tar_len.getmembers():
+                ver_array.append(member_info.name)
+
+            count = len(ver_array)
+            orig_count = len(file_list)
+            if orig_count != count:
+                raise clds.SystemProblem(
+                    'ARCHIVE NOT VERIFIED: Archive and File List do not Match.'
+                    ' Original File Count = %s, Found Archive Contents = %s'
+                    % (orig_count, count)
+                )
+            utils.reporter(
+                msg='ARCHIVE CONTENTS VERIFIED: %s files' % count,
+            )
+    except KeyboardInterrupt:
+        if os.path.exists(tmp_file):
+            os.remove(tmp_file)
+        utils.emergency_exit('I have stopped at your command,'
+                             ' I removed Local Copy of the Archive')
+    except Exception as exp:
+        if os.path.exists(tmp_file):
+            os.remove(tmp_file)
+            utils.emergency_exit(
+                'I am sorry i just don\'t know what you put into me, Removing'
+                ' Local Copy of the Archive.'
+            )
+        utils.emergency_exit(
+            'Exception while working on the archive. MESSAGE: %s' % exp
+        )
+    else:
+        return tmp_file

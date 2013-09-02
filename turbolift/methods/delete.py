@@ -50,22 +50,27 @@ class delete(object):
             LOG.debug('PAYLOAD\t: "%s"', payload)
 
         # Make 2 passes when deleting objects.
-        print('This operation will make 2 passes when deleting objects.')
+        utils.reporter(
+            msg='This operation will make 2 passes when deleting objects.'
+        )
         for _ in range(2):
-            print('getting file list')
+            utils.reporter(msg='getting file list')
             with methods.spinner():
                 # Get all objects in a Container
                 objects = self.action(url=payload['url'],
                                       container=payload['c_name'])
 
                 # Count the number of objects returned.
-                if objects is not None:
+                if objects is False:
+                    utils.reporter(msg='No Container found.')
+                    break
+                elif objects is not None:
                     num_files = len(objects)
                     if num_files < 1:
-                        print('No Objects found.')
+                        utils.reporter(msg='No Objects found.')
                         break
                 else:
-                    print('No Objects found.')
+                    utils.reporter(msg='No Objects found.')
                     break
 
                 # Get The rate of concurrency
@@ -76,16 +81,21 @@ class delete(object):
                 obj_list = [obj['name'] for obj in objects]
                 work_q = utils.basic_queue(obj_list)
 
-            print('Performing Delete...')
+            utils.reporter(msg='Performing Object Delete...')
             with methods.spinner(work_q=work_q):
                 utils.worker_proc(job_action=self.deleterator,
                                   num_jobs=num_files,
                                   concurrency=concurrency,
                                   t_args=payload,
                                   queue=work_q)
+
             utils.stupid_hack(wait=2)
 
-
+        if not ARGS.get('save_container') and objects is not False:
+            utils.reporter(msg='Performing Container Delete.')
+            with methods.spinner():
+                self.go.container_deleter(url=payload['url'],
+                                          container=payload['c_name'])
 
     def deleterator(self, work_q, payload):
         """Upload files to CloudFiles -Swift-.
@@ -105,6 +115,6 @@ class delete(object):
                                        container=payload['c_name'],
                                        u_file=wfile)
             except EOFError:
-                utils.emergency_exit('Died...')
+                utils.emergency_kill()
             except KeyboardInterrupt:
-                utils.emergency_exit('You killed the process...')
+                utils.emergency_kill(reclaim=True)

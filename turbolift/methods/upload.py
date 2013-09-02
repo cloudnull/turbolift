@@ -86,11 +86,11 @@ class upload(object):
             try:
                 source = payload['source']
                 container = payload['c_name']
-                self.go.object_putter(url=payload['url'],
-                                      container=container,
-                                      source=source,
-                                      u_file=wfile)
-            except EOFError:
-                utils.emergency_exit('Died...')
+                self.action(url=payload['url'],
+                            container=container,
+                            source=source,
+                            u_file=wfile)
             except KeyboardInterrupt:
-                utils.emergency_exit('You killed the process...')
+                utils.emergency_kill(reclaim=True)
+            except EOFError:
+                utils.emergency_kill()

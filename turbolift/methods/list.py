@@ -51,11 +51,22 @@ class list(object):
             objects = self.action(url=payload['url'],
                                   container=payload['c_name'])
 
-        if object is not False:
-            count = len(objects)
-            for obj in objects:
-                print(
-                    'size: %s (bytes) - name: %s '
-                    % (obj.get('bytes'), obj.get('name'))
+        # Count the number of objects returned.
+        if objects is False:
+            utils.reporter(msg='No Container found.')
+        elif objects is not None:
+            num_files = len(objects)
+            if num_files < 1:
+                utils.reporter(msg='No Objects found.')
+            else:
+                count = len(objects)
+                for obj in objects:
+                    utils.reporter(
+                        msg=('size: %s (bytes) - name: %s '
+                             % (obj.get('bytes'), obj.get('name')))
+                    )
+                utils.reporter(
+                    msg='You have %s objects in the container' % count
                 )
-            print('You have %s objects in the container' % count)
+        else:
+            utils.reporter(msg='No Objects found.')
