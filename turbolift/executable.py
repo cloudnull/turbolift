@@ -13,6 +13,7 @@ import multiprocessing
 
 from turbolift import arguments
 from turbolift.logger import logger
+from turbolift import utils
 from turbolift import worker
 
 
@@ -32,9 +33,9 @@ def run_turbolift():
         try:
             worker.start_work()
         except KeyboardInterrupt:
-            sys.exit('I have been Murdered.')
+            utils.emergency_kill(reclaim=True)
         finally:
-            print('All Done!')
+            utils.reporter(msg='All Done!')
 
 
 if __name__ == "__main__":
