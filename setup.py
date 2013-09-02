@@ -32,7 +32,11 @@ setuptools.setup(
     long_description=LDINFO,
     license='GNU General Public License v3 or later (GPLv3+)',
     packages=['turbolift',
-              'turbolift.operations'],
+              'turbolift.arguments',
+              'turbolift.authentication',
+              'turbolift.clouderator',
+              'turbolift.logger',
+              'turbolift.methods'],
     url=info.__url__,
     install_requires=REQUIRES,
     classifiers=[
