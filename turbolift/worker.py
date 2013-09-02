@@ -60,4 +60,5 @@ def start_work():
         else:
             raise clds.SystemProblem('No Method set for processing')
     except KeyboardInterrupt:
+        utils.emergency_kill(reclaim=True)
         utils.emergency_exit(msg='Caught KeyboardInterrupt, I\'M ON FIRE!!!!')
