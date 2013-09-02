@@ -61,7 +61,7 @@ class clone(object):
             target_region = target_region.upper()
 
         # check for a target type URL
-        if ARGS.get('snet') is True:
+        if ARGS.get('target_snet') is True:
             target_type = 'internalURL'
         else:
             target_type = 'publicURL'
