@@ -9,6 +9,30 @@
 # =============================================================================
 
 
+def reporter(msg, prt=True, lvl='info', log=False):
+    """Print Messages and Log it.
+
+    :param msg:
+    :param prt:
+    :param lvl:
+    """
+
+    from turbolift.worker import LOG
+    from turbolift.worker import ARGS
+
+    # Print a Message
+    if ARGS.get('quiet') is None:
+        if prt is True or ARGS.get('verbose') is True:
+            print(msg)
+
+    # Log message
+    if any([ARGS.get('verbose') is True,
+            lvl in ['debug', 'warn', 'error'],
+            log is True]):
+        logger = getattr(LOG, lvl)
+        logger(msg)
+
+
 def json_encode(read):
     """Return a json encoded object.
 
@@ -146,6 +170,21 @@ def get_from_q(queue):
         return None
 
 
+def emergency_kill(reclaim=None):
+    """Exit process.
+
+    :return kill pid:
+    """
+
+    import os
+    import signal
+
+    if reclaim is not None:
+        return os.kill(os.getpid(), signal.SIGKILL)
+    else:
+        return os.kill(os.getpid(), signal.SIGCHLD)
+
+
 def emergency_exit(msg):
     """Exit process.
 
@@ -169,17 +208,22 @@ def set_concurrency(args, file_count):
     """
 
     def verbose(ccr):
-        if args.get('verbose'):
-            print('MESSAGE\t: We are creating %s Processes\n' % ccr)
+        reporter(
+            msg='MESSAGE: We are creating %s Processes' % ccr,
+            prt=False
+        )
         return ccr
 
     _cc = args.get('cc')
 
     if _cc > file_count:
-        print('MESSAGE\t: There are less things to do than the number of\n'
-              '\t  concurrent processes specified by either an override\n'
-              '\t  or the system defaults. I am leveling the number of\n'
-              '\t  concurrent processes to the number of jobs to perform.')
+        reporter(
+            msg=('MESSAGE: There are less things to do than the number of'
+                 ' concurrent processes specified by either an override'
+                 ' or the system defaults. I am leveling the number of'
+                 ' concurrent processes to the number of jobs to perform.'),
+            lvl='warn'
+        )
         return verbose(ccr=file_count)
     else:
         return verbose(ccr=_cc)
@@ -210,8 +254,6 @@ def worker_proc(job_action, num_jobs, concurrency, queue, t_args=None):
 
     for job in jobs:
         job.join()
-
-    print('\nWaiting for in-process Jobs to finish')
 
 
 def mkdir_p(path):
@@ -426,7 +468,7 @@ def prep_payload(auth, container, source, args):
     """
 
     # Unpack the values from Authentication
-    token, tenant, user, inet, enet, cnet, aurl = auth
+    token, tenant, user, inet, enet, cnet, aurl, acfep = auth
 
     # Get the headers ready
     headers = set_headers({'X-Auth-Token': token})
@@ -443,11 +485,10 @@ def prep_payload(auth, container, source, args):
             'tenant': tenant,
             'headers': headers,
             'user': user,
-            'inet': inet,
-            'enet': enet,
             'cnet': cnet,
             'aurl': aurl,
-            'url': url}
+            'url': url,
+            'acfep': acfep}
 
 
 def get_new_token():
@@ -493,24 +534,30 @@ class IndicatorThread(object):
         import sys
         import time
 
-        while self.system:
-            busy_chars = ['|', '/', '-', '\\']
-            for _cr in busy_chars:
-                # Fixes Errors with OS X due to no sem_getvalue support
-                if self.work_q is not None:
-                    if not sys.platform.startswith('darwin'):
-                        _qz = ('Number of Jobs Left in Queue = %s '
-                               % self.work_q.qsize())
+        from turbolift import methods
+        from turbolift import utils
+
+        with methods.operation(retry=utils.emergency_kill()):
+            while self.system:
+                busy_chars = ['|', '/', '-', '\\']
+                for _cr in busy_chars:
+                    # Fixes Errors with OS X due to no sem_getvalue support
+                    if self.work_q is not None:
+                        if not sys.platform.startswith('darwin'):
+                            size = self.work_q.qsize()
+                            if size > 0:
+                                _qz = 'Number of Jobs in Queue = %s ' % size
+                            else:
+                                _qz = 'Waiting for in-process Jobs to finish '
+                        else:
+                            _qz = 'Waiting for in-process Jobs to finish. '
                     else:
-                        _qz = "The System Can't Count... Please Wait."
-                else:
-                    _qz = ''
-                sys.stdout.write('\rProcessing - [ %(spin)s ] - %(qsize)s'
-                                 % {"qsize": _qz,
-                                    "spin": _cr})
-                sys.stdout.flush()
-                time.sleep(.05)
-                self.system = self.system
+                        _qz = 'Please Wait... '
+                    sys.stdout.write('\rProcessing - [ %(spin)s ] - %(qsize)s'
+                                     % {"qsize": _qz, "spin": _cr})
+                    sys.stdout.flush()
+                    time.sleep(.05)
+                    self.system = self.system
 
     def indicator_thread(self):
         """indicate that we are performing work in a thread."""
