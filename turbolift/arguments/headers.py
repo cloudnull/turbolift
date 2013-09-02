@@ -17,22 +17,22 @@ def header_args(parser):
                                         ' using a CDN URL or other HTTP'
                                         ' action which may rely on Headers.'
                                         ' Here are the default headers')
-    headers.add_argument('--base-headers',
-                         metavar='[KEY=VALUE]',
+    headers.add_argument('-BH', '--base-headers',
+                         metavar='[K=V]',
                          default=[],
                          action='append',
                          help=('These are the basic headers used for'
                                ' all Turbolift operations. Anything'
                                ' added here will modify ALL Turbolift'
                                ' Operations which leverage the API.'))
-    headers.add_argument('--object-headers',
-                         metavar='[KEY=VALUE]',
+    headers.add_argument('-OH', '--object-headers',
+                         metavar='[K=V]',
                          default=[],
                          action='append',
                          help=('These Headers only effect Objects'
                                ' (files).'))
-    headers.add_argument('--container-headers',
-                         metavar='[KEY=VALUE]',
+    headers.add_argument('-CH', '--container-headers',
+                         metavar='[K=V]',
                          default=[],
                          action='append',
                          help='These headers only effect Containers')

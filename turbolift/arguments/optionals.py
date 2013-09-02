@@ -38,14 +38,6 @@ def optional_args(parser):
                            type=int,
                            default=50,
                            help='Upload Concurrency')
-    optionals.add_argument('--no-sort',
-                           action='store_true',
-                           default=False,
-                           help=('By default when getting the list of files'
-                                 ' to upload Turbolift will sort the files'
-                                 ' by size. If you have a lot of files this'
-                                 ' may be a time consuming operation.'
-                                 ' This flag will disable that function.'))
     optionals.add_argument('--system-config',
                            metavar='[CONFIG-FILE]',
                            type=str,
