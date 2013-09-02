@@ -35,30 +35,32 @@ def parse_reqtype():
     return auth_body
 
 
+def get_surl(region, cf_list, lookup):
+    """ Lookup a service URL.
+
+    :param region:
+    :param cf_list:
+    :param lookup:
+    :return net:
+    """
+
+    for srv in cf_list:
+        if region in srv.get('region'):
+            net = utils.parse_url(url=srv.get(lookup))
+            return net
+    else:
+        raise clds.SystemProblem(
+            'Region "%s" was not found in your Service Catalog.' % region
+        )
+
+
+
 def parse_auth_response(auth_response):
     """Parse the auth response and return the tenant, token, and username.
 
     :param auth_response: the full object returned from an auth call
     :returns: tuple (token, tenant, username, internalurl, externalurl, cdnurl)
     """
-
-    def get_surl(region, cf_list, lookup):
-        """ Lookup a service URL.
-
-        :param region:
-        :param cf_list:
-        :param lookup:
-        :return net:
-        """
-
-        for srv in cf_list:
-            if region in srv.get('region'):
-                net = utils.parse_url(url=srv.get(lookup))
-                return net
-        else:
-            raise clds.SystemProblem(
-                'Region "%s" was not found in your Service Catalog.' % region
-            )
 
     access = auth_response.get('access')
     token = access.get('token').get('id')
@@ -97,7 +99,7 @@ def parse_auth_response(auth_response):
     if cdn is not None:
         cnet = get_surl(region=region, cf_list=cdn, lookup='publicURL')
 
-    return token, tenant, user, inet, enet, cnet
+    return token, tenant, user, inet, enet, cnet, cfl
 
 
 def parse_region():

@@ -43,11 +43,12 @@ def authenticate():
         raise clds.SystemProblem('JSON Decode Failure. ERROR: %s - RESP %s'
                                  % (exp, resp_read))
     else:
-        token, tenant, user, inet, enet, cnet = auth_utils.parse_auth_response(
-            auth_resp
+        auth_info = auth_utils.parse_auth_response(auth_resp)
+        token, tenant, user, inet, enet, cnet, acfep = auth_info
+        utils.reporter(
+            msg=('API Access Granted. Auth token: %s TenantID: %s Username: %s'
+                 % (token, tenant, user)),
+            prt=False,
+            log=True
         )
-        LOG.debug(
-            'Auth token for user %s is %s [tenant %s]', token, tenant, user
-        )
-        LOG.info('User %s is Authenticated' % user)
-        return token, tenant, user, inet, enet, cnet, a_url
+        return token, tenant, user, inet, enet, cnet, a_url, acfep
