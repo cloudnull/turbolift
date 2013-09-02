@@ -1,5 +1,5 @@
 # =============================================================================
-# Copyright [2013] [kevin]
+# Copyright [2013] [Kevin Carter]
 # License Information :
 # This software has no warranty, it is provided 'as is'. It is your
 # responsibility to validate the behavior of the routines and its accuracy
@@ -33,24 +33,24 @@ def command_actions(subparser, source_args, container_args, cdn_args):
     )
     clone.set_defaults(clone=True)
     clone.add_argument('-sc',
-                        '--source-container',
-                        metavar='[CONTAINER]',
-                        help='Target Container.',
-                        required=True,
-                        default=None)
+                       '--source-container',
+                       metavar='[CONTAINER]',
+                       help='Target Container.',
+                       required=True,
+                       default=None)
     clone.add_argument('-tc',
-                        '--target-container',
-                        metavar='[CONTAINER]',
-                        help='Target Container.',
-                        required=True,
-                        default=None)
+                       '--target-container',
+                       metavar='[CONTAINER]',
+                       help='Target Container.',
+                       required=True,
+                       default=None)
     clone.add_argument('-tr',
-                        '--target-region',
-                        metavar='[REGION]',
-                        help='Target Container.',
-                        required=True,
-                        default=None)
-    clone.add_argument('--snet',
-                        action='store_true',
-                        help='Use Service Net to Stream the Objects.',
-                        default=False)
+                       '--target-region',
+                       metavar='[REGION]',
+                       help='Target Container.',
+                       required=True,
+                       default=None)
+    clone.add_argument('--target-snet',
+                       action='store_true',
+                       help='Use Service Net to Stream the Objects.',
+                       default=False)
