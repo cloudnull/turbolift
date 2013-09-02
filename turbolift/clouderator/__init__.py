@@ -7,6 +7,9 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
+import os
+import hashlib
+
 from turbolift.worker import ARGS
 from turbolift.worker import LOG
 from turbolift import utils
@@ -22,9 +25,6 @@ def md5_checker(resp, local_f):
     :param local_f:
     :return True|False:
     """
-
-    import os
-    import hashlib
 
     def calc_hash():
         """Read the hash.
@@ -45,20 +45,27 @@ def md5_checker(resp, local_f):
         lmd5sum = md5.hexdigest()
 
         if rmd5sum != lmd5sum:
-            if ARGS.get('debug'):
-                print('MESSAGE:\t CheckSumm Mis-Match %s != %s\n'
-                      '\t  STATUS : %s %s - Local File %s'
-                      % (lmd5sum, rmd5sum, resp.status, resp.reason, local_f))
-            elif ARGS.get('verbose'):
-                print('MESSAGE\t: CheckSum Mis-Match', lmd5sum)
+            if ARGS.get('verbose'):
+                utils.reporter(
+                    msg=('MESSAGE: CheckSumm Mis-Match %s != %s STATUS'
+                         ' : %s %s - Local File %s' % (lmd5sum,
+                                                       rmd5sum,
+                                                       resp.status,
+                                                       resp.reason,
+                                                       local_f))
+                )
             return True
         else:
-            if ARGS.get('verbose'):
-                print('MESSAGE\t: CheckSum Match', lmd5sum)
+            utils.reporter(
+                msg='MESSAGE: CheckSum Match %s = %s' % (lmd5sum, rmd5sum),
+                prt=False
+            )
 
             return False
     else:
-        if ARGS.get('verbose'):
-            print('MESSAGE\t: Local File Not Found %s' % local_file)
+        utils.reporter(
+            msg='MESSAGE: Local File Not Found %s' % local_f,
+            prt=False
+        )
 
         return True
