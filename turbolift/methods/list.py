@@ -36,8 +36,9 @@ class list(object):
             source=None,
             args=ARGS
         )
+
+        # Prep Actions.
         self.go = actions.cloud_actions(payload=payload)
-        self.action = getattr(self.go, 'object_lister')
 
         if ARGS.get('verbose'):
             LOG.info(
@@ -48,25 +49,29 @@ class list(object):
             LOG.debug('PAYLOAD\t: "%s"', payload)
 
         with methods.spinner():
-            objects = self.action(url=payload['url'],
-                                  container=payload['c_name'])
-
-        # Count the number of objects returned.
-        if objects is False:
-            utils.reporter(msg='No Container found.')
-        elif objects is not None:
-            num_files = len(objects)
-            if num_files < 1:
-                utils.reporter(msg='No Objects found.')
+            if ARGS.get('all_containers') is None:
+                objects = self.go.object_lister(url=payload['url'],
+                                                container=payload['c_name'])
             else:
-                count = len(objects)
-                for obj in objects:
+                objects = self.go.container_lister(url=payload['url'])
+
+            # Count the number of objects returned.
+            if objects is False:
+                utils.reporter(msg='Nothing found.')
+            elif objects is not None:
+                num_files = len(objects)
+                if num_files < 1:
+                    utils.reporter(msg='Nothing found.')
+                else:
+                    count = len(objects)
+                    for obj in objects:
+                        utils.reporter(
+                            msg=('size: %s\t(KB)\t- name: %s '
+                                 % (int(obj.get('bytes')) / 1024,
+                                    obj.get('name')))
+                        )
                     utils.reporter(
-                        msg=('size: %s (bytes) - name: %s '
-                             % (obj.get('bytes'), obj.get('name')))
+                        msg='I found "%s" Item(s).' % count
                     )
-                utils.reporter(
-                    msg='You have %s objects in the container' % count
-                )
-        else:
-            utils.reporter(msg='No Objects found.')
+            else:
+                utils.reporter(msg='Nothing found.')
