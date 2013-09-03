@@ -77,6 +77,12 @@ def shared_args():
                           help=('This will allow the container to remain'
                                 ' untouched and intact, but only the'
                                 ' container.'))
+    del_args.add_argument('-ON', '--object-name',
+                          metavar='[NAME]',
+                          default=[],
+                          action='append',
+                          help=('Name of a specific Object that you want'
+                                ' to delete.'))
 
     # Container Arguments
     container_args = argparse.ArgumentParser(add_help=False)
