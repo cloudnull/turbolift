@@ -30,7 +30,31 @@ def reporter(msg, prt=True, lvl='info', log=False):
             lvl in ['debug', 'warn', 'error'],
             log is True]):
         logger = getattr(LOG, lvl)
-        logger(msg)
+        if ARGS.get('disable_colorized') is True:
+            logger(msg)
+        else:
+            logger(bcolors(msg=msg, color=lvl))
+
+
+def bcolors(msg, color):
+    """return a colorizes string.
+
+    :param msg:
+    :param color:
+    :return str:
+    """
+
+    import turbolift as clds
+
+    colors = {'debug': '\033[94m',
+              'info': '\033[92m',
+              'warn': '\033[93m',
+              'error': '\033[91m',
+              'ENDC': '\033[0m'}
+    if color in colors:
+        return colors[color] + msg + colors['ENDC']
+    else:
+        raise clds.SystemProblem('"%s" was not a known color.' % color)
 
 
 def json_encode(read):
