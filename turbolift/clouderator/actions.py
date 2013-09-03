@@ -228,7 +228,6 @@ class cloud_actions(object):
                     self.resp_exception(resp=resp, rty=rty)
 
                     for obj in utils.json_encode(read):
-                        print obj
                         if ARGS.get('time_offset') is not None:
                             # Get the last_modified data from the Object
                             lmobj=obj.get('last_modified')
