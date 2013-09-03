@@ -79,10 +79,10 @@ def parse_auth_response(auth_response):
 
     scat = access.pop('serviceCatalog')
     for srv in scat:
-        if srv.get('name') in ('cloudFilesCDN', 'cloudFiles', 'swift'):
+        if srv.get('name') in info.__srv_types__:
             if srv.get('name') == 'cloudFilesCDN':
                 cdn = srv.get('endpoints')
-            if srv.get('name') == 'cloudFiles':
+            if srv.get('name') == ARGS.get('service_type'):
                 cfl = srv.get('endpoints')
 
     if ARGS.get('os_region') is not None:
