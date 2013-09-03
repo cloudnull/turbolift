@@ -54,7 +54,7 @@ class delete(object):
             msg='This operation will make 2 passes when deleting objects.'
         )
         for _ in range(2):
-            utils.reporter(msg='getting file list')
+            utils.reporter(msg='Getting file list')
             with methods.spinner():
                 # Get all objects in a Container
                 objects = self.action(url=payload['url'],
