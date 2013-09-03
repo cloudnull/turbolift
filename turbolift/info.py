@@ -19,7 +19,10 @@ __status__ = "Production"
 __appname__ = "Turbolift"
 __description__ = 'OpenStack Swift -Cloud Files- Uploader'
 __url__ = 'https://github.com/cloudnull/turbolift.git'
+
+# Service Information
 __rax_regions__ = ['dfw', 'ord', 'iad', 'lon', 'syd']
+__srv_types__ = ['cloudFilesCDN', 'cloudFiles', 'objectServer']
 
 # The Version Of the Application
 __VN__ = '%s' % __version__
