@@ -80,9 +80,7 @@ class cloud_actions(object):
         if skip is True:
             return True
         elif ARGS.get('sync'):
-            conn.request(
-                'HEAD', rpath, headers=fheaders
-            )
+            conn.request('HEAD', rpath, headers=fheaders)
             resp, read = utils.response_get(conn=conn)
             self.resp_exception(resp=resp, rty=retry)
             if resp.status == 404:
@@ -127,12 +125,13 @@ class cloud_actions(object):
                     utils.reporter(msg='Container "%s" Found' % container)
                     return False
 
-    def _downloader(self, conn, rpath, fhdr, lfile, source, retry, skip=False):
+    def _downloader(self, conn, rpath, fheaders, lfile, source, retry,
+                    skip=False):
         """Download a specified object in the container.
 
         :param conn:
         :param rpath:
-        :param fhdr:
+        :param fheaders:
         :param lfile:
         :param retry:
         :param skip:
@@ -143,11 +142,11 @@ class cloud_actions(object):
         else:
             local_f = os.path.join(source, lfile)
 
-        if self._checker(conn, rpath, local_f, fhdr, retry, skip) is True:
+        if self._checker(conn, rpath, local_f, fheaders, retry, skip) is True:
             LOG.debug('Downloading remote %s to local file %s', lfile, rpath)
 
             # perform Object Download
-            conn.request('GET', rpath, headers=fhdr)
+            conn.request('GET', rpath, headers=fheaders)
             resp, read = utils.response_get(conn=conn)
             self.resp_exception(resp=resp, rty=retry)
 
@@ -204,13 +203,13 @@ class cloud_actions(object):
                 prt=False
             )
 
-    def _list_getter(self, conn, count, filepath, headers):
+    def _list_getter(self, conn, count, filepath, fheaders):
         """Get a list of all objects in a container.
 
         :param conn:
         :param count:
         :param filepath:
-        :param headers:
+        :param fheaders:
         :return list:
         """
         file_l = []
@@ -219,9 +218,7 @@ class cloud_actions(object):
             for rty in utils.retryloop(attempts=ARGS.get('error_retry')):
                 with mlds.operation(rty):
                     # Make a connection
-                    conn.request(
-                        'GET', fpath, headers=headers
-                    )
+                    conn.request('GET', fpath, headers=fheaders)
                     resp, read = utils.response_get(conn=conn)
                     self.resp_exception(resp=resp, rty=rty)
 
@@ -243,6 +240,50 @@ class cloud_actions(object):
         )
         return final_list
 
+    def _header_getter(self, conn, rpath, fheaders, retry):
+        """perfrom HEAD request on a specified object in the container.
+
+        :param conn:
+        :param rpath:
+        :param fheaders:
+        :param retry:
+        """
+
+        # perform Object HEAD request
+        conn.request('HEAD', rpath, headers=fheaders)
+
+        resp, read = utils.response_get(conn=conn)
+        self.resp_exception(resp=resp, rty=retry)
+
+        utils.reporter(
+            msg='INFO: %s %s %s' % (resp.status, resp.reason, resp.msg),
+            prt=False
+        )
+
+        return dict(resp.getheaders())
+
+    def _header_poster(self, conn, rpath, fheaders, retry):
+        """POST Headers on a specified object in the container.
+
+        :param conn:
+        :param rpath:
+        :param fheaders:
+        :param retry:
+        """
+
+        # perform Object POST request for header update.
+        conn.request('POST', rpath, headers=fheaders)
+
+        resp, read = utils.response_get(conn=conn)
+        self.resp_exception(resp=resp, rty=retry)
+
+        utils.reporter(
+            msg='INFO: %s %s %s' % (resp.status, resp.reason, resp.msg),
+            prt=False
+        )
+
+        return dict(resp.getheaders())
+
     def container_deleter(self, url, container):
         """Delete all objects in a container.
 
@@ -255,7 +296,7 @@ class cloud_actions(object):
             conn = utils.open_connection(url=url)
 
             # Open connection and perform operation
-            with mlds.operation(retry):
+            with mlds.operation(retry, conn):
                 rpath = urllib.quote(
                     '%s/%s' % (url.path, container)
                 )
@@ -264,6 +305,48 @@ class cloud_actions(object):
                               rpath=rpath,
                               fheaders=self.payload['headers'],
                               retry=retry)
+
+    def container_lister(self, url):
+        """Builds a long list of objects found in a container.
+
+        NOTE: This could be millions of Objects.
+
+        :param url:
+        :return None | list:
+        """
+
+        last_obj = None
+        for retry in utils.retryloop(attempts=ARGS.get('error_retry')):
+            # Open Connection
+            conn = utils.open_connection(url=url)
+
+            # Open connection and perform operation
+            with mlds.operation(retry, conn):
+                # Determine how many files are in the container
+                fpath = urllib.quote('%s' % url.path)
+
+                # Make a connection
+                conn.request('HEAD', fpath, headers=self.payload['headers'])
+                resp, read = utils.response_get(conn=conn)
+                self.resp_exception(resp=resp, rty=retry)
+
+                head_check = dict(resp.getheaders())
+                container_count = head_check.get('x-account-container-count')
+                if container_count:
+                    container_count = int(container_count)
+                    if not container_count > 0:
+                        return None
+                else:
+                    return None
+
+                # Set the number of loops that we are going to do
+                _fpath = '%s/?limit=10000&format=json' % fpath
+                return self._list_getter(
+                    conn=conn,
+                    count=container_count,
+                    filepath=_fpath,
+                    fheaders=self.payload['headers']
+                )
 
     def object_putter(self, url, container, source, u_file):
         """This is the Sync method which uploads files to the swift repository
@@ -284,7 +367,7 @@ class cloud_actions(object):
             conn = utils.open_connection(url=url)
 
             # Open connection and perform operation
-            with mlds.operation(retry):
+            with mlds.operation(retry, conn):
                 # Get the path ready for action
                 sfile = utils.get_sfile(ufile=u_file, source=source)
                 rpath = urllib.quote(
@@ -317,15 +400,22 @@ class cloud_actions(object):
             conn = utils.open_connection(url=url)
 
             # Open connection and perform operation
-            with mlds.operation(retry):
+            with mlds.operation(retry, conn):
                 rpath = urllib.quote(
                     '%s/%s/%s' % (url.path, container, u_file)
                 )
-                # Perform delete.
-                self._deleter(conn=conn,
-                              rpath=rpath,
-                              fheaders=self.payload['headers'],
-                              retry=retry)
+
+                # Make a connection
+                conn.request('HEAD', rpath, headers=self.payload['headers'])
+                resp, read = utils.response_get(conn=conn)
+                self.resp_exception(resp=resp, rty=retry)
+
+                if not resp.status == 404:
+                    # Perform delete.
+                    self._deleter(conn=conn,
+                                  rpath=rpath,
+                                  fheaders=self.payload['headers'],
+                                  retry=retry)
 
     def object_downloader(self, url, container, source, u_file):
         """Download an Object from a Container.
@@ -340,14 +430,14 @@ class cloud_actions(object):
             conn = utils.open_connection(url=url)
 
             # Open connection and perform operation
-            with mlds.operation(retry):
+            with mlds.operation(retry, conn):
                 rpath = urllib.quote(
                     '%s/%s/%s' % (url.path, container, u_file)
                 )
                 # Perform Download.
                 self._downloader(conn=conn,
                                  rpath=rpath,
-                                 fhdr=self.payload['headers'],
+                                 fheaders=self.payload['headers'],
                                  lfile=u_file,
                                  source=source,
                                  retry=retry)
@@ -375,9 +465,7 @@ class cloud_actions(object):
                 )
 
                 # Make a connection
-                conn.request(
-                    'HEAD', fpath, headers=self.payload['headers']
-                )
+                conn.request('HEAD', fpath, headers=self.payload['headers'])
                 resp, read = utils.response_get(conn=conn)
                 self.resp_exception(resp=resp, rty=retry)
 
@@ -394,21 +482,18 @@ class cloud_actions(object):
                     return False
 
                 if resp.status == 404:
-                    conn.close()
-                    LOG.debug('Not found. %s | %s' % (resp.status, resp.msg))
+                    utils.reporter(
+                        msg='Not found. %s | %s' % (resp.status, resp.msg)
+                    )
                     return None
                 else:
-                    count = int(resp.getheader('X-Container-Object-Count'))
-
                     # Set the number of loops that we are going to do
                     _fpath = '%s/?limit=10000&format=json' % fpath
-                    headers = self.payload['headers']
-                    headers.update({'Content-type': 'application/json'})
                     return self._list_getter(
                         conn=conn,
-                        count=count,
+                        count=object_count,
                         filepath=_fpath,
-                        headers=headers
+                        fheaders=self.payload['headers']
                     )
 
     def object_syncer(self, surl, turl, scontainer, tcontainer, obj):
@@ -438,8 +523,6 @@ class cloud_actions(object):
                 return False
 
         fheaders = self.payload['headers']
-        fheaders.update({'Content-type': 'application/json'})
-
         for retry in utils.retryloop(attempts=5, delay=2):
             # Open connection and perform operation
             with mlds.operation(retry):
@@ -454,35 +537,58 @@ class cloud_actions(object):
                 tconn = utils.open_connection(url=turl)
                 conn = utils.open_connection(url=surl)
 
-                tconn.request('HEAD', tpath, headers=fheaders)
-                tresp, tread = utils.response_get(conn=tconn)
+                try:
+                    tconn.request('HEAD', tpath, headers=fheaders)
+                    tresp, tread = utils.response_get(conn=tconn)
 
-                # If object comparison is True GET then PUT object
-                if _compare(resp=tresp, obj=obj) is True:
-                    self.resp_exception(resp=tresp, rty=retry)
-                    try:
-                        tfile = tempfile.mktemp()
-                        # GET remote Object
-                        self._downloader(conn=conn,
-                                         rpath=spath,
-                                         fhdr=fheaders,
-                                         lfile=tfile,
-                                         source=None,
+                    # If object comparison is True GET then PUT object
+                    if _compare(resp=tresp, obj=obj) is True:
+                        self.resp_exception(resp=tresp, rty=retry)
+                        try:
+                            tfile = tempfile.mktemp()
+                            # GET remote Object
+                            self._downloader(conn=conn,
+                                             rpath=spath,
+                                             fheaders=fheaders,
+                                             lfile=tfile,
+                                             source=None,
+                                             retry=retry,
+                                             skip=True)
+
+                            # let the system rest for a max of 2 seconds.
+                            utils.stupid_hack(max=2)
+
+                            # PUT remote object
+                            self._putter(conn=tconn,
+                                         fpath=tfile,
+                                         rpath=tpath,
+                                         fheaders=fheaders,
                                          retry=retry,
                                          skip=True)
+                        finally:
+                            try:
+                                os.remove(tfile)
+                            except OSError:
+                                pass
 
-                        # let the system rest for a max of 2 seconds.
-                        utils.stupid_hack(max=2)
-
-                        # PUT remote object
-                        self._putter(conn=tconn,
-                                     fpath=tfile,
-                                     rpath=tpath,
-                                     fheaders=fheaders,
-                                     retry=retry,
-                                     skip=True)
-                    finally:
-                        try:
-                            os.remove(tfile)
-                        except OSError:
-                            pass
+                    # With the retrieved headers, POST new headers on the objext.
+                    if ARGS.get('clone_headers') is True:
+                        sheaders = self._header_getter(
+                            conn=conn, rpath=spath, fheaders=fheaders, retry=retry
+                        )
+                        theaders = self._header_getter(
+                            conn=tconn, rpath=spath, fheaders=fheaders, retry=retry
+                        )
+                        for key in sheaders.keys():
+                            if key not in theaders:
+                                fheaders.update({key: sheaders[key]})
+                        fheaders.update(
+                            {'content-type': sheaders.get('content-type')}
+                        )
+                        self._header_poster(
+                            conn=tconn, rpath=tpath, fheaders=fheaders, retry=retry
+                        )
+                finally:
+                    # Manually close the open connections.
+                    conn.close()
+                    tconn.close()
