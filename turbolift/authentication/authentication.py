@@ -46,8 +46,8 @@ def authenticate():
         auth_info = auth_utils.parse_auth_response(auth_resp)
         token, tenant, user, inet, enet, cnet, acfep = auth_info
         utils.reporter(
-            msg=('API Access Granted. Auth token: %s TenantID: %s Username: %s'
-                 % (token, tenant, user)),
+            msg=('API Access Granted. TenantID: %s Username: %s'
+                 % (tenant, user)),
             prt=False,
             log=True
         )
