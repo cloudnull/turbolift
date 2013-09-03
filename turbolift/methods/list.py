@@ -63,7 +63,6 @@ class list(object):
                 if num_files < 1:
                     utils.reporter(msg='Nothing found.')
                 else:
-                    count = len(objects)
                     for obj in objects:
                         utils.reporter(
                             msg=('size: %s\t(KB)\t- name: %s '
@@ -71,7 +70,7 @@ class list(object):
                                     obj.get('name')))
                         )
                     utils.reporter(
-                        msg='I found "%s" Item(s).' % count
+                        msg='I found "%s" Item(s).' % len(objects)
                     )
             else:
                 utils.reporter(msg='Nothing found.')
