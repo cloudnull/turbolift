@@ -518,8 +518,9 @@ class cloud_actions(object):
         def _time_difference(resp, obj):
             if ARGS.get('save_newer') is True:
                 # Get the source object last modified time.
-                if crds.time_delta(lmobj=obj['last_modified'],
-                                   compare_time=resp.getheader('etag')):
+                compare_time = resp.getheader('last_modified')
+                if crds.time_delta(compare_time=compare_time,
+                                   lmobj=obj['last_modified']) is True:
                     return False
                 else:
                     return True

@@ -103,7 +103,7 @@ def time_delta(lmobj, compare_time=None):
         else:
             return True
     else:
-        if date(compare_time, fmt) > date(lmobj, fmt):
+        if date.strptime(compare_time, fmt) > odate:
             return True
         else:
             return False
