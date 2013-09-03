@@ -126,7 +126,11 @@ def operation(retry, conn=None):
                  % (exp, info.__appname__)),
             lvl='error'
         )
-        LOG.error('IO ERROR. Message: %s', exp)
+        utils.reporter(
+            msg=('STACKTRACE: %s'
+                 % traceback.format_exc()),
+            lvl='error'
+        )
         retry()
     except Exception as exp:
         utils.reporter(
