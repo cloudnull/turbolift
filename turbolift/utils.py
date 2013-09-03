@@ -65,6 +65,23 @@ def bcolors(msg, color):
         raise clds.SystemProblem('"%s" was not a known color.' % color)
 
 
+def time_stamp():
+    """Setup time functions
+
+    :return (fmt, date, date_delta, now):
+    """
+
+    import datetime
+
+    # Time constants
+    fmt = '%Y-%m-%dT%H:%M:%S.%f'
+    date = datetime.datetime
+    date_delta = datetime.timedelta
+    now = datetime.datetime.utcnow()
+
+    return fmt, date, date_delta, now
+
+
 def json_encode(read):
     """Return a json encoded object.
 
