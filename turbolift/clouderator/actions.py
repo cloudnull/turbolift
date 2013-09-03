@@ -216,6 +216,17 @@ class cloud_actions(object):
         :param fheaders:
         :return list:
         """
+
+        def _append(obj):
+            """Create an object dict.
+
+            :return dict:
+            """
+            return {'name': obj.get('name'),
+                    'hash': obj.get('hash'),
+                    'bytes': obj.get('bytes'),
+                    'last_modified': obj.get('last_modified')}
+
         file_l = []
         fpath = filepath
         for _ in xrange(count / 10000 + 1):
@@ -227,17 +238,19 @@ class cloud_actions(object):
                     self.resp_exception(resp=resp, rty=rty)
 
                     for obj in utils.json_encode(read):
-                        # TODO(Kevin) Add the modified time filter.
-                        file_l.append(
-                            {'name': obj.get('name'),
-                             'hash': obj.get('hash'),
-                             'bytes': obj.get('bytes'),
-                             'last_modified': obj.get('last_modified')}
+                        if ARGS.get('time_offset') is not None:
+                            # Get the last_modified data from the Object
+                            lmobj=obj.get('last_modified')
+                            if crds.time_delta(lmobj=lmobj) is True:
+                                file_l.append(_append(obj))
+                        else:
+                            file_l.append(_append(obj))
+
+                    if file_l:
+                        lobj = file_l[-1].get('name')
+                        fpath = (
+                            '%s&marker=%s' % (filepath, urllib.quote(lobj))
                         )
-                    lobj = file_l[-1].get('name')
-                    fpath = (
-                        '%s&marker=%s' % (filepath, urllib.quote(lobj))
-                    )
         final_list = utils.unique_list_dicts(dlist=file_l, key='name')
         utils.reporter(
             msg='INFO: %s object(s) found' % len(final_list),
@@ -511,6 +524,17 @@ class cloud_actions(object):
         :param obj:
         """
 
+        def _time_difference(resp, obj):
+            if ARGS.get('save_newer') is True:
+                # Get the source object last modified time.
+                if crds.time_delta(lmobj=obj['last_modified'],
+                                   compare_time=resp.getheader('etag')):
+                    return False
+                else:
+                    return True
+            else:
+                return True
+
         def _compare(resp, obj):
             if resp.status == 404:
                 utils.reporter(
@@ -523,9 +547,9 @@ class cloud_actions(object):
                     msg='Checksum Mismatch on Target Object %s' % obj['name'],
                     prt=False
                 )
-                return True
+                return _time_difference(resp, obj)
             else:
-                return False
+                return _time_difference(resp, obj)
 
         fheaders = self.payload['headers']
         for retry in utils.retryloop(attempts=5, delay=2):
@@ -545,6 +569,7 @@ class cloud_actions(object):
                 try:
                     tconn.request('HEAD', tpath, headers=fheaders)
                     tresp, tread = utils.response_get(conn=tconn)
+                    print tresp.getheaders()
 
                     # If object comparison is True GET then PUT object
                     if _compare(resp=tresp, obj=obj) is True:
@@ -576,23 +601,27 @@ class cloud_actions(object):
                             except OSError:
                                 pass
 
-                    # With the retrieved headers, POST new headers on the objext.
+                    # With the retrieved headers POST new headers on the obj.
                     if ARGS.get('clone_headers') is True:
-                        sheaders = self._header_getter(
-                            conn=conn, rpath=spath, fheaders=fheaders, retry=retry
-                        )
-                        theaders = self._header_getter(
-                            conn=tconn, rpath=spath, fheaders=fheaders, retry=retry
-                        )
+                        sheaders = self._header_getter(conn=conn,
+                                                       rpath=spath,
+                                                       fheaders=fheaders,
+                                                       retry=retry)
+
+                        theaders = self._header_getter(conn=tconn,
+                                                       rpath=spath,
+                                                       fheaders=fheaders,
+                                                       retry=retry)
                         for key in sheaders.keys():
                             if key not in theaders:
                                 fheaders.update({key: sheaders[key]})
                         fheaders.update(
                             {'content-type': sheaders.get('content-type')}
                         )
-                        self._header_poster(
-                            conn=tconn, rpath=tpath, fheaders=fheaders, retry=retry
-                        )
+                        self._header_poster(conn=tconn,
+                                            rpath=tpath,
+                                            fheaders=fheaders,
+                                            retry=retry)
                 finally:
                     # Manually close the open connections.
                     conn.close()

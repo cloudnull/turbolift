@@ -69,3 +69,41 @@ def md5_checker(resp, local_f):
         )
 
         return True
+
+
+def time_delta(lmobj, compare_time=None):
+    """Check to see if a date delta exists based on filter for an object.
+
+    :param obj:
+    :return True|False:
+    """
+
+    def hours(delta, factor):
+        return delta(hours=factor)
+
+    def days(delta, factor):
+        return delta(days=factor)
+
+    def weeks(delta, factor):
+        return delta(weeks=factor)
+
+    fmt, date, delta, now = utils.time_stamp()
+
+    # Set time objects
+    odate = date.strptime(lmobj, fmt)
+
+    if compare_time is None:
+        # Time Options
+        time_factor = ARGS.get('time_factor', 1)
+        offset = ARGS.get('time_offset')
+        offset_method = locals()[offset]
+
+        if (odate + offset_method(delta=delta, factor=time_factor)) > now:
+            return False
+        else:
+            return True
+    else:
+        if date(compare_time, fmt) > date(lmobj, fmt):
+            return True
+        else:
+            return False
