@@ -111,7 +111,23 @@ def shared_args():
                                     ' "Source" can be a directory Path or'
                                     ' File'))
 
-    return cdn_args, del_args, container_args, source_args, msource_args
+    # Time Arguments
+    time_args = argparse.ArgumentParser(add_help=False)
+    time_args.add_argument('--time-offset',
+                           choices=['weeks', 'days', 'hours', None],
+                           metavar='{weeks,days,hours}',
+                           default=None,
+                           help=('Filter objects where the last modified time'
+                                 ' is older than [OFFSET]'))
+    time_args.add_argument('--time-factor',
+                           metavar='[INT]',
+                           type=int,
+                           default=None,
+                           help=('If Offset is used the default time factor'
+                                 ' is "1".'))
+
+    return (cdn_args, del_args, container_args, source_args, msource_args,
+            time_args)
 
 
 def default_args(parser):
@@ -141,7 +157,7 @@ def args_setup():
     default_args(parser=parser)
 
     # Shared Arguments
-    cdn, remove, container, source, msource = shared_args()
+    cdn, remove, container, source, msource, timeargs = shared_args()
 
     # Optional Arguments
     authgroup.auth_group(parser=parser)
@@ -158,7 +174,8 @@ def args_setup():
                           container_args=container)
     download.download_actions(subparser=subparser,
                               source_args=source,
-                              container_args=container)
+                              container_args=container,
+                              time_args=timeargs)
     tsync.tsync_actions(subparser=subparser,
                         source_args=source,
                         container_args=container,
@@ -166,12 +183,15 @@ def args_setup():
     upload.upload_actions(subparser=subparser,
                           source_args=source,
                           container_args=container,
-                          cdn_args=cdn)
+                          cdn_args=cdn,
+                          time_args=timeargs)
     command.command_actions(subparser=subparser,
                             source_args=source,
                             container_args=container,
-                            cdn_args=cdn)
-    clone.clone_actions(subparser=subparser)
+                            cdn_args=cdn,
+                            time_args=timeargs)
+    clone.clone_actions(subparser=subparser,
+                        time_args=timeargs)
     return parser
 
 

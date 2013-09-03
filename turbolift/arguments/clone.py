@@ -9,7 +9,7 @@
 # =============================================================================
 
 
-def clone_actions(subparser):
+def clone_actions(subparser, time_args):
     """Uploading Arguments.
 
     :param subparser:
@@ -18,6 +18,7 @@ def clone_actions(subparser):
     # Provides for the stream Function.
     clone = subparser.add_parser(
         'clone',
+        parents=[time_args],
         help='Clone Objects from one container to another.'
     )
     clone.set_defaults(clone=True)
@@ -47,4 +48,10 @@ def clone_actions(subparser):
                        action='store_true',
                        help=('Query the source object for headers and restore'
                              ' them on the target.'),
+                       default=False)
+    clone.add_argument('--save-newer',
+                       action='store_true',
+                       help=('Check to see if the target "last_modified" time'
+                             ' is newer than the source. If "True" upload is'
+                             ' skipped.'),
                        default=False)

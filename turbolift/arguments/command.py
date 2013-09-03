@@ -9,7 +9,8 @@
 # =============================================================================
 
 
-def command_actions(subparser, source_args, container_args, cdn_args):
+def command_actions(subparser, source_args, container_args, cdn_args,
+                    time_args):
     """Uploading Arguments.
 
     :param subparser:
@@ -21,6 +22,7 @@ def command_actions(subparser, source_args, container_args, cdn_args):
     # Provides for the list Function.
     list = subparser.add_parser(
         'list',
+        parents=[time_args],
         help='List Objects in a container.'
     )
     list.set_defaults(list=True)

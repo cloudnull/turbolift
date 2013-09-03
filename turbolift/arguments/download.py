@@ -9,7 +9,7 @@
 # =============================================================================
 
 
-def download_actions(subparser, source_args, container_args):
+def download_actions(subparser, source_args, container_args, time_args):
     """Download Actions.
 
     :param subparser:
@@ -18,7 +18,9 @@ def download_actions(subparser, source_args, container_args):
     """
 
     download = subparser.add_parser('download',
-                                    parents=[source_args, container_args],
+                                    parents=[source_args,
+                                             container_args,
+                                             time_args],
                                     help=('Downloads everything from a'
                                           ' given container creating a'
                                           ' target Directory if it does'
