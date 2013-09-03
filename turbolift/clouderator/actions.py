@@ -62,8 +62,12 @@ class cloud_actions(object):
             elif resp.status >= 300:
                 raise clds.SystemProblem('NOVA-API FAILURE -> REQUEST')
         except clds.SystemProblem as exp:
-            LOG.error(
-                'FAILURE STATUS %s FAILURE REASON %s', resp.status, resp.reason
+            utils.reporter(
+                msg=('FAILURE STATUS %s FAILURE REASON %s MESSAGE %s'
+                     % (resp.status, resp.reason, resp.msg)),
+                prt=True,
+                lvl='error',
+                log=True
             )
             rty()
 
