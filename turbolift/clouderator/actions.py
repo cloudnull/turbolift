@@ -217,16 +217,6 @@ class cloud_actions(object):
         :return list:
         """
 
-        def _append(obj):
-            """Create an object dict.
-
-            :return dict:
-            """
-            return {'name': obj.get('name'),
-                    'hash': obj.get('hash'),
-                    'bytes': obj.get('bytes'),
-                    'last_modified': obj.get('last_modified')}
-
         file_l = []
         fpath = filepath
         for _ in xrange(count / 10000 + 1):
@@ -238,13 +228,14 @@ class cloud_actions(object):
                     self.resp_exception(resp=resp, rty=rty)
 
                     for obj in utils.json_encode(read):
+                        print obj
                         if ARGS.get('time_offset') is not None:
                             # Get the last_modified data from the Object
                             lmobj=obj.get('last_modified')
                             if crds.time_delta(lmobj=lmobj) is True:
-                                file_l.append(_append(obj))
+                                file_l.append(obj)
                         else:
-                            file_l.append(_append(obj))
+                            file_l.append(obj)
 
                     if file_l:
                         lobj = file_l[-1].get('name')
@@ -554,6 +545,8 @@ class cloud_actions(object):
         fheaders = self.payload['headers']
         for retry in utils.retryloop(attempts=5, delay=2):
             # Open connection and perform operation
+            fmt, date, date_delta, now = utils.time_stamp()
+
             with mlds.operation(retry):
                 spath = urllib.quote(
                     '%s/%s/%s' % (surl.path, scontainer, obj['name'])
@@ -567,9 +560,12 @@ class cloud_actions(object):
                 conn = utils.open_connection(url=surl)
 
                 try:
+                    conn.request('HEAD', spath, headers=fheaders)
+                    resp, tread = utils.response_get(conn=conn)
+                    x_timestamp = resp.getheader('x-timestamp')
+
                     tconn.request('HEAD', tpath, headers=fheaders)
                     tresp, tread = utils.response_get(conn=tconn)
-                    print tresp.getheaders()
 
                     # If object comparison is True GET then PUT object
                     if _compare(resp=tresp, obj=obj) is True:
@@ -587,7 +583,9 @@ class cloud_actions(object):
 
                             # let the system rest for a max of 2 seconds.
                             utils.stupid_hack(max=2)
-
+                            fheaders.update(
+                                {'X-timestamp': x_timestamp}
+                            )
                             # PUT remote object
                             self._putter(conn=tconn,
                                          fpath=tfile,
