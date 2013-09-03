@@ -53,6 +53,9 @@ class delete(object):
         utils.reporter(
             msg='This operation will make 2 passes when deleting objects.'
         )
+
+        # Multipass Object Delete.
+        objects = False
         for _ in range(2):
             utils.reporter(msg='Getting file list')
             with methods.spinner():
@@ -70,7 +73,7 @@ class delete(object):
                         utils.reporter(msg='No Objects found.')
                         break
                 else:
-                    utils.reporter(msg='No Objects found.')
+                    utils.reporter(msg='Nothing found.')
                     break
 
                 # Get The rate of concurrency
@@ -79,6 +82,9 @@ class delete(object):
 
                 # Load the queue
                 obj_list = [obj['name'] for obj in objects]
+                if ARGS.get('object_name'):
+                    obj_names = ARGS.get('object_name')
+                    obj_list = [obj for obj in obj_list if obj in obj_names]
                 work_q = utils.basic_queue(obj_list)
 
             utils.reporter(msg='Performing Object Delete...')
@@ -91,11 +97,13 @@ class delete(object):
 
             utils.stupid_hack(wait=2)
 
-        if not ARGS.get('save_container') and objects is not False:
-            utils.reporter(msg='Performing Container Delete.')
-            with methods.spinner():
-                self.go.container_deleter(url=payload['url'],
-                                          container=payload['c_name'])
+        if any([ARGS.get('save_container') is None,
+                objects is not False]):
+            if not ARGS.get('object_name'):
+                utils.reporter(msg='Performing Container Delete.')
+                with methods.spinner():
+                    self.go.container_deleter(url=payload['url'],
+                                              container=payload['c_name'])
 
     def deleterator(self, work_q, payload):
         """Upload files to CloudFiles -Swift-.
