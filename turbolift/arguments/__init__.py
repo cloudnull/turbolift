@@ -15,6 +15,7 @@ from turbolift import utils
 from turbolift.arguments import archive
 from turbolift.arguments import authgroup
 from turbolift.arguments import command
+from turbolift.arguments import clone
 from turbolift.arguments import delete
 from turbolift.arguments import download
 from turbolift.arguments import headers
@@ -164,6 +165,7 @@ def args_setup():
                             source_args=source,
                             container_args=container,
                             cdn_args=cdn)
+    clone.clone_actions(subparser=subparser)
     return parser
 
 
