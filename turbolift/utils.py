@@ -9,7 +9,7 @@
 # =============================================================================
 
 
-def reporter(msg, prt=True, lvl='info', log=False):
+def reporter(msg, prt=True, lvl='info', log=False, color=False):
     """Print Messages and Log it.
 
     :param msg:
@@ -23,7 +23,13 @@ def reporter(msg, prt=True, lvl='info', log=False):
     # Print a Message
     if ARGS.get('quiet') is None:
         if prt is True or ARGS.get('verbose') is True:
-            print(msg)
+            if lvl is 'error' or color is True:
+                if ARGS.get('disable_colorized') is True:
+                    print(msg)
+                else:
+                    print(bcolors(msg=msg, color=lvl))
+            else:
+                print(msg)
 
     # Log message
     if any([ARGS.get('verbose') is True,
@@ -46,13 +52,15 @@ def bcolors(msg, color):
 
     import turbolift as clds
 
+    # Available Colors
     colors = {'debug': '\033[94m',
               'info': '\033[92m',
               'warn': '\033[93m',
               'error': '\033[91m',
               'ENDC': '\033[0m'}
+
     if color in colors:
-        return colors[color] + msg + colors['ENDC']
+        return '%s%s%s' % (colors[color], msg, colors['ENDC'])
     else:
         raise clds.SystemProblem('"%s" was not a known color.' % color)
 
