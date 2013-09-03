@@ -7,6 +7,7 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
+import datetime
 import os
 import tempfile
 import urllib
@@ -190,8 +191,11 @@ class cloud_actions(object):
         """
 
         if self._checker(conn, rpath, fpath, fheaders, retry, skip) is True:
-            LOG.debug('Uploading local file %s to remote %s', fpath, rpath)
-
+            utils.reporter(
+                msg=('SOURCE: %s => REMOTE: %s' % (fpath, rpath)),
+                lvl='debug',
+                prt=False
+            )
             with open(fpath, 'r') as f_open:
                 conn.request('PUT', rpath, body=f_open, headers=fheaders)
 
@@ -223,12 +227,13 @@ class cloud_actions(object):
                     self.resp_exception(resp=resp, rty=rty)
 
                     for obj in utils.json_encode(read):
+                        # TODO(Kevin) Add the modified time filter.
                         file_l.append(
                             {'name': obj.get('name'),
                              'hash': obj.get('hash'),
-                             'bytes': obj.get('bytes')}
+                             'bytes': obj.get('bytes'),
+                             'last_modified': obj.get('last_modified')}
                         )
-
                     lobj = file_l[-1].get('name')
                     fpath = (
                         '%s&marker=%s' % (filepath, urllib.quote(lobj))
