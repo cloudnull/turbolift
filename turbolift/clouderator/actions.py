@@ -49,7 +49,7 @@ class cloud_actions(object):
                     msg=('Not found STATUS: %s, REASON: %s, MESSAGE: %s'
                          % (resp.status, resp.reason, resp.msg)),
                     prt=False,
-                    log=True
+                    lvl='debug'
                 )
             elif resp.status == 413:
                 _di = dict(resp.getheaders())
