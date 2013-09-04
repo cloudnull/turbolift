@@ -44,8 +44,7 @@ class archive(object):
             args=ARGS
         )
 
-        if ARGS.get('debug'):
-            LOG.debug('PAYLOAD\t: "%s"', payload)
+        LOG.debug('PAYLOAD\t: "%s"', payload)
 
         # Set the actions class up
         self.go = actions.cloud_actions(payload=payload)
