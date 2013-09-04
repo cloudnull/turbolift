@@ -308,13 +308,14 @@ class cloud_actions(object):
 
         # perform Object POST request for header update.
         conn.request('POST', rpath, headers=fheaders)
-
         resp, read = utils.response_get(conn=conn, retry=retry)
         self.resp_exception(resp=resp, rty=retry)
 
         utils.reporter(
-            msg='INFO: %s %s %s' % (resp.status, resp.reason, resp.msg),
-            prt=False
+            msg=('STATUS: %s MESSAGE: %s REASON: %s'
+                 % (resp.status, resp.msg, resp.reason)),
+            prt=False,
+            lvl='debug'
         )
 
         return dict(resp.getheaders())
@@ -446,13 +447,9 @@ class cloud_actions(object):
                 if ARGS.get('object_headers') is not None:
                     obh = self.payload['headers']
                     obh.update(ARGS.get('object_headers'))
-                    conn.request('POST', rpath, headers=obh)
-                    resp, read = utils.response_get(conn=conn, retry=retry)
-                    self.resp_exception(resp=resp, rty=retry)
-                    utils.reporter(
-                        msg='STATUS: %s MESSAGE: %s' % (resp.status, resp.msg),
-                        lvl='debug',
-                        log=True
+
+                    self._header_poster(
+                        conn=conn, rpath=rpath, fheaders=obh, retry=retry
                     )
 
     def object_deleter(self, url, container, u_file):
@@ -478,7 +475,6 @@ class cloud_actions(object):
                                            rpath=rpath,
                                            fheaders=self.payload['headers'],
                                            retry=retry)
-
                 if not resp.status == 404:
                     # Perform delete.
                     self._deleter(conn=conn,
@@ -614,51 +610,50 @@ class cloud_actions(object):
             tpath = self._quoter(url=turl.path,
                                  cont=tcontainer,
                                  ufile=obj['name'])
-
-            # Open Connection
-            conn = utils.open_connection(url=surl)
-            with mlds.operation(retry, conn=conn, obj=obj):
-                # Make a connection
-                resp = self._header_getter(conn=conn,
-                                           rpath=spath,
-                                           fheaders=fheaders,
-                                           retry=retry)
-                sheaders = resp.getheaders()
-
-                # TODO(kevin) add the ability to short upload if timestamp...
-                # TODO(kevin) ... is newer on the target.
-                #x_timestamp = resp.getheader('x-timestamp')
-
+            try:
                 # make a temp file.
                 tfile = tempfile.mktemp()
 
-                # GET remote Object
-                _dl = self._downloader(conn=conn,
-                                       rpath=spath,
-                                       fheaders=fheaders,
-                                       lfile=tfile,
-                                       source=None,
-                                       retry=retry,
-                                       skip=True)
-                if _dl is False:
-                    try:
-                        os.remove(tfile)
-                    except OSError:
-                        pass
-                    finally:
-                        retry()
+                # Open Connection
+                conn = utils.open_connection(url=surl)
+                with mlds.operation(retry, conn=conn, obj=obj):
+                    # Make a connection
+                    resp = self._header_getter(conn=conn,
+                                               rpath=spath,
+                                               fheaders=fheaders,
+                                               retry=retry)
+                    sheaders = dict(resp.getheaders())
 
-            conn = utils.open_connection(url=turl)
-            with mlds.operation(retry, conn=conn, obj=obj):
-                resp = self._header_getter(conn=conn,
-                                           rpath=tpath,
+                    # TODO(kevin) add the ability to short upload if timestamp
+                    # TODO(kevin) ... is newer on the target.
+                    #x_timestamp = resp.getheader('x-timestamp')
+
+                    # GET remote Object
+                    _dl = self._downloader(conn=conn,
+                                           rpath=spath,
                                            fheaders=fheaders,
-                                           retry=retry)
+                                           lfile=tfile,
+                                           source=None,
+                                           retry=retry,
+                                           skip=True)
+                    if _dl is False:
+                        try:
+                            os.remove(tfile)
+                        except OSError:
+                            pass
+                        finally:
+                            retry()
 
-                # If object comparison is True GET then PUT object
-                if _compare(resp=resp, obj=obj) is True:
-                    self.resp_exception(resp=resp, rty=retry)
-                    try:
+                conn = utils.open_connection(url=turl)
+                with mlds.operation(retry, conn=conn, obj=obj):
+                    resp = self._header_getter(conn=conn,
+                                               rpath=tpath,
+                                               fheaders=fheaders,
+                                               retry=retry)
+
+                    # If object comparison is True GET then PUT object
+                    if _compare(resp=resp, obj=obj) is True:
+                        self.resp_exception(resp=resp, rty=retry)
                         # PUT remote object
                         self._putter(conn=conn,
                                      fpath=tfile,
@@ -668,25 +663,30 @@ class cloud_actions(object):
                                      skip=True)
                         # let the system rest for 3 seconds.
                         utils.stupid_hack(wait=3)
-                    finally:
-                        try:
-                            os.remove(tfile)
-                        except OSError:
-                            pass
 
-                # With the retrieved headers POST new headers on the obj.
-                if ARGS.get('clone_headers') is True:
-                    theaders = self._header_getter(conn=conn,
-                                                   rpath=spath,
+                    # With the retrieved headers POST new headers on the obj.
+                    if ARGS.get('clone_headers') is True:
+                        resp = self._header_getter(conn=conn,
+                                                   rpath=tpath,
                                                    fheaders=fheaders,
                                                    retry=retry)
-                    for key in sheaders.keys():
-                        if key not in theaders:
-                            fheaders.update({key: sheaders[key]})
-                    fheaders.update(
-                        {'content-type': sheaders.get('content-type')}
-                    )
-                    self._header_poster(conn=conn,
-                                        rpath=tpath,
-                                        fheaders=fheaders,
-                                        retry=retry)
+                        theaders = dict(resp.getheaders())
+                        for key in sheaders.keys():
+                            if key not in theaders:
+                                fheaders.update({key: sheaders[key]})
+                        # Force the SOURCE content Type on the Target.
+                        fheaders.update(
+                            {'content-type': sheaders.get('content-type')}
+                        )
+                        self._header_poster(
+                            conn=conn,
+                            rpath=tpath,
+                            fheaders=fheaders,
+                            retry=retry
+                        )
+            finally:
+                # Ensure that our temp file is removed.
+                try:
+                    os.remove(tfile)
+                except OSError:
+                    pass
