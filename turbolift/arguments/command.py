@@ -37,3 +37,7 @@ def command_actions(subparser, source_args, container_args, cdn_args,
                             action='store_true',
                             help='Target Container.',
                             default=None)
+    list.add_argument('--filter',
+                      metavar='[NAME]',
+                      help='Filter returned list by name.',
+                      default=None)
