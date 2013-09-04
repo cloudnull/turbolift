@@ -27,7 +27,8 @@ def run_turbolift():
         sys.exit('Give me something to do and I will do it')
     else:
         args = arguments.get_args()
-        log = logger.load_in(log_level=args.get('log_level', 'info'))
+        log = logger.load_in(log_level=args.get('log_level', 'info'),
+                             log_location=args.get('log_location', '/var/log'))
         log.debug('set arguments %s', args)
         worker.load_constants(log_method=log, args=args)
         try:
