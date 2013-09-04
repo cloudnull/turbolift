@@ -8,12 +8,10 @@
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
 import os
-import sys
 
-import turbolift as clds
+from turbolift.clouderator import actions
 from turbolift import methods
 from turbolift import utils
-from turbolift.clouderator import actions
 from turbolift.worker import ARGS
 from turbolift.worker import LOG
 
@@ -37,9 +35,6 @@ class archive(object):
         f_indexed = methods.get_local_files()
         num_files = len(f_indexed)
         utils.reporter(msg='MESSAGE: "%s" Files have been found.' % num_files)
-
-        # Get The rate of concurrency
-        concurrency = utils.set_concurrency(args=ARGS, file_count=num_files)
 
         # Package up the Payload
         payload = utils.prep_payload(

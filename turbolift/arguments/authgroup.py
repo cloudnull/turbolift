@@ -65,4 +65,3 @@ def auth_group(parser):
                            metavar='[VERSION_NUM]',
                            default=os.getenv('OS_VERSION', 'v2.0'),
                            help='env[OS_VERSION]')
-

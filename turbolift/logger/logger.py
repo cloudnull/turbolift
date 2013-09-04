@@ -13,6 +13,7 @@ import os
 
 import turbolift as clds
 from turbolift import info
+from turbolift.worker import ARGS
 
 
 class Logging(object):
@@ -71,9 +72,8 @@ def return_logfile(filename):
     if os.path.isfile(filename):
         return filename
     else:
-        user = os.getuid()
         logname = ('%s' % filename)
-        logfile = os.path.join(os.getenv('HOME'), logname)
+        logfile = os.path.join(ARGS.get('log_location', '/var/log'), logname)
         return logfile
 
 

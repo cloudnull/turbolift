@@ -7,16 +7,12 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
-import os
-import sys
-
 import turbolift as clds
-from turbolift import utils
-from turbolift import methods
 from turbolift.authentication import auth_utils
 from turbolift.clouderator import actions
+from turbolift import methods
+from turbolift import utils
 from turbolift.worker import ARGS
-from turbolift.worker import LOG
 
 
 class clone(object):

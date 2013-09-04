@@ -7,19 +7,17 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
-from contextlib import contextmanager
+import contextlib
 import datetime
-import operator
 import os
-import sys
 import tarfile
 import traceback
 
-from turbolift import info
 import turbolift as clds
+from turbolift import info
 from turbolift import utils
-from turbolift.worker import LOG
 from turbolift.worker import ARGS
+from turbolift.worker import LOG
 
 
 def get_local_files():
@@ -29,10 +27,10 @@ def get_local_files():
     """
 
     def not_list(item):
-        """
+        """Exclude items.
 
         :param item:
-        :return:
+        :return True|False:
         """
         if all([not os.path.islink(item),
                 not os.path.ismount(item)]):
@@ -77,10 +75,13 @@ def get_local_files():
         return f_index
 
 
-@contextmanager
+@contextlib.contextmanager
 def spinner(work_q=None):
-    from turbolift.worker import ARGS
-    from turbolift import utils
+    """Show a fancy spinner while we have work running.
+
+    :param work_q:
+    :return:
+    """
 
     # Start Spinning
     if not ARGS.get('verbose') or ARGS.get('quiet'):
@@ -95,7 +96,7 @@ def spinner(work_q=None):
         itd.terminate()
 
 
-@contextmanager
+@contextlib.contextmanager
 def operation(retry, conn=None, obj=None):
     try:
         yield retry

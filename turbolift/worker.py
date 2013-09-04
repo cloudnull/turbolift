@@ -45,10 +45,9 @@ def start_work():
     import pkgutil
 
     import turbolift as clds
+    from turbolift.authentication import authentication as auth
     from turbolift import methods as met
     from turbolift import utils
-    from turbolift.authentication import authentication as auth
-
 
     try:
         for mod, name, package in pkgutil.iter_modules(met.__path__):

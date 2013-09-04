@@ -54,6 +54,11 @@ def optional_args(parser):
     optionals.add_argument('--disable-colorized',
                            action='store_true',
                            help='Make %(prog)s less pretty.')
+    optionals.add_argument('--log-location',
+                           type=str,
+                           default=os.getenv('TURBO_LOGS', os.getenv('HOME')),
+                           help=('Change the log location, Default is Home.'
+                                 'The DEFAULT is the users HOME Dir.'))
     optionals.add_argument('--quiet',
                            action='store_true',
                            help='Make %(prog)s Shut the hell up',

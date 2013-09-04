@@ -8,9 +8,9 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
+import os
 import setuptools
 import sys
-import os
 
 from turbolift import info
 

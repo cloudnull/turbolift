@@ -10,18 +10,18 @@
 import argparse
 import sys
 
-from turbolift import info
-from turbolift import utils
 from turbolift.arguments import archive
 from turbolift.arguments import authgroup
-from turbolift.arguments import command
 from turbolift.arguments import clone
+from turbolift.arguments import command
 from turbolift.arguments import delete
 from turbolift.arguments import download
 from turbolift.arguments import headers
 from turbolift.arguments import optionals
 from turbolift.arguments import tsync
 from turbolift.arguments import upload
+from turbolift import info
+from turbolift import utils
 
 
 def setup_parser():

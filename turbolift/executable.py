@@ -8,8 +8,8 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
-import sys
 import multiprocessing
+import sys
 
 from turbolift import arguments
 from turbolift.logger import logger

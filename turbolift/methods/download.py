@@ -8,12 +8,10 @@
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
 import os
-import sys
 
-import turbolift as clds
-from turbolift import utils
-from turbolift import methods
 from turbolift.clouderator import actions
+from turbolift import methods
+from turbolift import utils
 from turbolift.worker import ARGS
 from turbolift.worker import LOG
 
@@ -85,7 +83,7 @@ class download(object):
                 )[0].rstrip(os.sep)
                 unique_dirs.append(dir_path)
 
-            for udir in  set(unique_dirs):
+            for udir in set(unique_dirs):
                 utils.mkdir_p(path=udir)
 
         utils.reporter(msg='Performing Object Download...')

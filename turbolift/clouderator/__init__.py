@@ -7,13 +7,11 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
-import os
 import hashlib
+import os
 
-from turbolift.worker import ARGS
-from turbolift.worker import LOG
 from turbolift import utils
-import turbolift as clds
+from turbolift.worker import ARGS
 
 
 def md5_checker(resp, local_f):

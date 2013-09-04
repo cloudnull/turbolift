@@ -17,8 +17,8 @@ def reporter(msg, prt=True, lvl='info', log=False, color=False):
     :param lvl:
     """
 
-    from turbolift.worker import LOG
     from turbolift.worker import ARGS
+    from turbolift.worker import LOG
 
     # Print a Message
     if ARGS.get('quiet') is None:
@@ -206,11 +206,11 @@ def get_from_q(queue):
     :return item|None:
     """
 
-    from multiprocessing.queues import Empty
+    import multiprocessing
 
     try:
         return queue.get(timeout=2)
-    except Empty:
+    except multiprocessing.queues.Empty:
         return None
 
 
@@ -287,7 +287,6 @@ def worker_proc(job_action, num_jobs, concurrency, queue, t_args=None):
 
     import multiprocessing
 
-    sem = multiprocessing.Semaphore(concurrency)
     jobs = [multiprocessing.Process(target=job_action,
                                     args=(queue, t_args))
             for _ in xrange(concurrency)]
@@ -402,11 +401,9 @@ def response_get(conn, retry, resp_only=False):
     """
 
     import httplib
-    import time
     import traceback
 
     import turbolift as clds
-    from turbolift.worker import ARGS
 
     try:
         if resp_only is True:

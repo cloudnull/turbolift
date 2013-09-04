@@ -4,8 +4,8 @@ import json
 import traceback
 
 import turbolift as clds
-from turbolift import utils
 from turbolift.authentication import auth_utils
+from turbolift import utils
 from turbolift.worker import LOG
 
 

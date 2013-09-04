@@ -5,9 +5,9 @@ import traceback
 
 import turbolift as clds
 from turbolift import info
-from turbolift.worker import LOG
-from turbolift.worker import ARGS
 from turbolift import utils
+from turbolift.worker import ARGS
+from turbolift.worker import LOG
 
 
 def parse_reqtype():
@@ -36,7 +36,7 @@ def parse_reqtype():
 
 
 def get_surl(region, cf_list, lookup):
-    """ Lookup a service URL.
+    """Lookup a service URL.
 
     :param region:
     :param cf_list:
@@ -52,7 +52,6 @@ def get_surl(region, cf_list, lookup):
         raise clds.SystemProblem(
             'Region "%s" was not found in your Service Catalog.' % region
         )
-
 
 
 def parse_auth_response(auth_response):

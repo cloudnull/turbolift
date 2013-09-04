@@ -27,6 +27,7 @@ The Application can except Environment Variables for simpler authentication if y
     #export OS_AUTH_URL=AUTH_URL_SET_IF_NEEDED
 
     # NOT REQUIRED OPTIONS
+    #export TURBO_LOGS=LOG_LOCATION
     #export TURBO_ERROR_RETRY=INT
     #export TURBO_CONCURRENCY=INT
     #export TURBO_QUIET=True|False

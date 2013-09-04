@@ -8,6 +8,7 @@
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
 
+
 class NoLogLevelSet(Exception):
     """Not Log Level Set Exception."""
 

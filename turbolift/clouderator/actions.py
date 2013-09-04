@@ -7,18 +7,15 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
-import datetime
 import os
 import tempfile
 import urllib
 
 import turbolift as clds
-from turbolift import info
 import turbolift.clouderator as crds
 import turbolift.methods as mlds
 from turbolift import utils
 from turbolift.worker import ARGS
-from turbolift.worker import LOG
 
 
 class cloud_actions(object):
@@ -262,7 +259,7 @@ class cloud_actions(object):
                     for obj in utils.json_encode(read):
                         if ARGS.get('time_offset') is not None:
                             # Get the last_modified data from the Object
-                            lmobj=obj.get('last_modified')
+                            lmobj = obj.get('last_modified')
                             if crds.time_delta(lmobj=lmobj) is True:
                                 file_l.append(obj)
                         else:
@@ -350,7 +347,6 @@ class cloud_actions(object):
                 '%s' % url
             )
 
-
     def container_deleter(self, url, container):
         """Delete all objects in a container.
 
@@ -381,7 +377,6 @@ class cloud_actions(object):
         :return None | list:
         """
 
-        last_obj = None
         for retry in utils.retryloop(attempts=ARGS.get('error_retry')):
             # Open Connection
             conn = utils.open_connection(url=url)
@@ -448,11 +443,17 @@ class cloud_actions(object):
                              retry=retry)
 
                 # Put headers on the object if custom headers
-                if ARGS.get('object_headers'):
-                    conn.request('POST', remote_path, headers=f_headers)
+                if ARGS.get('object_headers') is not None:
+                    obh = self.payload['headers']
+                    obh.update(ARGS.get('object_headers'))
+                    conn.request('POST', rpath, headers=obh)
                     resp, read = utils.response_get(conn=conn, retry=retry)
-                    LOG.debug(read)
                     self.resp_exception(resp=resp, rty=retry)
+                    utils.reporter(
+                        msg='STATUS: %s MESSAGE: %s' % (resp.status, resp.msg),
+                        lvl='debug',
+                        log=True
+                    )
 
     def object_deleter(self, url, container, u_file):
         """Deletes an objects in a container.
@@ -522,7 +523,6 @@ class cloud_actions(object):
         :return None | list:
         """
 
-        last_obj = None
         for retry in utils.retryloop(attempts=ARGS.get('error_retry')):
             # Open Connection
             conn = utils.open_connection(url=url)
@@ -624,7 +624,10 @@ class cloud_actions(object):
                                            fheaders=fheaders,
                                            retry=retry)
                 sheaders = resp.getheaders()
-                x_timestamp = resp.getheader('x-timestamp')
+
+                # TODO(kevin) add the ability to short upload if timestamp...
+                # TODO(kevin) ... is newer on the target.
+                #x_timestamp = resp.getheader('x-timestamp')
 
                 # make a temp file.
                 tfile = tempfile.mktemp()
