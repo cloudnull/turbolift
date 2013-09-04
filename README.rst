@@ -1,1 +1,1 @@
-docs/1-general.rst
+1-general.rst

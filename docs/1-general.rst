@@ -89,7 +89,7 @@ The application has been tested on :
   * CentOS[RHEL] 6
 
 
-.. _INSTALL_EMBED.rst: INSTALL_EMBED.rst
+.. _INSTALL_EMBED.rst: docs/INSTALL_EMBED.rst
 .. _command_line_args.rst: docs/command_line_args.rst
 .. _environment_vars.rst: docs/environment_vars.rst
 .. _turboliftrc_example: turboliftrc_example
