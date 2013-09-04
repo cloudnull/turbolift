@@ -23,11 +23,18 @@ elif sys.version_info < (2, 7, 0):
     REQUIRES.append('argparse')
 
 first = ['1-general.rst']
-with open('README', 'ab+') as r_file:
-    for doc in first + sorted(os.listdir(os.path.join(os.getcwd(), 'docs'))):
-        if doc[0].isdigit():
-            with open(doc, 'rb') as d_file:
-                r_file.write(d_file)
+path = os.path.join(os.getcwd(), 'docs')
+for doc in first + sorted(os.listdir(path)):
+    if doc[0].isdigit():
+        if doc is '1-general.rst':
+            fpath = doc
+        else:
+            os.path.join(path, doc)
+
+        with open(fpath, 'rb') as docr:
+            objr = docr.read()
+        with open('README', 'ab') as readme:
+            readme.write(objr)
 
 with open('README', 'rb') as r_file:
     LDINFO = r_file
