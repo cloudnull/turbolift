@@ -259,7 +259,6 @@ class cloud_actions(object):
                     conn.request('GET', fpath, headers=fheaders)
                     resp, read = utils.response_get(conn=conn, retry=retry)
                     self.resp_exception(resp=resp, rty=retry)
-
                     for obj in utils.json_encode(read):
                         if ARGS.get('time_offset') is not None:
                             # Get the last_modified data from the Object
@@ -271,10 +270,8 @@ class cloud_actions(object):
 
                     if file_l:
                         lobj = file_l[-1].get('name')
-                        fpath = urllib.quote(
-                            '%s&marker=%s' % (utils.ustr(filepath),
-                                              utils.ustr(lobj))
-                        )
+                        fpath = '%s&marker=%s' % (utils.ustr(filepath),
+                                                  utils.ustr(lobj))
         final_list = utils.unique_list_dicts(dlist=file_l, key='name')
         utils.reporter(
             msg='INFO: %s object(s) found' % len(final_list),
