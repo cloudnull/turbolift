@@ -53,7 +53,8 @@ def auth_group(parser):
                               default=os.environ.get('OS_REGION_NAME', None))
     a_regiontype.add_argument('--os-rax-auth',
                               choices=info.__rax_regions__,
-                              help='Rackspace Cloud Authentication',
+                              help=('Rackspace Cloud Authentication,'
+                                    ' env[OS_RAX_AUTH]'),
                               default=os.getenv('OS_RAX_AUTH', None))
 
     authgroup.add_argument('--os-auth-url',
@@ -64,7 +65,4 @@ def auth_group(parser):
                            metavar='[VERSION_NUM]',
                            default=os.getenv('OS_VERSION', 'v2.0'),
                            help='env[OS_VERSION]')
-    authgroup.add_argument('--os-swift-version',
-                           metavar='[OS_SWIFT_VERSION]',
-                           default=os.getenv('OS_SWIFT_VERSION', 'v1'),
-                           help='env[OS_VERSION]')
+

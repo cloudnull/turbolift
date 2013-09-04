@@ -7,6 +7,7 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
+import os
 
 
 def optional_args(parser):
@@ -23,11 +24,12 @@ def optional_args(parser):
     optionals.add_argument('-I',
                            '--internal',
                            action='store_true',
-                           help='Use Service Network')
+                           help='Use Service Network',
+                           default=os.getenv('TURBO_INTERNAL', None))
     optionals.add_argument('--error-retry',
                            metavar='[ATTEMPTS]',
                            type=int,
-                           default=5,
+                           default=os.getenv('TURBO_ERROR_RETRY', 5),
                            help=('This option sets the number of attempts'
                                  ' %(prog)s will attempt an operation'
                                  ' before quiting. The default is 5. This'
@@ -36,8 +38,8 @@ def optional_args(parser):
     optionals.add_argument('--cc',
                            metavar='[CONCURRENCY]',
                            type=int,
-                           default=50,
-                           help='Upload Concurrency')
+                           help='Upload Concurrency',
+                           default=os.getenv('TURBO_CONCURRENCY', 50))
     optionals.add_argument('--service-type',
                            type=str,
                            default='cloudFiles',
@@ -51,13 +53,16 @@ def optional_args(parser):
                                  ' credentials.'))
     optionals.add_argument('--disable-colorized',
                            action='store_true',
-                           help='Make %(prog)s Shut the hell up')
+                           help='Make %(prog)s less pretty.')
     optionals.add_argument('--quiet',
                            action='store_true',
-                           help='Make %(prog)s Shut the hell up')
+                           help='Make %(prog)s Shut the hell up',
+                           default=os.getenv('TURBO_QUIET', None))
     optionals.add_argument('--verbose',
                            action='store_true',
-                           help='Be verbose While Uploading')
+                           help='Be verbose While Uploading',
+                           default=os.getenv('TURBO_VERBOSE', None))
     optionals.add_argument('--debug',
                            action='store_true',
-                           help='Turn up verbosity to over 9000')
+                           help='Turn up verbosity to over 9000',
+                           default=os.getenv('TURBO_DEBUG', None))
