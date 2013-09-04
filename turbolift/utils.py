@@ -446,6 +446,18 @@ def response_get(conn, retry, resp_only=False):
         return resp, read
 
 
+def ustr(obj):
+    """If an Object is unicode convert it.
+
+    :param object:
+    :return:
+    """
+    if obj is not None and isinstance(obj, unicode):
+        return str(obj.encode('utf8'))
+    else:
+        return obj
+
+
 def retryloop(attempts, timeout=None, delay=None, backoff=1):
     """Enter the amount of retries you want to perform.
 

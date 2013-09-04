@@ -113,8 +113,9 @@ class cloud_actions(object):
         rty_count = ARGS.get('error_retry')
         for retry in utils.retryloop(attempts=rty_count, delay=5):
             conn = utils.open_connection(url=url)
-            rpath = urllib.quote('%s/%s' % (url.path, container))
-            path = urllib.quote(rpath)
+
+            rpath = self._quoter(url=url.path,
+                                 cont=container)
 
             # Open connection and perform operation
             with mlds.operation(retry, conn):
@@ -270,8 +271,9 @@ class cloud_actions(object):
 
                     if file_l:
                         lobj = file_l[-1].get('name')
-                        fpath = (
-                            '%s&marker=%s' % (filepath, urllib.quote(lobj))
+                        fpath = urllib.quote(
+                            '%s&marker=%s' % (utils.ustr(filepath),
+                                              utils.ustr(lobj))
                         )
         final_list = utils.unique_list_dicts(dlist=file_l, key='name')
         utils.reporter(
@@ -323,6 +325,35 @@ class cloud_actions(object):
 
         return dict(resp.getheaders())
 
+    def _quoter(self, url, cont=None, ufile=None):
+        """Return a Quoted URL.
+
+        :param url:
+        :param cont:
+        :param ufile:
+        :return:
+        """
+
+        url = utils.ustr(obj=url)
+        if cont is not None:
+            cont = utils.ustr(obj=cont)
+        if ufile is not None:
+            ufile = utils.ustr(obj=ufile)
+
+        if ufile is not None and cont is not None:
+            return urllib.quote(
+                '%s/%s/%s' % (url, cont, ufile)
+            )
+        elif cont is not None:
+            return urllib.quote(
+                '%s/%s' % (url, cont)
+            )
+        else:
+            return urllib.quote(
+                '%s' % url
+            )
+
+
     def container_deleter(self, url, container):
         """Delete all objects in a container.
 
@@ -336,9 +367,8 @@ class cloud_actions(object):
 
             # Open connection and perform operation
             with mlds.operation(retry, conn):
-                rpath = urllib.quote(
-                    '%s/%s' % (url.path, container)
-                )
+                rpath = self._quoter(url=url.path,
+                                     cont=container)
                 # Perform delete.
                 self._deleter(conn=conn,
                               rpath=rpath,
@@ -362,7 +392,7 @@ class cloud_actions(object):
             # Open connection and perform operation
             with mlds.operation(retry, conn):
                 # Determine how many files are in the container
-                fpath = urllib.quote('%s' % url.path)
+                fpath = self._quoter(url=url.path)
 
                 # Make a connection
                 resp = self._header_getter(conn=conn,
@@ -410,9 +440,9 @@ class cloud_actions(object):
             with mlds.operation(retry, conn):
                 # Get the path ready for action
                 sfile = utils.get_sfile(ufile=u_file, source=source)
-                rpath = urllib.quote(
-                    '%s/%s/%s' % (url.path, container, sfile)
-                )
+                rpath = self._quoter(url=url.path,
+                                     cont=container,
+                                     ufile=sfile)
                 # Perform Upload.
                 self._putter(conn=conn,
                              fpath=u_file,
@@ -441,9 +471,9 @@ class cloud_actions(object):
 
             # Open connection and perform operation
             with mlds.operation(retry, conn):
-                rpath = urllib.quote(
-                    '%s/%s/%s' % (url.path, container, u_file)
-                )
+                rpath = self._quoter(url=url.path,
+                                     cont=container,
+                                     ufile=u_file)
 
                 # Make a connection
                 resp = self._header_getter(conn=conn,
@@ -470,11 +500,11 @@ class cloud_actions(object):
             # Open Connection
             conn = utils.open_connection(url=url)
 
-            # Open connection and perform operation
+            # Perform operation
             with mlds.operation(retry, conn):
-                rpath = urllib.quote(
-                    '%s/%s/%s' % (url.path, container, u_file)
-                )
+                rpath = self._quoter(url=url.path,
+                                     cont=container,
+                                     ufile=u_file)
                 # Perform Download.
                 _dl = self._downloader(conn=conn,
                                        rpath=rpath,
@@ -503,10 +533,8 @@ class cloud_actions(object):
             # Open connection and perform operation
             with mlds.operation(retry, conn):
                 # Determine how many files are in the container
-                fpath = urllib.quote(
-                    '%s/%s' % (url.path, container)
-                )
-
+                fpath = self._quoter(url=url.path,
+                                     cont=container)
                 # Make a connection
                 resp = self._header_getter(conn=conn,
                                            rpath=fpath,
@@ -583,13 +611,12 @@ class cloud_actions(object):
                                      delay=5):
             # Open connection and perform operation
             fmt, date, date_delta, now = utils.time_stamp()
-
-            spath = urllib.quote(
-                '%s/%s/%s' % (surl.path, scontainer, obj['name'])
-            )
-            tpath = urllib.quote(
-                '%s/%s/%s' % (turl.path, tcontainer, obj['name'])
-            )
+            spath = self._quoter(url=surl.path,
+                                 cont=scontainer,
+                                 ufile=obj['name'])
+            tpath = self._quoter(url=turl.path,
+                                 cont=tcontainer,
+                                 ufile=obj['name'])
 
             # Open Connection
             conn = utils.open_connection(url=surl)
