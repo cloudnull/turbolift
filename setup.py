@@ -10,6 +10,8 @@
 # =============================================================================
 import setuptools
 import sys
+import os
+
 from turbolift import info
 
 REQUIRES = []
@@ -20,8 +22,14 @@ if sys.version_info < (2, 6, 0):
 elif sys.version_info < (2, 7, 0):
     REQUIRES.append('argparse')
 
-with open('README') as r_file:
-    LDINFO = r_file.read()
+with open('README', 'ab+') as r_file:
+    for doc in sorted(os.listdir(os.path.join(os.getcwd(), 'docs'))):
+        if doc[0].isdigit():
+            with open(doc, 'rb') as d_file:
+                r_file.write(d_file)
+
+with open('README', 'rb') as r_file
+    LDINFO = r_file
 
 setuptools.setup(
     name=info.__appname__,
