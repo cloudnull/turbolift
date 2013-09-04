@@ -89,7 +89,7 @@ The application has been tested on :
   * CentOS[RHEL] 6
 
 
-.. _INSTALL_EMBED.rst: https://github.com/cloudnull/turbolift/docs/INSTALL_EMBED.rst
-.. _command_line_args.rst: https://github.com/cloudnull/turbolift/docs/command_line_args.rst
-.. _environment_vars.rst: https://github.com/cloudnull/turbolift/docs/environment_vars.rst
-.. _turboliftrc_example: https://github.com/cloudnull/turbolift/turboliftrc_example
+.. _INSTALL_EMBED.rst: INSTALL_EMBED.rst
+.. _command_line_args.rst: docs/command_line_args.rst
+.. _environment_vars.rst: docs/environment_vars.rst
+.. _turboliftrc_example: turboliftrc_example
