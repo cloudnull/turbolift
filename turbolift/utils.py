@@ -397,34 +397,53 @@ def open_connection(url):
         return conn
 
 
-def response_get(conn):
+def response_get(conn, retry, resp_only=False):
     """Get the response information and return it.
 
     :param conn:
-    :param rty:
+    :param retry:
     :param ret_read:
     :param mcr:
     """
 
     import httplib
     import time
+    import traceback
 
     import turbolift as clds
     from turbolift.worker import ARGS
 
-    for retry in retryloop(attempts=ARGS.get('error_retry'),
-                           timeout=960,
-                           delay=1):
-        try:
-            time.sleep(.2)
-            resp = conn.getresponse()
-            read = resp.read()
-        except httplib.BadStatusLine as exp:
-            retry()
-        except httplib.ResponseNotReady:
-            retry()
+    try:
+        if resp_only is True:
+            return conn.getresponse()
         else:
-            return resp, read
+            resp = conn.getresponse()
+            if resp is None:
+                raise clds.DirectoryFailure('Response Was NONE.')
+            else:
+                read = resp.read()
+    except httplib.BadStatusLine as exp:
+        reporter(msg=('BAD STATUS-LINE ON METHOD MESSAGE %s -'
+                      ' INFO: conn %s retry %s'
+                      % (exp, conn, retry)),
+                 lvl='error',
+                 prt=True)
+        retry()
+    except httplib.ResponseNotReady as exp:
+        reporter(msg=('RESPONSE NOT READY MESSAGE %s -'
+                      ' INFO: conn %s retry %s'
+                      % (exp, conn, retry)),
+                 lvl='error',
+                 prt=True)
+        retry()
+    except Exception as exp:
+        reporter(msg=('Failure, System will retry. DATA: %s %s %s\nTB:%s'
+                      % (exp, conn, retry, traceback.format_exc())),
+                 lvl='error',
+                 prt=True)
+        retry()
+    else:
+        return resp, read
 
 
 def retryloop(attempts, timeout=None, delay=None, backoff=1):

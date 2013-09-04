@@ -38,7 +38,8 @@ class cloud_actions(object):
             if resp.status == 401:
                 utils.reporter(
                     msg='MESSAGE: Forced Re-authentication is happening.',
-                    lvl='error'
+                    lvl='error',
+                    log=True
                 )
                 utils.stupid_hack()
                 self.payload['headers']['X-Auth-Token'] = utils.get_new_token()
@@ -47,24 +48,28 @@ class cloud_actions(object):
                 utils.reporter(
                     msg=('Not found STATUS: %s, REASON: %s, MESSAGE: %s'
                          % (resp.status, resp.reason, resp.msg)),
-                    prt=False
+                    prt=False,
+                    log=True
                 )
             elif resp.status == 413:
                 _di = dict(resp.getheaders())
                 utils.stupid_hack(wait=_di.get('retry_after', 10))
-                rty()
                 raise clds.SystemProblem(
                     'The System encountered an API limitation and will'
-                    ' continue in "%s" Seconds' % _di.get('retry_after', 5)
+                    ' continue in "%s" Seconds' % _di.get('retry_after')
                 )
             elif resp.status == 502:
                 raise clds.SystemProblem('Failure making Connection')
+            elif resp.status == 503:
+                utils.stupid_hack(wait=10)
+                raise clds.SystemProblem('503')
             elif resp.status >= 300:
                 raise clds.SystemProblem('NOVA-API FAILURE -> REQUEST')
         except clds.SystemProblem as exp:
             utils.reporter(
-                msg=('FAILURE STATUS %s FAILURE REASON %s MESSAGE %s'
-                     % (resp.status, resp.reason, resp.msg)),
+                msg=('FAIL-MESSAGE %s FAILURE STATUS %s FAILURE REASON %s '
+                     'TYPE %s MESSAGE %s' % (exp, resp.status, resp.reason,
+                                             resp._method, resp.msg)),
                 prt=True,
                 lvl='error',
                 log=True
@@ -85,9 +90,10 @@ class cloud_actions(object):
         if skip is True:
             return True
         elif ARGS.get('sync'):
-            conn.request('HEAD', rpath, headers=fheaders)
-            resp, read = utils.response_get(conn=conn)
-            self.resp_exception(resp=resp, rty=retry)
+            resp = self._header_getter(conn=conn,
+                                       rpath=rpath,
+                                       fheaders=fheaders,
+                                       retry=retry)
             if resp.status == 404:
                 return True
             elif crds.md5_checker(resp=resp, local_f=lpath) is True:
@@ -112,16 +118,18 @@ class cloud_actions(object):
 
             # Open connection and perform operation
             with mlds.operation(retry, conn):
-                conn.request('HEAD', rpath, headers=self.payload['headers'])
-                resp, read = utils.response_get(conn=conn)
-                self.resp_exception(resp=resp, rty=retry)
+
+                resp = self._header_getter(conn=conn,
+                                           rpath=rpath,
+                                           fheaders=self.payload['headers'],
+                                           retry=retry)
 
                 # Check that the status was a good one
                 if resp.status == 404:
                     utils.reporter(msg='Creating Container ==> %s' % container)
 
                     conn.request('PUT', rpath, headers=self.payload['headers'])
-                    resp, read = utils.response_get(conn=conn)
+                    resp, read = utils.response_get(conn=conn, retry=retry)
                     self.resp_exception(resp=resp, rty=retry)
 
                     utils.reporter(msg='Container "%s" Created' % container)
@@ -148,20 +156,28 @@ class cloud_actions(object):
             local_f = os.path.join(source, lfile)
 
         if self._checker(conn, rpath, local_f, fheaders, retry, skip) is True:
-            LOG.debug('Downloading remote %s to local file %s', lfile, rpath)
+            LOG.debug('Downloading remote %s to local file %s', rpath, lfile)
 
             # perform Object Download
             conn.request('GET', rpath, headers=fheaders)
-            resp, read = utils.response_get(conn=conn)
-            self.resp_exception(resp=resp, rty=retry)
-
             # Open our source file and write it
             with open(local_f, 'wb') as f_name:
-                f_name.write(read)
+                resp = utils.response_get(conn=conn,
+                                          retry=retry,
+                                          resp_only=True)
+                if resp is None:
+                    raise clds.DirectoryFailure('API Response Was NONE.')
+                else:
+                    self.resp_exception(resp=resp, rty=retry)
+                f_name.write(resp.read())
+
+
 
             utils.reporter(
-                msg='INFO: %s %s %s' % (resp.status, resp.reason, resp.msg),
-                prt=False
+                msg=('OBJECT %s MESSAGE %s %s %s'
+                     % (rpath, resp.status, resp.reason, resp.msg)),
+                prt=False,
+                lvl='debug'
             )
 
     def _deleter(self, conn, rpath, fheaders, retry):
@@ -176,12 +192,14 @@ class cloud_actions(object):
         # perform Object Delete
         conn.request('DELETE', rpath, headers=fheaders)
 
-        resp, read = utils.response_get(conn=conn)
+        resp, read = utils.response_get(conn=conn, retry=retry)
         self.resp_exception(resp=resp, rty=retry)
 
         utils.reporter(
-            msg='INFO: %s %s %s' % (resp.status, resp.reason, resp.msg),
-            prt=False
+            msg=('OBJECT %s MESSAGE %s %s %s'
+                 % (rpath, resp.status, resp.reason, resp.msg)),
+            prt=False,
+            lvl='debug'
         )
 
     def _putter(self, conn, fpath, rpath, fheaders, retry, skip=False):
@@ -196,19 +214,20 @@ class cloud_actions(object):
 
         if self._checker(conn, rpath, fpath, fheaders, retry, skip) is True:
             utils.reporter(
-                msg=('SOURCE: %s => REMOTE: %s' % (fpath, rpath)),
-                lvl='debug',
-                prt=False
+                msg='OBJECT ORIGIN %s RPATH %s' % (fpath, rpath),
+                prt=False,
+                lvl='debug'
             )
-            with open(fpath, 'r') as f_open:
+            with open(fpath, 'rb') as f_open:
                 conn.request('PUT', rpath, body=f_open, headers=fheaders)
-
-            resp, read = utils.response_get(conn=conn)
+            resp, read = utils.response_get(conn=conn, retry=retry)
             self.resp_exception(resp=resp, rty=retry)
 
             utils.reporter(
-                msg='INFO: %s %s %s' % (resp.status, resp.reason, resp.msg),
-                prt=False
+                msg=('MESSAGE %s %s %s'
+                     % (resp.status, resp.reason, resp.msg)),
+                prt=False,
+                lvl='debug'
             )
 
     def _list_getter(self, conn, count, filepath, fheaders):
@@ -224,12 +243,12 @@ class cloud_actions(object):
         file_l = []
         fpath = filepath
         for _ in xrange(count / 10000 + 1):
-            for rty in utils.retryloop(attempts=ARGS.get('error_retry')):
-                with mlds.operation(rty):
+            for retry in utils.retryloop(attempts=ARGS.get('error_retry')):
+                with mlds.operation(retry):
                     # Make a connection
                     conn.request('GET', fpath, headers=fheaders)
-                    resp, read = utils.response_get(conn=conn)
-                    self.resp_exception(resp=resp, rty=rty)
+                    resp, read = utils.response_get(conn=conn, retry=retry)
+                    self.resp_exception(resp=resp, rty=retry)
 
                     for obj in utils.json_encode(read):
                         if ARGS.get('time_offset') is not None:
@@ -263,8 +282,7 @@ class cloud_actions(object):
 
         # perform Object HEAD request
         conn.request('HEAD', rpath, headers=fheaders)
-
-        resp, read = utils.response_get(conn=conn)
+        resp, read = utils.response_get(conn=conn, retry=retry)
         self.resp_exception(resp=resp, rty=retry)
 
         utils.reporter(
@@ -272,7 +290,7 @@ class cloud_actions(object):
             prt=False
         )
 
-        return dict(resp.getheaders())
+        return resp
 
     def _header_poster(self, conn, rpath, fheaders, retry):
         """POST Headers on a specified object in the container.
@@ -286,7 +304,7 @@ class cloud_actions(object):
         # perform Object POST request for header update.
         conn.request('POST', rpath, headers=fheaders)
 
-        resp, read = utils.response_get(conn=conn)
+        resp, read = utils.response_get(conn=conn, retry=retry)
         self.resp_exception(resp=resp, rty=retry)
 
         utils.reporter(
@@ -338,9 +356,10 @@ class cloud_actions(object):
                 fpath = urllib.quote('%s' % url.path)
 
                 # Make a connection
-                conn.request('HEAD', fpath, headers=self.payload['headers'])
-                resp, read = utils.response_get(conn=conn)
-                self.resp_exception(resp=resp, rty=retry)
+                resp = self._header_getter(conn=conn,
+                                           rpath=fpath,
+                                           fheaders=self.payload['headers'],
+                                           retry=retry)
 
                 head_check = dict(resp.getheaders())
                 container_count = head_check.get('x-account-container-count')
@@ -395,7 +414,7 @@ class cloud_actions(object):
                 # Put headers on the object if custom headers
                 if ARGS.get('object_headers'):
                     conn.request('POST', remote_path, headers=f_headers)
-                    resp, read = utils.response_get(conn=conn)
+                    resp, read = utils.response_get(conn=conn, retry=retry)
                     LOG.debug(read)
                     self.resp_exception(resp=resp, rty=retry)
 
@@ -418,9 +437,10 @@ class cloud_actions(object):
                 )
 
                 # Make a connection
-                conn.request('HEAD', rpath, headers=self.payload['headers'])
-                resp, read = utils.response_get(conn=conn)
-                self.resp_exception(resp=resp, rty=retry)
+                resp = self._header_getter(conn=conn,
+                                           rpath=rpath,
+                                           fheaders=self.payload['headers'],
+                                           retry=retry)
 
                 if not resp.status == 404:
                     # Perform delete.
@@ -477,9 +497,10 @@ class cloud_actions(object):
                 )
 
                 # Make a connection
-                conn.request('HEAD', fpath, headers=self.payload['headers'])
-                resp, read = utils.response_get(conn=conn)
-                self.resp_exception(resp=resp, rty=retry)
+                resp = self._header_getter(conn=conn,
+                                           rpath=fpath,
+                                           fheaders=self.payload['headers'],
+                                           retry=retry)
 
                 if not resp.status == 404:
                     head_check = dict(resp.getheaders())
@@ -547,35 +568,41 @@ class cloud_actions(object):
                 return _time_difference(resp, obj)
 
         fheaders = self.payload['headers']
-        for retry in utils.retryloop(attempts=5, delay=2):
+        for retry in utils.retryloop(attempts=5, delay=5, backoff=1):
             # Open connection and perform operation
             fmt, date, date_delta, now = utils.time_stamp()
 
-            with mlds.operation(retry):
-                spath = urllib.quote(
-                    '%s/%s/%s' % (surl.path, scontainer, obj['name'])
-                )
-                tpath = urllib.quote(
-                    '%s/%s/%s' % (turl.path, tcontainer, obj['name'])
-                )
+            spath = urllib.quote(
+                '%s/%s/%s' % (surl.path, scontainer, obj['name'])
+            )
+            tpath = urllib.quote(
+                '%s/%s/%s' % (turl.path, tcontainer, obj['name'])
+            )
 
-                # Open Connection
+            # Open Connection
+            conn = utils.open_connection(url=surl)
+            with mlds.operation(retry, conn=conn, obj=obj):
+                # Make a connection
+                resp = self._header_getter(conn=conn,
+                                           rpath=spath,
+                                           fheaders=fheaders,
+                                           retry=retry)
+                x_timestamp = resp.getheader('x-timestamp')
+
                 tconn = utils.open_connection(url=turl)
-                conn = utils.open_connection(url=surl)
-
-                try:
-                    conn.request('HEAD', spath, headers=fheaders)
-                    resp, tread = utils.response_get(conn=conn)
-                    x_timestamp = resp.getheader('x-timestamp')
-
-                    tconn.request('HEAD', tpath, headers=fheaders)
-                    tresp, tread = utils.response_get(conn=tconn)
+                with mlds.operation(retry, conn=tconn, obj=obj):
+                    tresp = self._header_getter(conn=tconn,
+                                                rpath=tpath,
+                                                fheaders=fheaders,
+                                                retry=retry)
 
                     # If object comparison is True GET then PUT object
                     if _compare(resp=tresp, obj=obj) is True:
                         self.resp_exception(resp=tresp, rty=retry)
                         try:
                             tfile = tempfile.mktemp()
+                            utils.stupid_hack(max=5)
+
                             # GET remote Object
                             self._downloader(conn=conn,
                                              rpath=spath,
@@ -585,11 +612,9 @@ class cloud_actions(object):
                                              retry=retry,
                                              skip=True)
 
-                            # let the system rest for a max of 2 seconds.
-                            utils.stupid_hack(max=2)
-                            fheaders.update(
-                                {'X-timestamp': x_timestamp}
-                            )
+                            # let the system rest for 3 seconds.
+                            utils.stupid_hack(wait=3)
+
                             # PUT remote object
                             self._putter(conn=tconn,
                                          fpath=tfile,
@@ -609,7 +634,6 @@ class cloud_actions(object):
                                                        rpath=spath,
                                                        fheaders=fheaders,
                                                        retry=retry)
-
                         theaders = self._header_getter(conn=tconn,
                                                        rpath=spath,
                                                        fheaders=fheaders,
@@ -624,7 +648,3 @@ class cloud_actions(object):
                                             rpath=tpath,
                                             fheaders=fheaders,
                                             retry=retry)
-                finally:
-                    # Manually close the open connections.
-                    conn.close()
-                    tconn.close()

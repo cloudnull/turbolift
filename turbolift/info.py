@@ -16,7 +16,7 @@ __license__ = "GPLv3+"
 __date__ = "2013-08-21"
 __version__ = "1.5.0"
 __status__ = "Production"
-__appname__ = "Turbolift"
+__appname__ = "turbolift"
 __description__ = 'OpenStack Swift -Cloud Files- Uploader'
 __url__ = 'https://github.com/cloudnull/turbolift.git'
 

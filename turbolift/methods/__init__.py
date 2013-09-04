@@ -96,25 +96,26 @@ def spinner(work_q=None):
 
 
 @contextmanager
-def operation(retry, conn=None):
+def operation(retry, conn=None, obj=None):
     try:
         yield retry
     except clds.RetryError:
         utils.reporter(
-            msg=('Failed to perform action after "%s" times\nTB: %s'
-                 % (ARGS.get('error_retry'), traceback.format_exc())),
+            msg=('Failed to perform action after "%s" times'
+                 '\nADDITIONAL DATA: %s\nTB: %s'
+                 % (ARGS.get('error_retry'), obj, traceback.format_exc())),
             lvl='error'
         )
     except clds.NoSource as exp:
         utils.reporter(
-            msg=('No Source. Message: %s\nTB: %s'
-                 % (traceback.format_exc(), exp)),
+            msg=('No Source. Message: %s\nADDITIONAL DATA: %s\nTB: %s'
+                 % (traceback.format_exc(), exp, obj)),
             lvl='error'
         )
         retry()
     except clds.SystemProblem as exp:
         utils.reporter(
-            msg='System Problems Found %s' % exp,
+            msg='System Problems Found %s\nADDITIONAL DATA: %s' % (exp, obj),
             lvl='error'
         )
         retry()
@@ -122,20 +123,17 @@ def operation(retry, conn=None):
         utils.emergency_kill(reclaim=True)
     except IOError as exp:
         utils.reporter(
-            msg=('IO ERROR: %s. MESSAGE %s will retry.'
-                 % (exp, info.__appname__)),
-            lvl='error'
-        )
-        utils.reporter(
-            msg=('STACKTRACE: %s'
-                 % traceback.format_exc()),
+            msg=('IO ERROR: %s. ADDITIONAL DATA: %s'
+                 '\nMESSAGE %s will retry.'
+                 '\nSTACKTRACE: %s'
+                 % (exp, obj, info.__appname__, traceback.format_exc())),
             lvl='error'
         )
         retry()
     except Exception as exp:
         utils.reporter(
-            msg=('Failed Operation. %s will retry.\nTB: %s'
-                 % (info.__appname__, traceback.format_exc())),
+            msg=('Failed Operation. ADDITIONAL DATA: %s\n%s will retry\nTB: %s'
+                 % (obj, info.__appname__, traceback.format_exc())),
             lvl='error'
         )
         retry()
