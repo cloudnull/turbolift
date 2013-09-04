@@ -51,6 +51,10 @@ class list(object):
             else:
                 objects = self.go.container_lister(url=payload['url'])
 
+            if ARGS.get('filter') is not None:
+                nfil = ARGS.get('filter')
+                objects = [obj for obj in objects if nfil in obj.get('name')]
+
             # Count the number of objects returned.
             if objects is False:
                 utils.reporter(msg='Nothing found.')
