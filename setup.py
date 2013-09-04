@@ -22,8 +22,9 @@ if sys.version_info < (2, 6, 0):
 elif sys.version_info < (2, 7, 0):
     REQUIRES.append('argparse')
 
+first = ['1-general.rst']
 with open('README', 'ab+') as r_file:
-    for doc in sorted(os.listdir(os.path.join(os.getcwd(), 'docs'))):
+    for doc in first + sorted(os.listdir(os.path.join(os.getcwd(), 'docs'))):
         if doc[0].isdigit():
             with open(doc, 'rb') as d_file:
                 r_file.write(d_file)
@@ -60,4 +61,5 @@ setuptools.setup(
         'Topic :: Utilities',
         'Topic :: Software Development :: Libraries :: Python Modules'],
     entry_points={
-        "console_scripts": ["turbolift = turbolift.executable:run_turbolift"]})
+        "console_scripts": ["turbolift = turbolift.executable:run_turbolift"]}
+)
