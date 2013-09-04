@@ -156,22 +156,30 @@ class cloud_actions(object):
             local_f = os.path.join(source, lfile)
 
         if self._checker(conn, rpath, local_f, fheaders, retry, skip) is True:
-            LOG.debug('Downloading remote %s to local file %s', rpath, lfile)
+            utils.reporter(
+                msg='Downloading remote %s to local file %s' % (rpath, lfile),
+                prt=False,
+                lvl='debug',
+            )
 
-            # perform Object Download
-            conn.request('GET', rpath, headers=fheaders)
             # Open our source file and write it
             with open(local_f, 'wb') as f_name:
+                # perform Object Download
+                conn.request('GET', rpath, headers=fheaders)
                 resp = utils.response_get(conn=conn,
                                           retry=retry,
                                           resp_only=True)
                 if resp is None:
-                    raise clds.DirectoryFailure('API Response Was NONE.')
+                    utils.reporter(
+                        msg='API Response Was NONE. resp was: %s' % resp,
+                        prt=True,
+                        lvl='error',
+                        log=True
+                    )
+                    return False
                 else:
                     self.resp_exception(resp=resp, rty=retry)
-                f_name.write(resp.read())
-
-
+                    f_name.write(resp.read())
 
             utils.reporter(
                 msg=('OBJECT %s MESSAGE %s %s %s'
@@ -179,6 +187,7 @@ class cloud_actions(object):
                 prt=False,
                 lvl='debug'
             )
+            return True
 
     def _deleter(self, conn, rpath, fheaders, retry):
         """Delete a specified object in the container.
@@ -467,12 +476,14 @@ class cloud_actions(object):
                     '%s/%s/%s' % (url.path, container, u_file)
                 )
                 # Perform Download.
-                self._downloader(conn=conn,
-                                 rpath=rpath,
-                                 fheaders=self.payload['headers'],
-                                 lfile=u_file,
-                                 source=source,
-                                 retry=retry)
+                _dl = self._downloader(conn=conn,
+                                       rpath=rpath,
+                                       fheaders=self.payload['headers'],
+                                       lfile=u_file,
+                                       source=source,
+                                       retry=retry)
+                if _dl is False:
+                    retry()
 
     def object_lister(self, url, container):
         """Builds a long list of objects found in a container.
@@ -568,7 +579,8 @@ class cloud_actions(object):
                 return _time_difference(resp, obj)
 
         fheaders = self.payload['headers']
-        for retry in utils.retryloop(attempts=5, delay=5, backoff=1):
+        for retry in utils.retryloop(attempts=ARGS.get('error_retry'),
+                                     delay=5):
             # Open connection and perform operation
             fmt, date, date_delta, now = utils.time_stamp()
 
@@ -587,64 +599,67 @@ class cloud_actions(object):
                                            rpath=spath,
                                            fheaders=fheaders,
                                            retry=retry)
+                sheaders = resp.getheaders()
                 x_timestamp = resp.getheader('x-timestamp')
 
-                tconn = utils.open_connection(url=turl)
-                with mlds.operation(retry, conn=tconn, obj=obj):
-                    tresp = self._header_getter(conn=tconn,
-                                                rpath=tpath,
-                                                fheaders=fheaders,
-                                                retry=retry)
+                # make a temp file.
+                tfile = tempfile.mktemp()
 
-                    # If object comparison is True GET then PUT object
-                    if _compare(resp=tresp, obj=obj) is True:
-                        self.resp_exception(resp=tresp, rty=retry)
+                # GET remote Object
+                _dl = self._downloader(conn=conn,
+                                       rpath=spath,
+                                       fheaders=fheaders,
+                                       lfile=tfile,
+                                       source=None,
+                                       retry=retry,
+                                       skip=True)
+                if _dl is False:
+                    try:
+                        os.remove(tfile)
+                    except OSError:
+                        pass
+                    finally:
+                        retry()
+
+            conn = utils.open_connection(url=turl)
+            with mlds.operation(retry, conn=conn, obj=obj):
+                resp = self._header_getter(conn=conn,
+                                           rpath=tpath,
+                                           fheaders=fheaders,
+                                           retry=retry)
+
+                # If object comparison is True GET then PUT object
+                if _compare(resp=resp, obj=obj) is True:
+                    self.resp_exception(resp=resp, rty=retry)
+                    try:
+                        # PUT remote object
+                        self._putter(conn=conn,
+                                     fpath=tfile,
+                                     rpath=tpath,
+                                     fheaders=fheaders,
+                                     retry=retry,
+                                     skip=True)
+                        # let the system rest for 3 seconds.
+                        utils.stupid_hack(wait=3)
+                    finally:
                         try:
-                            tfile = tempfile.mktemp()
-                            utils.stupid_hack(max=5)
+                            os.remove(tfile)
+                        except OSError:
+                            pass
 
-                            # GET remote Object
-                            self._downloader(conn=conn,
-                                             rpath=spath,
-                                             fheaders=fheaders,
-                                             lfile=tfile,
-                                             source=None,
-                                             retry=retry,
-                                             skip=True)
-
-                            # let the system rest for 3 seconds.
-                            utils.stupid_hack(wait=3)
-
-                            # PUT remote object
-                            self._putter(conn=tconn,
-                                         fpath=tfile,
-                                         rpath=tpath,
-                                         fheaders=fheaders,
-                                         retry=retry,
-                                         skip=True)
-                        finally:
-                            try:
-                                os.remove(tfile)
-                            except OSError:
-                                pass
-
-                    # With the retrieved headers POST new headers on the obj.
-                    if ARGS.get('clone_headers') is True:
-                        sheaders = self._header_getter(conn=conn,
-                                                       rpath=spath,
-                                                       fheaders=fheaders,
-                                                       retry=retry)
-                        theaders = self._header_getter(conn=tconn,
-                                                       rpath=spath,
-                                                       fheaders=fheaders,
-                                                       retry=retry)
-                        for key in sheaders.keys():
-                            if key not in theaders:
-                                fheaders.update({key: sheaders[key]})
-                        fheaders.update(
-                            {'content-type': sheaders.get('content-type')}
-                        )
-                        self._header_poster(conn=tconn,
-                                            rpath=tpath,
-                                            fheaders=fheaders,
-                                            retry=retry)
+                # With the retrieved headers POST new headers on the obj.
+                if ARGS.get('clone_headers') is True:
+                    theaders = self._header_getter(conn=conn,
+                                                   rpath=spath,
+                                                   fheaders=fheaders,
+                                                   retry=retry)
+                    for key in sheaders.keys():
+                        if key not in theaders:
+                            fheaders.update({key: sheaders[key]})
+                    fheaders.update(
+                        {'content-type': sheaders.get('content-type')}
+                    )
+                    self._header_poster(conn=conn,
+                                        rpath=tpath,
+                                        fheaders=fheaders,
+                                        retry=retry)
