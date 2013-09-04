@@ -28,7 +28,7 @@ with open('README', 'ab+') as r_file:
             with open(doc, 'rb') as d_file:
                 r_file.write(d_file)
 
-with open('README', 'rb') as r_file
+with open('README', 'rb') as r_file:
     LDINFO = r_file
 
 setuptools.setup(
