@@ -13,7 +13,6 @@ import os
 
 import turbolift as clds
 from turbolift import info
-from turbolift.worker import ARGS
 
 
 class Logging(object):
@@ -59,7 +58,7 @@ class Logging(object):
         return logger
 
 
-def return_logfile(filename):
+def return_logfile(filename, log_location):
     """Return a path for logging file.
 
     :param filename: name of the file for log storage.
@@ -73,11 +72,11 @@ def return_logfile(filename):
         return filename
     else:
         logname = ('%s' % filename)
-        logfile = os.path.join(ARGS.get('log_location', '/var/log'), logname)
+        logfile = os.path.join(log_location, logname)
         return logfile
 
 
-def load_in(log_level='info'):
+def load_in(log_location, log_level='info'):
     """Load in the log handler.
 
     If output is not None, systen will use the default
@@ -85,7 +84,7 @@ def load_in(log_level='info'):
     """
 
     _file = '%s.log' % info.__appname__
-    _log_file = return_logfile(filename=_file)
+    _log_file = return_logfile(filename=_file, log_location=log_location)
     log = Logging(log_level=log_level, log_file=_log_file)
     output = log.logger_setup()
     return output
