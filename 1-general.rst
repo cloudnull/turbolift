@@ -89,7 +89,11 @@ The application has been tested on :
   * CentOS[RHEL] 6
 
 
+For information on Benchmarks from my own testing, please have a look here at the `benchmarks.rst`_ file.
+
+
 .. _INSTALL_EMBED.rst: docs/INSTALL_EMBED.rst
-.. _command_line_args.rst: docs/command_line_args.rst
-.. _environment_vars.rst: docs/environment_vars.rst
+.. _command_line_args.rst: docs/2-command_line_args.rst
+.. _environment_vars.rst: docs/3-environment_vars.rst
+.. _benchmarks.rst: docs/4-benchmarks.rst
 .. _turboliftrc_example: turboliftrc_example
