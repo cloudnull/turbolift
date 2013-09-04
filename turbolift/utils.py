@@ -23,11 +23,8 @@ def reporter(msg, prt=True, lvl='info', log=False, color=False):
     # Print a Message
     if ARGS.get('quiet') is None:
         if prt is True or ARGS.get('verbose') is True:
-            if lvl is 'error' or color is True:
-                if ARGS.get('disable_colorized') is True:
-                    print(msg)
-                else:
-                    print(bcolors(msg=msg, color=lvl))
+            if lvl is 'error':
+                print(msg)
             else:
                 print(msg)
 
@@ -36,10 +33,7 @@ def reporter(msg, prt=True, lvl='info', log=False, color=False):
             lvl in ['debug', 'warn', 'error'],
             log is True]):
         logger = getattr(LOG, lvl)
-        if ARGS.get('disable_colorized') is True:
-            logger(msg)
-        else:
-            logger(bcolors(msg=msg, color=lvl))
+        logger(msg)
 
 
 def bcolors(msg, color):
@@ -50,6 +44,7 @@ def bcolors(msg, color):
     :return str:
     """
 
+    # TODO(kevin) need a better method for this.
     import turbolift as clds
 
     # Available Colors
