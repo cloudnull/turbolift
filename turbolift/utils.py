@@ -563,6 +563,34 @@ def prep_payload(auth, container, source, args):
             'acfep': acfep}
 
 
+def restor_perms(local_file, headers):
+    """Restore Permissions, UID, GID from metadata.
+
+    :param local_file:
+    :param headers:
+    """
+
+    import os
+    import pwd
+    import grp
+
+    # Restore Permissions.
+
+    print local_file, int(headers['x-object-meta-perms'])
+
+    os.chmod(
+        local_file,
+        int(headers['x-object-meta-perms'])
+    )
+
+    # Lookup user and group name and restore them.
+    os.chown(
+        local_file,
+        pwd.getpwnam(headers['x-object-meta-owner']).pw_uid,
+        grp.getgrnam(headers['x-object-meta-group']).gr_gid
+    )
+
+
 def stat_file(local_file):
     """Stat a file and return the Permissions, UID, GID.
 
@@ -572,11 +600,12 @@ def stat_file(local_file):
 
     import os
     import pwd
+    import grp
 
     obj = os.stat(local_file)
     return {'X-Object-Meta-perms': oct(obj.st_mode)[-4:],
             'X-Object-Meta-owner': pwd.getpwuid(obj.st_uid).pw_name,
-            'X-Object-Meta-group': pwd.getpwuid(obj.st_gid).pw_name}
+            'X-Object-Meta-group': grp.getgrgid(obj.st_gid).gr_name}
 
 
 def get_new_token():

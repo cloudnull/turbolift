@@ -31,4 +31,10 @@ def download_actions(subparser, source_args, container_args, time_args):
                           help=('Looks at local file vs Remote File and if a'
                                 ' difference is detected the file is'
                                 ' uploaded.'),
-                          default=False)
+                          default=None)
+    download.add_argument('--restore-perms',
+                          action='store_true',
+                          help=('If The object has permissions saved as'
+                                ' metadata restore those permissions on the'
+                                ' local object'),
+                          default=None)

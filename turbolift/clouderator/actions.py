@@ -191,6 +191,25 @@ class cloud_actions(object):
                 lvl='debug'
             )
 
+        if ARGS.get('restore_perms') is not None:
+            # Make a connection
+            resp = self._header_getter(conn=conn,
+                                       rpath=rpath,
+                                       fheaders=fheaders,
+                                       retry=retry)
+            all_headers = dict(resp.getheaders())
+            if all(['x-object-meta-group' in all_headers,
+                    'x-object-meta-owner' in all_headers,
+                    'x-object-meta-perms' in all_headers]):
+                utils.restor_perms(local_file=local_f, headers=all_headers)
+            else:
+                utils.reporter(
+                    msg=('No Permissions were restored, because none were'
+                         ' saved on the object "%s"' % rpath),
+                    lvl='warn',
+                    log=True
+                )
+
     def _deleter(self, conn, rpath, fheaders, retry):
         """Delete a specified object in the container.
 
@@ -490,20 +509,15 @@ class cloud_actions(object):
                              fheaders=fheaders,
                              retry=retry)
 
-                # Put headers on the object if custom headers
-                if ARGS.get('object_headers') is not None:
-                    obh = self.payload['headers']
-                    obh.update(ARGS.get('object_headers'))
+                # Put headers on the object if custom headers, or save perms.
+                if any([ARGS.get('object_headers') is not None,
+                        ARGS.get('save_perms') is not None]):
 
-                    self._header_poster(
-                        conn=conn, rpath=rpath, fheaders=obh, retry=retry
-                    )
+                    if ARGS.get('object_headers') is not None:
+                        fheaders.update(ARGS.get('object_headers'))
+                    if ARGS.get('save_perms') is not None:
+                        fheaders.update(utils.stat_file(local_file=u_file))
 
-                if ARGS.get('save_perms') is not None:
-                    # Stat the file and save info as metadata on the object
-                    fheaders.update(
-                        utils.stat_file(local_file=u_file)
-                    )
                     self._header_poster(conn=conn,
                                         rpath=rpath,
                                         fheaders=fheaders,
@@ -553,13 +567,15 @@ class cloud_actions(object):
 
             # Perform operation
             with mlds.operation(retry, conn):
+                fheaders = self.payload['headers']
+
                 rpath = self._quoter(url=url.path,
                                      cont=container,
                                      ufile=u_file)
                 # Perform Download.
                 self._downloader(conn=conn,
                                  rpath=rpath,
-                                 fheaders=self.payload['headers'],
+                                 fheaders=fheaders,
                                  lfile=u_file,
                                  source=source,
                                  retry=retry)
