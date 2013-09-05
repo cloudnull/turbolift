@@ -110,7 +110,7 @@ def shared_args():
     # Time Arguments
     time_args = argparse.ArgumentParser(add_help=False)
     time_args.add_argument('--time-offset',
-                           choices=['weeks', 'days', 'hours', None],
+                           choices=['weeks', 'days', 'hours'],
                            metavar='{weeks,days,hours}',
                            default=None,
                            help=('Filter objects where the last modified time'
