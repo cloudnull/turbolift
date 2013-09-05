@@ -16,7 +16,7 @@ from turbolift.worker import ARGS
 from turbolift.worker import LOG
 
 
-class archive(object):
+class cdn_command(object):
     """Setup and run the archive Method."""
 
     def __init__(self, auth):
@@ -50,9 +50,12 @@ class archive(object):
 
         with methods.spinner():
             objects = self.go.container_lister(url=payload['url'])
-
-            # Perform the upload
-            self.action(url=payload['url'],
-                        container=payload['c_name'],
-                        source=source,
-                        u_file=wfile)
+            if ARGS.get('purge'):
+                for obj in ARGS.get('purge'):
+                    # Perform the purge
+                    self.go.container_cdn_command(url=payload['cnet'],
+                                                  container=payload['c_name'],
+                                                  sfile=obj)
+            else:
+                self.go.container_cdn_command(url=payload['cnet'],
+                                              container=payload['c_name'])
