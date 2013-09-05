@@ -654,6 +654,8 @@ class cloud_actions(object):
             if ARGS.get('save_newer') is True:
                 # Get the source object last modified time.
                 compare_time = resp.getheader('last_modified')
+                if compare_time is None:
+                    raise clds.NoSource('No Response was found.')
                 if crds.time_delta(compare_time=compare_time,
                                    lmobj=obj['last_modified']) is True:
                     return False
