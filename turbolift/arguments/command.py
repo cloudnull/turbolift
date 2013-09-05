@@ -19,6 +19,19 @@ def command_actions(subparser, source_args, container_args, cdn_args,
     :param cdn_args:
     """
 
+    # Provides for the show Function.
+    show = subparser.add_parser(
+        'show',
+        parents=[container_args],
+        help='List Objects in a container.'
+    )
+    show.set_defaults(show=True)
+    show.add_argument('-o',
+                      '--object',
+                      metavar='[NAME]',
+                      help='Target Object.',
+                      default=None)
+
     # Provides for the list Function.
     list = subparser.add_parser(
         'list',
