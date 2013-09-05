@@ -61,7 +61,7 @@ class cloud_actions(object):
                 utils.stupid_hack(wait=10)
                 raise clds.SystemProblem('503')
             elif resp.status >= 300:
-                raise clds.SystemProblem('NOVA-API FAILURE -> REQUEST')
+                raise clds.SystemProblem('SWIFT-API FAILURE -> REQUEST')
         except clds.SystemProblem as exp:
             utils.reporter(
                 msg=('FAIL-MESSAGE %s FAILURE STATUS %s FAILURE REASON %s '
@@ -289,14 +289,22 @@ class cloud_actions(object):
                             file_l.append(obj)
 
                     if file_l:
+                        # Quote the file path.
+                        _filepath = utils.ustr(filepath)
+                        # Get the last file in the list.
                         lobj = file_l[-1].get('name')
-                        fpath = '%s&marker=%s' % (utils.ustr(filepath),
-                                                  utils.ustr(lobj))
+                        # Quote the last file in the list.
+                        _lobj = self._quoter(url=lobj)
+                        # Set the marker.
+                        fpath = '%s&marker=%s' % (_filepath, _lobj)
+
         final_list = utils.unique_list_dicts(dlist=file_l, key='name')
+
         utils.reporter(
             msg='INFO: %s object(s) found' % len(final_list),
             log=True
         )
+
         return final_list
 
     def _header_getter(self, conn, rpath, fheaders, retry):
