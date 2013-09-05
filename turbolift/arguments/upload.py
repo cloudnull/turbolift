@@ -9,8 +9,7 @@
 # =============================================================================
 
 
-def upload_actions(subparser, source_args, container_args, cdn_args,
-                   time_args):
+def upload_actions(subparser, source_args, container_args, time_args):
     """Uploading Arguments.
 
     :param subparser:
@@ -21,7 +20,7 @@ def upload_actions(subparser, source_args, container_args, cdn_args,
 
     upload = subparser.add_parser(
         'upload',
-        parents=[source_args, container_args, cdn_args, time_args],
+        parents=[source_args, container_args, time_args],
         help='Upload files to SWIFT, -CloudFiles-'
     )
     upload.set_defaults(upload=True)
@@ -29,4 +28,11 @@ def upload_actions(subparser, source_args, container_args, cdn_args,
                         action='store_true',
                         help=('Looks at local file vs Remote File and if a '
                               'difference is detected the file is uploaded.'),
+                        default=False)
+    upload.add_argument('--delete-remote',
+                        action='store_true',
+                        help=('Compare the REMOTE container and LOCAL file'
+                              ' system and if the REMOTE container has objects'
+                              ' NOT found in the LOCAL File System, DELETE THE'
+                              ' REMOTE OBJECTS.'),
                         default=False)
