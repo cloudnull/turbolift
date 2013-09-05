@@ -575,9 +575,6 @@ def restor_perms(local_file, headers):
     import grp
 
     # Restore Permissions.
-
-    print local_file, int(headers['x-object-meta-perms'])
-
     os.chmod(
         local_file,
         int(headers['x-object-meta-perms'], 8)
