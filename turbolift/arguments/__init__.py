@@ -55,10 +55,6 @@ def shared_args():
 
     # CDN Arguments
     cdn_args = argparse.ArgumentParser(add_help=False)
-    cdn_args.add_argument('--cdn-toggle',
-                          choices=[True, False],
-                          default=None,
-                          help='Enable the CDN for a Container')
     cdn_args.add_argument('--cdn-ttl',
                           metavar='[TTL]',
                           type=int,
@@ -66,7 +62,7 @@ def shared_args():
                           help='Set the TTL on a CDN Enabled Container.')
     cdn_args.add_argument('--cdn-logs',
                           action='store_true',
-                          default=False,
+                          default=True,
                           help='Set CDN Logging on a Container')
 
     # Delete Arguments
@@ -167,8 +163,7 @@ def args_setup():
     # Subparser Positional Arguments
     archive.archive_actions(subparser=subparser,
                             multi_source_args=msource,
-                            container_args=container,
-                            cdn_args=cdn)
+                            container_args=container)
     delete.delete_actions(subparser=subparser,
                           del_args=remove,
                           container_args=container)
@@ -178,12 +173,10 @@ def args_setup():
                               time_args=timeargs)
     tsync.tsync_actions(subparser=subparser,
                         source_args=source,
-                        container_args=container,
-                        cdn_args=cdn)
+                        container_args=container)
     upload.upload_actions(subparser=subparser,
                           source_args=source,
                           container_args=container,
-                          cdn_args=cdn,
                           time_args=timeargs)
     command.command_actions(subparser=subparser,
                             source_args=source,

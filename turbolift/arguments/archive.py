@@ -9,7 +9,7 @@
 # =============================================================================
 
 
-def archive_actions(subparser, multi_source_args, container_args, cdn_args):
+def archive_actions(subparser, multi_source_args, container_args):
     """Archive Arguments.
 
     :param subparser:
@@ -20,8 +20,7 @@ def archive_actions(subparser, multi_source_args, container_args, cdn_args):
 
     archaction = subparser.add_parser('archive',
                                       parents=[multi_source_args,
-                                               container_args,
-                                               cdn_args],
+                                               container_args],
                                       help=('Compress files or directories'
                                             ' into a single archive'))
     archaction.set_defaults(archive=True)
