@@ -580,7 +580,7 @@ def restor_perms(local_file, headers):
 
     os.chmod(
         local_file,
-        int(headers['x-object-meta-perms'])
+        int(headers['x-object-meta-perms'], 8)
     )
 
     # Lookup user and group name and restore them.
