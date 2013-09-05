@@ -83,11 +83,14 @@ class clone(object):
         self.go._container_create(url=payload['url'],
                                   container=payload['c_name'])
         # Target Container.
-        self.go._container_create(url=target_url, container=target_container)
+        self.go._container_create(url=target_url,
+                                  container=target_container)
 
-        # Get a list of Objects from the Source container.
-        s_objs = self.go.object_lister(url=payload['url'],
-                                       container=payload['c_name'])
+        with methods.spinner():
+            # Get a list of Objects from the Source container.
+            utils.reporter(msg='Getting Object list.')
+            s_objs = self.go.object_lister(url=payload['url'],
+                                           container=payload['c_name'])
         if s_objs is None:
             raise clds.NoSource('The source container is empty.')
 
@@ -95,12 +98,15 @@ class clone(object):
         num_files = len(s_objs)
         concurrency = utils.set_concurrency(args=ARGS,
                                             file_count=num_files)
-        # Load returned objects into a queue
-        work_q = utils.basic_queue(s_objs)
-        utils.reporter(msg='Beginning Sync Operation.')
 
-        # Begin Work
+        with methods.spinner():
+            utils.reporter(msg='Loading Work Queue')
+            # Load returned objects into a queue
+            work_q = utils.basic_queue(s_objs)
+
         with methods.spinner(work_q=work_q):
+            utils.reporter(msg='Beginning Sync Operation.')
+            # Process the Queue
             utils.worker_proc(job_action=self.syncerator,
                               num_jobs=num_files,
                               concurrency=concurrency,
