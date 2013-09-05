@@ -160,23 +160,24 @@ class cloud_actions(object):
                 lvl='debug',
             )
 
+            # Perform Object GET
+            conn.request('GET', rpath, headers=fheaders)
+
             # Open our source file and write it
             with open(local_f, 'wb') as f_name:
-                # perform Object Download
-                conn.request('GET', rpath, headers=fheaders)
                 resp = utils.response_get(conn=conn,
                                           retry=retry,
                                           resp_only=True)
+                self.resp_exception(resp=resp, rty=retry)
                 if resp is None:
                     utils.reporter(
-                        msg='API Response Was NONE. resp was: %s' % resp,
+                        msg='API Response Was NONE. resp was: %s' % resp.msg,
                         prt=True,
                         lvl='error',
                         log=True
                     )
-                    return False
+                    retry()
                 else:
-                    self.resp_exception(resp=resp, rty=retry)
                     f_name.write(resp.read())
 
             utils.reporter(
@@ -185,7 +186,6 @@ class cloud_actions(object):
                 prt=False,
                 lvl='debug'
             )
-            return True
 
     def _deleter(self, conn, rpath, fheaders, retry):
         """Delete a specified object in the container.
@@ -539,14 +539,12 @@ class cloud_actions(object):
                                      cont=container,
                                      ufile=u_file)
                 # Perform Download.
-                _dl = self._downloader(conn=conn,
-                                       rpath=rpath,
-                                       fheaders=self.payload['headers'],
-                                       lfile=u_file,
-                                       source=source,
-                                       retry=retry)
-                if _dl is False:
-                    retry()
+                self._downloader(conn=conn,
+                                 rpath=rpath,
+                                 fheaders=self.payload['headers'],
+                                 lfile=u_file,
+                                 source=source,
+                                 retry=retry)
 
     def object_lister(self, url, container):
         """Builds a long list of objects found in a container.
