@@ -563,6 +563,22 @@ def prep_payload(auth, container, source, args):
             'acfep': acfep}
 
 
+def stat_file(local_file):
+    """Stat a file and return the Permissions, UID, GID.
+
+    :param local_file:
+    :return dict:
+    """
+
+    import os
+    import pwd
+
+    obj = os.stat(local_file)
+    return {'X-Object-Meta-perms': oct(obj.st_mode)[-4:],
+            'X-Object-Meta-owner': pwd.getpwuid(obj.st_uid).pw_name,
+            'X-Object-Meta-group': pwd.getpwuid(obj.st_gid).pw_name}
+
+
 def get_new_token():
     """Authenticate and return only a new token.
 
