@@ -123,7 +123,7 @@ class upload(object):
                      ' the REMOTE CONTAINER.', _num_files)
             _work_q = utils.basic_queue(iters=_objects)
             _concurrency = utils.set_concurrency(args=ARGS,
-                                                file_count=_num_files)
+                                                 file_count=_num_files)
 
             # Delete the difference in Files.
             utils.reporter(msg='Performing Remote Delete')

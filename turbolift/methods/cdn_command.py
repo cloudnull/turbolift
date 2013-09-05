@@ -7,8 +7,6 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
-import os
-
 from turbolift.clouderator import actions
 from turbolift import methods
 from turbolift import utils
@@ -49,7 +47,6 @@ class cdn_command(object):
         self.go = actions.cloud_actions(payload=payload)
 
         with methods.spinner():
-            objects = self.go.container_lister(url=payload['url'])
             if ARGS.get('purge'):
                 for obj in ARGS.get('purge'):
                     # Perform the purge

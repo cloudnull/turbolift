@@ -60,4 +60,4 @@ class show(object):
                 else:
                     utils.reporter(msg='Object found.')
                     for _re in resp.getheaders():
-                        print '%s:\t%s' % _re
+                        utils.reporter(msg='%s:\t%s' % _re)

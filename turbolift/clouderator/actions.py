@@ -509,8 +509,6 @@ class cloud_actions(object):
                                         fheaders=fheaders,
                                         retry=retry)
 
-
-
     def object_deleter(self, url, container, u_file):
         """Deletes an objects in a container.
 
