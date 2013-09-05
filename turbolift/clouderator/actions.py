@@ -398,7 +398,8 @@ class cloud_actions(object):
         :param container:
         """
 
-        for retry in utils.retryloop(attempts=5, delay=2):
+        for retry in utils.retryloop(attempts=ARGS.get('error_retry'),
+                                     delay=2):
             # Open Connection
             conn = utils.open_connection(url=url)
 
@@ -479,11 +480,14 @@ class cloud_actions(object):
                 rpath = self._quoter(url=url.path,
                                      cont=container,
                                      ufile=sfile)
+
+                fheaders = self.payload['headers']
+
                 # Perform Upload.
                 self._putter(conn=conn,
                              fpath=u_file,
                              rpath=rpath,
-                             fheaders=self.payload['headers'],
+                             fheaders=fheaders,
                              retry=retry)
 
                 # Put headers on the object if custom headers
@@ -494,6 +498,18 @@ class cloud_actions(object):
                     self._header_poster(
                         conn=conn, rpath=rpath, fheaders=obh, retry=retry
                     )
+
+                if ARGS.get('save_perms') is not None:
+                    # Stat the file and save info as metadata on the object
+                    fheaders.update(
+                        utils.stat_file(local_file=u_file)
+                    )
+                    self._header_poster(conn=conn,
+                                        rpath=rpath,
+                                        fheaders=fheaders,
+                                        retry=retry)
+
+
 
     def object_deleter(self, url, container, u_file):
         """Deletes an objects in a container.
@@ -615,7 +631,8 @@ class cloud_actions(object):
         def _cleanup():
             """Ensure that our temp file is removed."""
             try:
-                os.remove(tfile)
+                if locals().get('tfile') is not None:
+                    os.remove(tfile)
             except OSError:
                 pass
 
@@ -641,11 +658,12 @@ class cloud_actions(object):
             elif resp.getheader('etag') != obj['hash']:
                 utils.reporter(
                     msg='Checksum Mismatch on Target Object %s' % obj['name'],
-                    prt=False
+                    prt=False,
+                    lvl='debug'
                 )
                 return _time_difference(resp, obj)
             else:
-                return _time_difference(resp, obj)
+                return False
 
         fheaders = self.payload['headers']
         for retry in utils.retryloop(attempts=ARGS.get('error_retry'),
@@ -658,13 +676,25 @@ class cloud_actions(object):
             tpath = self._quoter(url=turl.path,
                                  cont=tcontainer,
                                  ufile=obj['name'])
+
+            conn = utils.open_connection(url=turl)
+            with mlds.operation(retry, conn=conn, obj=obj):
+                resp = self._header_getter(conn=conn,
+                                           rpath=tpath,
+                                           fheaders=fheaders,
+                                           retry=retry)
+
+                # If object comparison is True GET then PUT object
+                if _compare(resp=resp, obj=obj) is not True:
+                    return None
             try:
-                # Open Connection
+                # Open Connection for source Download
                 conn = utils.open_connection(url=surl)
                 with mlds.operation(retry,
                                     conn=conn,
                                     obj=obj,
                                     cleanup=_cleanup):
+
                     # make a temp file.
                     tfile = tempfile.mktemp()
 
@@ -690,6 +720,7 @@ class cloud_actions(object):
                     if _dl is False:
                         retry()
 
+                # open connection for target upload.
                 conn = utils.open_connection(url=turl)
                 with mlds.operation(retry,
                                     conn=conn,
@@ -700,18 +731,17 @@ class cloud_actions(object):
                                                fheaders=fheaders,
                                                retry=retry)
 
-                    # If object comparison is True GET then PUT object
-                    if _compare(resp=resp, obj=obj) is True:
-                        self.resp_exception(resp=resp, rty=retry)
-                        # PUT remote object
-                        self._putter(conn=conn,
-                                     fpath=tfile,
-                                     rpath=tpath,
-                                     fheaders=fheaders,
-                                     retry=retry,
-                                     skip=True)
-                        # let the system rest for 3 seconds.
-                        utils.stupid_hack(wait=3)
+                    self.resp_exception(resp=resp, rty=retry)
+                    # PUT remote object
+                    self._putter(conn=conn,
+                                 fpath=tfile,
+                                 rpath=tpath,
+                                 fheaders=fheaders,
+                                 retry=retry,
+                                 skip=True)
+
+                    # let the system rest for 3 seconds.
+                    utils.stupid_hack(wait=3)
 
                     # With the retrieved headers POST new headers on the obj.
                     if ARGS.get('clone_headers') is True:
