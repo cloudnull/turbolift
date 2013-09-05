@@ -9,7 +9,7 @@
 # =============================================================================
 
 
-def tsync_actions(subparser, source_args, container_args, cdn_args):
+def tsync_actions(subparser, source_args, container_args):
     """Tsync Arguments.
 
     :param source_args:
@@ -20,7 +20,7 @@ def tsync_actions(subparser, source_args, container_args, cdn_args):
 
     tsync = subparser.add_parser(
         'tsync',
-        parents=[source_args, container_args, cdn_args],
+        parents=[source_args, container_args],
         help='Deprecated, Please use "upload --sync" instead'
     )
     tsync.set_defaults(tsync=True)
