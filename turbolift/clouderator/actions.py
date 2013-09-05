@@ -348,6 +348,45 @@ class cloud_actions(object):
                 '%s' % url
             )
 
+    def container_cdn_command(self, url, container, sfile=None):
+        """Command your CDN enabled Container.
+
+        :param url:
+        :param container:
+        """
+
+        for retry in utils.retryloop(attempts=5, delay=2):
+            # Open Connection
+            conn = utils.open_connection(url=url)
+            with mlds.operation(retry, conn):
+                cheaders = self.payload['headers']
+                if sfile is not None:
+                    rpath = self._quoter(url=url.path,
+                                         cont=container,
+                                         ufile=sfile)
+                    # perform CDN Object DELETE
+                    conn.request('DELETE', rpath, headers=cheaders)
+                    resp, read = utils.response_get(conn=conn, retry=retry)
+                    self.resp_exception(resp=resp, rty=retry)
+                else:
+                    rpath = self._quoter(url=url.path,
+                                         cont=container)
+                    endis = ARGS.get('enabled', ARGS.get('disable', False))
+                    cheaders.update({'X-CDN-Enabled': endis,
+                                     'X-TTL': ARGS.get('cdn_ttl'),
+                                     'X-Log-Retention': ARGS.get('cdn_logs')})
+                    # perform CDN Enable POST
+                    conn.request('PUT', rpath, headers=cheaders)
+                    resp, read = utils.response_get(conn=conn, retry=retry)
+                    self.resp_exception(resp=resp, rty=retry)
+
+                utils.reporter(
+                    msg=('OBJECT %s MESSAGE %s %s %s'
+                         % (rpath, resp.status, resp.reason, resp.msg)),
+                    prt=False,
+                    lvl='debug'
+                )
+
     def container_deleter(self, url, container):
         """Delete all objects in a container.
 
