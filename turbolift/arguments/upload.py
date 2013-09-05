@@ -36,3 +36,8 @@ def upload_actions(subparser, source_args, container_args, time_args):
                               ' NOT found in the LOCAL File System, DELETE THE'
                               ' REMOTE OBJECTS.'),
                         default=False)
+    upload.add_argument('--save-perms',
+                        action='store_true',
+                        help=('Save the UID, GID, and MODE, of a file as meta'
+                              ' data on the object.'),
+                        default=False)
