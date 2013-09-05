@@ -162,9 +162,8 @@ class cloud_actions(object):
 
             # Perform Object GET
             conn.request('GET', rpath, headers=fheaders)
-
             # Open our source file and write it
-            with open(local_f, 'wb') as f_name:
+            with open(local_f, 'ab') as f_name:
                 resp = utils.response_get(conn=conn,
                                           retry=retry,
                                           resp_only=True)
@@ -178,7 +177,12 @@ class cloud_actions(object):
                     )
                     retry()
                 else:
-                    f_name.write(resp.read())
+                    while True:
+                        chunk = resp.read(2048)
+                        if not chunk:
+                            break
+                        else:
+                            f_name.write(chunk)
 
             utils.reporter(
                 msg=('OBJECT %s MESSAGE %s %s %s'
@@ -608,6 +612,13 @@ class cloud_actions(object):
         :param obj:
         """
 
+        def _cleanup():
+            """Ensure that our temp file is removed."""
+            try:
+                os.remove(tfile)
+            except OSError:
+                pass
+
         def _time_difference(resp, obj):
             if ARGS.get('save_newer') is True:
                 # Get the source object last modified time.
@@ -648,12 +659,15 @@ class cloud_actions(object):
                                  cont=tcontainer,
                                  ufile=obj['name'])
             try:
-                # make a temp file.
-                tfile = tempfile.mktemp()
-
                 # Open Connection
                 conn = utils.open_connection(url=surl)
-                with mlds.operation(retry, conn=conn, obj=obj):
+                with mlds.operation(retry,
+                                    conn=conn,
+                                    obj=obj,
+                                    cleanup=_cleanup):
+                    # make a temp file.
+                    tfile = tempfile.mktemp()
+
                     # Make a connection
                     resp = self._header_getter(conn=conn,
                                                rpath=spath,
@@ -674,15 +688,13 @@ class cloud_actions(object):
                                            retry=retry,
                                            skip=True)
                     if _dl is False:
-                        try:
-                            os.remove(tfile)
-                        except OSError:
-                            pass
-                        finally:
-                            retry()
+                        retry()
 
                 conn = utils.open_connection(url=turl)
-                with mlds.operation(retry, conn=conn, obj=obj):
+                with mlds.operation(retry,
+                                    conn=conn,
+                                    obj=obj,
+                                    cleanup=_cleanup):
                     resp = self._header_getter(conn=conn,
                                                rpath=tpath,
                                                fheaders=fheaders,
@@ -722,8 +734,4 @@ class cloud_actions(object):
                             retry=retry
                         )
             finally:
-                # Ensure that our temp file is removed.
-                try:
-                    os.remove(tfile)
-                except OSError:
-                    pass
+                _cleanup()

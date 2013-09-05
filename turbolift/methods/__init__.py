@@ -97,10 +97,23 @@ def spinner(work_q=None):
 
 
 @contextlib.contextmanager
-def operation(retry, conn=None, obj=None):
+def operation(retry, conn=None, obj=None, cleanup=None):
+    """This is an operation wrapper, which wraps an operation in try except.
+
+    If clean up is used, a clean up operation will be run should an exception
+    happen.
+
+    :param retry:
+    :param conn:
+    :param obj:
+    :param cleanup:
+    :return:
+    """
     try:
         yield retry
     except clds.RetryError:
+        if cleanup is not None:
+            cleanup()
         utils.reporter(
             msg=('Failed to perform action after "%s" times'
                  '\nADDITIONAL DATA: %s\nTB: %s'
@@ -108,6 +121,8 @@ def operation(retry, conn=None, obj=None):
             lvl='error'
         )
     except clds.NoSource as exp:
+        if cleanup is not None:
+            cleanup()
         utils.reporter(
             msg=('No Source. Message: %s\nADDITIONAL DATA: %s\nTB: %s'
                  % (traceback.format_exc(), exp, obj)),
@@ -115,14 +130,20 @@ def operation(retry, conn=None, obj=None):
         )
         retry()
     except clds.SystemProblem as exp:
+        if cleanup is not None:
+            cleanup()
         utils.reporter(
             msg='System Problems Found %s\nADDITIONAL DATA: %s' % (exp, obj),
             lvl='error'
         )
         retry()
     except KeyboardInterrupt:
+        if cleanup is not None:
+            cleanup()
         utils.emergency_kill(reclaim=True)
     except IOError as exp:
+        if cleanup is not None:
+            cleanup()
         utils.reporter(
             msg=('IO ERROR: %s. ADDITIONAL DATA: %s'
                  '\nMESSAGE %s will retry.'
@@ -132,6 +153,8 @@ def operation(retry, conn=None, obj=None):
         )
         retry()
     except Exception as exp:
+        if cleanup is not None:
+            cleanup()
         utils.reporter(
             msg=('Failed Operation. ADDITIONAL DATA: %s\n%s will retry\nTB: %s'
                  % (obj, info.__appname__, traceback.format_exc())),
