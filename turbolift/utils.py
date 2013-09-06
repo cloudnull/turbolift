@@ -219,7 +219,7 @@ def batcher(num_files):
     if num_files > batch_size:
         ops = num_files / batch_size + 1
         reporter(
-            msg='This take "%s" operations to complete.' % ops,
+            msg='This will take "%s" operations to complete.' % ops,
             lvl='warn',
             log=True,
             prt=True
@@ -255,10 +255,7 @@ def get_from_q(queue):
     from Queue import Empty
 
     try:
-        wfile = queue.get(timeout=2)
-        # If Work is None return None
-        if wfile is None:
-            wfile = queue.get(timeout=2)
+        wfile = queue.get(timeout=5)
     except Empty:
         return None
     else:
