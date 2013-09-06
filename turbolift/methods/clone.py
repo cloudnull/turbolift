@@ -94,51 +94,17 @@ class clone(object):
         if s_objs is None:
             raise clds.NoSource('The source container is empty.')
 
-        # TODO(kevin) make this better, or figure out a better way.
-        # utils.reporter(msg='Getting Object list from the Target.')
-        # with methods.spinner():
-        #     # Get a list of Objects from the Source container.
-        #     t_objs = self.go.object_lister(url=payload['turl'],
-        #                                    container=payload['tc_name'])
-        # if t_objs is not None:
-        #     utils.reporter(
-        #         msg=('Determining the difference between the Source and the'
-        #              ' Target.')
-        #     )
-        #     with methods.spinner():
-        #         source_objs = [obj['name'] for obj in s_objs]
-        #         target_objs = [obj['name'] for obj in t_objs]
-        #         tmp_objs = utils.return_diff(target=target_objs,
-        #                                      source=source_objs)
-        #         if tmp_objs:
-        #             s_objs = [obj for obj in s_objs
-        #                       if obj.get('name') in tmp_objs]
-        #
-        #         del t_objs, source_objs, target_objs, tmp_objs
-
         # Get the number of objects and set Concurrency
         num_files = len(s_objs)
         concurrency = utils.set_concurrency(args=ARGS,
                                             file_count=num_files)
-        try:
-            utils.reporter(msg='Loading Work Queue')
-            batch_size = utils.batcher(num_files=num_files)
-            for work in utils.batch_gen(data=s_objs,
-                                        batch_size=batch_size,
-                                        count=num_files):
-                # Load returned objects into a queue
-                work_q = utils.basic_queue(work)
 
-                with methods.spinner(work_q=work_q):
-                    utils.reporter(msg='Beginning Sync Operation.')
-                    # Process the Queue
-                    utils.worker_proc(job_action=self.syncerator,
-                                      num_jobs=num_files,
-                                      concurrency=concurrency,
-                                      t_args=payload,
-                                      queue=work_q)
-        except KeyboardInterrupt:
-            utils.emergency_kill(reclaim=True)
+        utils.reporter(msg='Beginning Sync Operation.')
+        utils.job_processer(num_jobs=num_files,
+                            objects=s_objs,
+                            job_action=self.syncerator,
+                            concur=concurrency,
+                            payload=payload)
 
     def syncerator(self, work_q, payload):
         """Upload files to CloudFiles -Swift-.
