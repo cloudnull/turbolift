@@ -76,7 +76,7 @@ class download(object):
         with methods.spinner():
             unique_dirs = []
             for obj in obj_list:
-                full_path = os.path.join(payload['source'], obj)
+                full_path = utils.jpath(root=payload['source'], inode=obj)
                 dir_path = full_path.split(
                     os.path.basename(full_path)
                 )[0].rstrip(os.sep)
@@ -85,19 +85,13 @@ class download(object):
             for udir in set(unique_dirs):
                 utils.mkdir_p(path=udir)
 
-        batch_size = utils.batcher(num_files=len(obj_list))
-        for work in utils.batch_gen(data=obj_list,
-                                    batch_size=batch_size,
-                                    count=num_files):
-            work_q = utils.basic_queue(work)
 
-            utils.reporter(msg='Performing Object Download...')
-            with methods.spinner(work_q=work_q):
-                utils.worker_proc(job_action=self.downloaderator,
-                                  num_jobs=num_files,
-                                  concurrency=concurrency,
-                                  t_args=payload,
-                                  queue=work_q)
+        utils.reporter(msg='Performing Object Download.')
+        utils.job_processer(num_jobs=len(obj_list),
+                            objects=obj_list,
+                            job_action=self.downloaderator,
+                            concur=concurrency,
+                            payload=payload)
 
     def downloaderator(self, work_q, payload):
         """Upload files to CloudFiles -Swift-.
