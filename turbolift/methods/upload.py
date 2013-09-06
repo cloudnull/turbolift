@@ -49,26 +49,20 @@ class upload(object):
         LOG.info('MESSAGE\t: "%s" Files have been found.', num_files)
         LOG.debug('PAYLOAD\t: "%s"', payload)
 
-        batch_size = utils.batcher(num_files=num_files)
-        for work in utils.batch_gen(data=f_indexed,
-                                    batch_size=batch_size,
-                                    count=num_files):
-            work_q = utils.basic_queue(work)
-            # Set the actions class up
-            self.go = actions.cloud_actions(payload=payload)
-            self.go._container_create(url=payload['url'],
-                                      container=payload['c_name'])
-            with methods.spinner(work_q=work_q):
-                utils.worker_proc(job_action=self.uploaderator,
-                                  num_jobs=num_files,
-                                  concurrency=concurrency,
-                                  t_args=payload,
-                                  queue=work_q)
+        # Set the actions class up
+        self.go = actions.cloud_actions(payload=payload)
+        self.go._container_create(url=payload['url'],
+                                  container=payload['c_name'])
+
+        utils.job_processer(num_jobs=num_files,
+                            objects=f_indexed,
+                            job_action=self.uploaderator,
+                            concur=concurrency,
+                            payload=payload)
 
         if ARGS.get('delete_remote') is True:
-            with methods.spinner(work_q=None):
-                self.remote_delete(payload=payload,
-                                   f_indexed=f_indexed)
+            self.remote_delete(payload=payload,
+                               f_indexed=f_indexed)
 
     def uploaderator(self, work_q, payload):
         """Upload files to CloudFiles -Swift-.
@@ -113,10 +107,11 @@ class upload(object):
         objects = self.go.object_lister(url=payload['url'],
                                         container=payload['c_name'])
         source = payload['source']
-        obj_names = [os.path.join(source, obj.get('name')) for obj in objects]
+        obj_names = [utils.jpath(root=source,
+                                 inode=obj.get('name')) for obj in objects]
 
         # From the remote system see if we have differences in the local system
-        _objects = utils.return_diff(target=obj_names, source=f_indexed)
+        _objects = utils.return_diff(target=f_indexed, source=obj_names)
 
         if _objects:
             # Set Basic Data for file delete.
@@ -129,16 +124,11 @@ class upload(object):
 
             # Delete the difference in Files.
             utils.reporter(msg='Performing Remote Delete')
-            batch_size = utils.batcher(num_files=_num_files)
-            for work in utils.batch_gen(data=_objects,
-                                        batch_size=batch_size,
-                                        count=_num_files):
-                work_q = utils.basic_queue(work)
-                utils.worker_proc(job_action=self.deleterator,
-                                  num_jobs=_num_files,
-                                  concurrency=_concurrency,
-                                  t_args=payload,
-                                  queue=work_q)
+            utils.job_processer(num_jobs=_num_files,
+                                objects=_objects,
+                                job_action=self.deleterator,
+                                concur=_concurrency,
+                                payload=payload)
         else:
             utils.reporter(msg='No Difference between REMOTE and LOCAL'
                                ' Directories.')
