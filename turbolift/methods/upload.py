@@ -54,13 +54,11 @@ class upload(object):
                                     batch_size=batch_size,
                                     count=num_files):
             work_q = utils.basic_queue(work)
+            # Set the actions class up
+            self.go = actions.cloud_actions(payload=payload)
+            self.go._container_create(url=payload['url'],
+                                      container=payload['c_name'])
             with methods.spinner(work_q=work_q):
-                # Set the actions class up
-                self.go = actions.cloud_actions(payload=payload)
-                self.go._container_create(url=payload['url'],
-                                          container=payload['c_name'])
-                self.action = getattr(self.go, 'object_putter')
-
                 utils.worker_proc(job_action=self.uploaderator,
                                   num_jobs=num_files,
                                   concurrency=concurrency,
@@ -110,19 +108,22 @@ class upload(object):
 
         :return:
         """
+
         utils.reporter(msg='Getting file list for REMOTE DELETE')
         objects = self.go.object_lister(url=payload['url'],
                                         container=payload['c_name'])
+        source = payload['source']
+        obj_names = [os.path.join(source, obj.get('name')) for obj in objects]
 
-        # TODO(kevin) Make this indexing faster.
-        _objects = [obj.get('name') for obj in objects
-                    if os.path.join(payload['source'],
-                                    obj.get('name')) not in f_indexed]
+        # From the remote system see if we have differences in the local system
+        _objects = utils.return_diff(target=obj_names, source=f_indexed)
+
         if _objects:
             # Set Basic Data for file delete.
             _num_files = len(_objects)
             LOG.info('MESSAGE\t: "%s" Files have been found to be removed from'
                      ' the REMOTE CONTAINER.', _num_files)
+
             _concurrency = utils.set_concurrency(args=ARGS,
                                                  file_count=_num_files)
 
@@ -156,6 +157,7 @@ class upload(object):
             if wfile is None:
                 break
             try:
+                wfile = utils.get_sfile(ufile=wfile, source=payload['source'])
                 self.go.object_deleter(url=payload['url'],
                                        container=payload['c_name'],
                                        u_file=wfile)
