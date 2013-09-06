@@ -200,6 +200,19 @@ def basic_queue(iters=None):
     return worker_q
 
 
+def manager_dict(dictionary):
+    """Create and return a Manger Dictionary.
+
+    :param dictionary:
+    :return dict:
+    """
+
+    import multiprocessing
+
+    manager = multiprocessing.Manager()
+    return manager.dict(dictionary)
+
+
 def batcher(num_files):
     """Check the batch size and return it.
 
@@ -578,6 +591,18 @@ def set_headers(headers):
         return headers
 
 
+def return_diff(target, source):
+    """Compare the target list to the source list and return the difference.
+
+    :param target:
+    :param source:
+    :return list:
+    """
+
+    return list(set(source).difference(set(target)))
+
+
+
 def prep_payload(auth, container, source, args):
     """Create payload dictionary.
 
@@ -599,16 +624,15 @@ def prep_payload(auth, container, source, args):
         url = enet
 
     # Set the upload Payload
-    return {'c_name': container,
-            'source': source,
-            'token': token,
-            'tenant': tenant,
-            'headers': headers,
-            'user': user,
-            'cnet': cnet,
-            'aurl': aurl,
-            'url': url,
-            'acfep': acfep}
+    return manager_dict({'c_name': container,
+                         'source': source,
+                         'tenant': tenant,
+                         'headers': headers,
+                         'user': user,
+                         'cnet': cnet,
+                         'aurl': aurl,
+                         'url': url,
+                         'acfep': acfep})
 
 
 def restor_perms(local_file, headers):
