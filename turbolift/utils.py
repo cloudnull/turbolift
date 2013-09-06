@@ -184,6 +184,31 @@ def rand_string(length=15):
     return output
 
 
+def create_tmp():
+    """Create a tmp file.
+
+    :return str:
+    """
+    import tempfile
+
+    return tempfile.mktemp()
+
+
+def remove_file(filename):
+    """Remove a file if its found.
+
+    :param filename:
+    """
+
+    import os
+
+    if os.path.exists(filename):
+        try:
+            os.remove(filename)
+        except OSError:
+            pass
+
+
 def basic_queue(iters=None):
     """Uses a manager Queue, from multiprocessing.
 
@@ -263,8 +288,6 @@ def get_from_q(queue):
     :return item|None:
     """
 
-    import turbolift as clds
-    import multiprocessing
     from Queue import Empty
 
     try:
@@ -334,11 +357,12 @@ def set_concurrency(args, file_count):
         return verbose(ccr=_cc)
 
 
-def worker_proc(job_action, num_jobs, concurrency, queue, t_args=None):
+def worker_proc(job_action, concurrency, queue, t_args=None, opt=None):
     """Requires the job_action and num_jobs variables for functionality.
 
     :param job_action: What function will be used
-    :param num_jobs: The number of jobs that will be processed
+    :param concurrency: The number of jobs that will be processed
+    :param queue: The Queue
     :param t_args: Optional
 
     All threads produced by the worker are limited by the number of concurrency
@@ -348,9 +372,14 @@ def worker_proc(job_action, num_jobs, concurrency, queue, t_args=None):
 
     import multiprocessing
 
-    jobs = [multiprocessing.Process(target=job_action,
-                                    args=(queue, t_args))
-            for _ in xrange(concurrency)]
+    if opt is not None:
+        jobs = [multiprocessing.Process(target=job_action,
+                                        args=(queue, t_args, opt))
+                for _ in xrange(concurrency)]
+    else:
+        jobs = [multiprocessing.Process(target=job_action,
+                                        args=(queue, t_args))
+                for _ in xrange(concurrency)]
 
     for _job in jobs:
         _job.Daemon = True
@@ -358,6 +387,34 @@ def worker_proc(job_action, num_jobs, concurrency, queue, t_args=None):
 
     for job in jobs:
         job.join()
+
+
+def job_processer(num_jobs, objects, job_action, concur, payload, opt=None):
+    """Process all jobs in batches.
+
+    :param num_jobs:
+    :param objects:
+    :param job_action:
+    :param concur:
+    :param payload:
+    """
+
+    from turbolift import methods
+
+    count = 0
+    batch_size = batcher(num_files=num_jobs)
+    for work in batch_gen(data=objects,
+                          batch_size=batch_size,
+                          count=num_jobs):
+        count += 1
+        reporter(msg='Job Count %s' % count)
+        work_q = basic_queue(work)
+        with methods.spinner(work_q=work_q):
+            worker_proc(job_action=job_action,
+                        concurrency=concur,
+                        t_args=payload,
+                        queue=work_q,
+                        opt=opt)
 
 
 def mkdir_p(path):
@@ -591,15 +648,63 @@ def set_headers(headers):
         return headers
 
 
-def return_diff(target, source):
-    """Compare the target list to the source list and return the difference.
+class return_diff(object):
+    def __init__(self):
+        """Compare the target list to the source list and return the diff."""
 
-    :param target:
-    :param source:
-    :return list:
-    """
+        self.target = None
+        self.opt = None
 
-    return list(set(source).difference(set(target)))
+    def _checker(self, work_q, payload):
+        """Check if an object is in the target, if so append to manager list.
+
+        :param work_q:
+        :param payload:
+        """
+        while True:
+            sobj = get_from_q(work_q)
+            if sobj is None:
+                break
+            elif sobj not in self.target:
+                if self.opt is not None:
+                    for obj in self.opt:
+                        if obj['name'] == sobj:
+                            payload.append(obj)
+                            break
+                else:
+                    payload.append(sobj)
+
+    def difference(self, target, source, opt):
+        """Process the diff.
+
+        :param target:
+        :param source:
+        :return list:
+        """
+
+        import multiprocessing
+
+        # Load the target into the class
+        self.target = target
+        if opt is not None:
+            self.opt = opt
+
+        manager = multiprocessing.Manager()
+        proxy_list = manager.list()
+
+        # Get The rate of concurrency
+        num_files = len(source)
+        concurrency = multiprocessing.cpu_count() * 32
+        if concurrency > 128:
+            concurrency = 128
+
+        job_processer(num_jobs=num_files,
+                      objects=source,
+                      job_action=self._checker,
+                      concur=concurrency,
+                      payload=proxy_list)
+
+        return list(proxy_list)
 
 
 
