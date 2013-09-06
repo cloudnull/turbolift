@@ -8,7 +8,6 @@
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
 import os
-import tempfile
 import urllib
 
 import turbolift as clds
@@ -151,7 +150,7 @@ class cloud_actions(object):
         if source is None:
             local_f = lfile
         else:
-            local_f = os.path.join(source, lfile)
+            local_f = utils.jpath(root=source, inode=lfile)
 
         if self._checker(conn, rpath, local_f, fheaders, retry, skip) is True:
             utils.reporter(
@@ -652,11 +651,8 @@ class cloud_actions(object):
 
         def _cleanup():
             """Ensure that our temp file is removed."""
-            try:
-                if locals().get('tfile') is not None:
-                    os.remove(tfile)
-            except OSError:
-                pass
+            if locals().get('tfile') is not None:
+                utils.remove_file(tfile)
 
         def _time_difference(resp, obj):
             if ARGS.get('save_newer') is True:
@@ -720,7 +716,7 @@ class cloud_actions(object):
                                     cleanup=_cleanup):
 
                     # make a temp file.
-                    tfile = tempfile.mktemp()
+                    tfile = utils.create_tmp()
 
                     # Make a connection
                     resp = self._header_getter(conn=conn,
@@ -744,48 +740,50 @@ class cloud_actions(object):
                     if _dl is False:
                         retry()
 
-                # open connection for target upload.
-                conn = utils.open_connection(url=turl)
-                with mlds.operation(retry,
-                                    conn=conn,
-                                    obj=obj,
-                                    cleanup=_cleanup):
-                    resp = self._header_getter(conn=conn,
-                                               rpath=tpath,
-                                               fheaders=fheaders,
-                                               retry=retry)
-
-                    self.resp_exception(resp=resp, rty=retry)
-                    # PUT remote object
-                    self._putter(conn=conn,
-                                 fpath=tfile,
-                                 rpath=tpath,
-                                 fheaders=fheaders,
-                                 retry=retry,
-                                 skip=True)
-
-                    # let the system rest for 3 seconds.
-                    utils.stupid_hack(wait=3)
-
-                    # With the retrieved headers POST new headers on the obj.
-                    if ARGS.get('clone_headers') is True:
+                for nretry in utils.retryloop(attempts=ARGS.get('error_retry'),
+                                              delay=5):
+                    # open connection for target upload.
+                    conn = utils.open_connection(url=turl)
+                    with mlds.operation(retry,
+                                        conn=conn,
+                                        obj=obj,
+                                        cleanup=_cleanup):
                         resp = self._header_getter(conn=conn,
                                                    rpath=tpath,
                                                    fheaders=fheaders,
-                                                   retry=retry)
-                        theaders = dict(resp.getheaders())
-                        for key in sheaders.keys():
-                            if key not in theaders:
-                                fheaders.update({key: sheaders[key]})
-                        # Force the SOURCE content Type on the Target.
-                        fheaders.update(
-                            {'content-type': sheaders.get('content-type')}
-                        )
-                        self._header_poster(
-                            conn=conn,
-                            rpath=tpath,
-                            fheaders=fheaders,
-                            retry=retry
-                        )
+                                                   retry=nretry)
+
+                        self.resp_exception(resp=resp, rty=nretry)
+                        # PUT remote object
+                        self._putter(conn=conn,
+                                     fpath=tfile,
+                                     rpath=tpath,
+                                     fheaders=fheaders,
+                                     retry=nretry,
+                                     skip=True)
+
+                        # let the system rest for 3 seconds.
+                        utils.stupid_hack(wait=3)
+
+                        # With the source headers POST new headers on target
+                        if ARGS.get('clone_headers') is True:
+                            resp = self._header_getter(conn=conn,
+                                                       rpath=tpath,
+                                                       fheaders=fheaders,
+                                                       retry=nretry)
+                            theaders = dict(resp.getheaders())
+                            for key in sheaders.keys():
+                                if key not in theaders:
+                                    fheaders.update({key: sheaders[key]})
+                            # Force the SOURCE content Type on the Target.
+                            fheaders.update(
+                                {'content-type': sheaders.get('content-type')}
+                            )
+                            self._header_poster(
+                                conn=conn,
+                                rpath=tpath,
+                                fheaders=fheaders,
+                                retry=nretry
+                            )
             finally:
                 _cleanup()
