@@ -86,22 +86,42 @@ class clone(object):
         self.go._container_create(url=target_url,
                                   container=target_container)
 
+        utils.reporter(msg='Getting Object list from the Source.')
         with methods.spinner():
-            # Get a list of Objects from the Source container.
-            utils.reporter(msg='Getting Object list.')
+            # Get a list of Objects from the Source/Target container.
             s_objs = self.go.object_lister(url=payload['url'],
                                            container=payload['c_name'])
         if s_objs is None:
             raise clds.NoSource('The source container is empty.')
 
+        # TODO(kevin) make this better, or figure out a better way.
+        # utils.reporter(msg='Getting Object list from the Target.')
+        # with methods.spinner():
+        #     # Get a list of Objects from the Source container.
+        #     t_objs = self.go.object_lister(url=payload['turl'],
+        #                                    container=payload['tc_name'])
+        # if t_objs is not None:
+        #     utils.reporter(
+        #         msg=('Determining the difference between the Source and the'
+        #              ' Target.')
+        #     )
+        #     with methods.spinner():
+        #         source_objs = [obj['name'] for obj in s_objs]
+        #         target_objs = [obj['name'] for obj in t_objs]
+        #         tmp_objs = utils.return_diff(target=target_objs,
+        #                                      source=source_objs)
+        #         if tmp_objs:
+        #             s_objs = [obj for obj in s_objs
+        #                       if obj.get('name') in tmp_objs]
+        #
+        #         del t_objs, source_objs, target_objs, tmp_objs
+
         # Get the number of objects and set Concurrency
         num_files = len(s_objs)
         concurrency = utils.set_concurrency(args=ARGS,
                                             file_count=num_files)
-
-        utils.reporter(msg='Loading Work Queue')
-
         try:
+            utils.reporter(msg='Loading Work Queue')
             batch_size = utils.batcher(num_files=num_files)
             for work in utils.batch_gen(data=s_objs,
                                         batch_size=batch_size,
