@@ -288,11 +288,11 @@ def get_from_q(queue):
     :return item|None:
     """
 
-    from Queue import Empty
+    import Queue
 
     try:
         wfile = queue.get(timeout=5)
-    except Empty:
+    except Queue.Empty:
         return None
     else:
         return wfile
@@ -632,20 +632,20 @@ def set_headers(headers):
 
     from turbolift.worker import ARGS
 
-    def object_headers(headers):
+    def _base_headers(headers):
         """Set and return custom headers.
 
         :param headers:
         :return headers:
         """
 
-        return headers.update(ARGS.get('object_headers'))
+        return headers.update(ARGS.get('base_headers'))
 
     # Set the headers if some custom ones were specified
-    if ARGS.get('object_headers'):
-        return object_headers(headers=headers)
-    else:
-        return headers
+    if ARGS.get('base_headers'):
+        _base_headers(headers=headers)
+
+    return headers
 
 
 class return_diff(object):
@@ -667,18 +667,17 @@ class return_diff(object):
                 break
             elif sobj not in self.target:
                 if self.opt is not None:
-                    for obj in self.opt:
-                        if obj['name'] == sobj:
-                            payload.append(obj)
-                            break
+                    self.opt(sobj)
                 else:
                     payload.append(sobj)
 
-    def difference(self, target, source, opt):
+    def difference(self, target, source, opt=None):
         """Process the diff.
 
         :param target:
         :param source:
+        :param opt: THIS IS AN OPTIONAL FUNCTION...
+                    ... which the difference "result" will run.
         :return list:
         """
 
@@ -705,7 +704,6 @@ class return_diff(object):
                       payload=proxy_list)
 
         return list(proxy_list)
-
 
 
 def prep_payload(auth, container, source, args):
@@ -747,9 +745,9 @@ def restor_perms(local_file, headers):
     :param headers:
     """
 
+    import grp
     import os
     import pwd
-    import grp
 
     # Restore Permissions.
     os.chmod(
@@ -772,9 +770,9 @@ def stat_file(local_file):
     :return dict:
     """
 
+    import grp
     import os
     import pwd
-    import grp
 
     obj = os.stat(local_file)
     return {'X-Object-Meta-perms': oct(obj.st_mode)[-4:],

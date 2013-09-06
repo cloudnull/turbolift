@@ -41,7 +41,10 @@ class show(object):
         with methods.spinner():
             for retry in utils.retryloop(attempts=ARGS.get('error_retry'),
                                          delay=1):
-                url = payload['url']
+                if ARGS.get('cdn_info'):
+                    url = payload['cnet']
+                else:
+                    url = payload['url']
                 conn = utils.open_connection(url=url)
                 if ARGS.get('object') is not None:
                     rpath = self.go._quoter(url=url.path,

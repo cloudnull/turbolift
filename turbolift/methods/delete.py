@@ -34,16 +34,10 @@ class delete(object):
         )
         self.go = actions.cloud_actions(payload=payload)
         self.action = getattr(self.go, 'object_lister')
-
-        LOG.info('Attempting Delete of Remote path %s', payload['c_name'])
-
-        if ARGS.get('verbose'):
-            LOG.info(
-                'Accessing API for a list of Objects in %s', payload['c_name']
-            )
-
-        if ARGS.get('debug'):
-            LOG.debug('PAYLOAD\t: "%s"', payload)
+        LOG.info(
+            'Accessing API for a list of Objects in %s', payload['c_name']
+        )
+        LOG.debug('PAYLOAD\t: "%s"', payload)
 
         # Make 2 passes when deleting objects.
         utils.reporter(
@@ -51,7 +45,6 @@ class delete(object):
         )
 
         # Multipass Object Delete.
-        objects = False
         for _ in range(2):
             utils.reporter(msg='Getting file list')
             with methods.spinner():
@@ -79,24 +72,26 @@ class delete(object):
                 # Load the queue
                 obj_list = [obj['name'] for obj in objects]
 
-            if ARGS.get('object_name'):
-                obj_names = ARGS.get('object_name')
+            if ARGS.get('object'):
+                obj_names = ARGS.get('object')
                 obj_list = [obj for obj in obj_list if obj in obj_names]
+                num_files = len(obj_list)
 
-            utils.reporter(msg='Performing Object Delete...')
+            utils.reporter(
+                msg=('Performing Object Delete for "%s" object(s)...'
+                     % num_files)
+            )
             utils.job_processer(num_jobs=num_files,
                                 objects=obj_list,
                                 job_action=self.deleterator,
                                 concur=concurrency,
                                 payload=payload)
 
-        if any([ARGS.get('save_container') is None,
-                objects is not False]):
-            if not ARGS.get('object_name'):
-                utils.reporter(msg='Performing Container Delete.')
-                with methods.spinner():
-                    self.go.container_deleter(url=payload['url'],
-                                              container=payload['c_name'])
+        if ARGS.get('save_container') is None and not ARGS.get('object'):
+            utils.reporter(msg='Performing Container Delete.')
+            with methods.spinner():
+                self.go.container_deleter(url=payload['url'],
+                                          container=payload['c_name'])
 
     def deleterator(self, work_q, payload):
         """Upload files to CloudFiles -Swift-.

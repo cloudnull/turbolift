@@ -7,8 +7,6 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
-import os
-
 from turbolift.clouderator import actions
 from turbolift import methods
 from turbolift import utils
@@ -111,8 +109,8 @@ class upload(object):
                                  inode=obj.get('name')) for obj in objects]
 
         # From the remote system see if we have differences in the local system
-        _objects = utils.return_diff(target=f_indexed, source=obj_names)
-
+        _objects = utils.return_diff().difference(target=f_indexed,
+                                                  source=obj_names)
         if _objects:
             # Set Basic Data for file delete.
             _num_files = len(_objects)

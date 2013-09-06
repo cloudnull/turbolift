@@ -26,21 +26,26 @@ def command_actions(subparser, source_args, container_args, cdn_args,
         help='List Objects in a container.'
     )
     show.set_defaults(show=True)
-    show.add_argument('-o',
-                      '--object',
-                      metavar='[NAME]',
-                      help='Target Object.',
-                      default=None)
+    show_group = show.add_mutually_exclusive_group()
+    show_group.add_argument('-o',
+                            '--object',
+                            metavar='[NAME]',
+                            help='Target Object.',
+                            default=None)
+    show_group.add_argument('--cdn-info',
+                            action='store_true',
+                            help='Show Info on the Container for CDN',
+                            default=None)
 
     # Provides for the list Function.
-    list = subparser.add_parser(
+    lister = subparser.add_parser(
         'list',
         parents=[time_args],
         help='List Objects in a container.'
     )
-    list.set_defaults(list=True)
+    lister.set_defaults(list=True)
 
-    list_group = list.add_mutually_exclusive_group()
+    list_group = lister.add_mutually_exclusive_group()
     list_group.add_argument('-c',
                             '--container',
                             metavar='[CONTAINER]',
@@ -50,10 +55,10 @@ def command_actions(subparser, source_args, container_args, cdn_args,
                             action='store_true',
                             help='Target Container.',
                             default=None)
-    list.add_argument('--filter',
-                      metavar='[NAME]',
-                      help='Filter returned list by name.',
-                      default=None)
+    lister.add_argument('--filter',
+                        metavar='[NAME]',
+                        help='Filter returned list by name.',
+                        default=None)
 
     # Provides for the CDN Toggle Function.
     cdn_command = subparser.add_parser(

@@ -73,7 +73,7 @@ def shared_args():
                           help=('This will allow the container to remain'
                                 ' untouched and intact, but only the'
                                 ' container.'))
-    del_args.add_argument('-ON', '--object-name',
+    del_args.add_argument('-o', '--object',
                           metavar='[NAME]',
                           default=[],
                           action='append',
@@ -222,8 +222,10 @@ def understand_args(set_args):
         :return set_args:
         """
 
-        from turbolift.operations import systemconfig
-        return systemconfig.ConfigurationSetup(args=set_args).config_args()
+        # TODO(kevin) Need to add in the system config file parser
+        # from turbolift.operations import systemconfig
+        # return systemconfig.ConfigurationSetup(args=set_args).config_args()
+        pass
 
     def set_header_args():
         """return base Headers.

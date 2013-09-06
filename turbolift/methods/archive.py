@@ -64,3 +64,7 @@ class archive(object):
                         container=payload['c_name'],
                         source=source,
                         u_file=wfile)
+
+            # Remove the archive unless instructed not too.
+            if ARGS.get('no_cleanup') is None:
+                utils.remove_file(wfile)

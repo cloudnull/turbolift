@@ -85,7 +85,6 @@ class download(object):
             for udir in set(unique_dirs):
                 utils.mkdir_p(path=udir)
 
-
         utils.reporter(msg='Performing Object Download.')
         utils.job_processer(num_jobs=len(obj_list),
                             objects=obj_list,
