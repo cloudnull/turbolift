@@ -71,7 +71,6 @@ class download(object):
                                                 file_count=num_files)
             # Load the queue
             obj_list = [obj['name'] for obj in objects]
-            work_q = utils.basic_queue(obj_list)
 
         utils.reporter(msg='Building Directory Structure.')
         with methods.spinner():
@@ -86,13 +85,19 @@ class download(object):
             for udir in set(unique_dirs):
                 utils.mkdir_p(path=udir)
 
-        utils.reporter(msg='Performing Object Download...')
-        with methods.spinner(work_q=work_q):
-            utils.worker_proc(job_action=self.downloaderator,
-                              num_jobs=num_files,
-                              concurrency=concurrency,
-                              t_args=payload,
-                              queue=work_q)
+        batch_size = utils.batcher(num_files=len(obj_list))
+        for work in utils.batch_gen(data=obj_list,
+                                    batch_size=batch_size,
+                                    count=num_files):
+            work_q = utils.basic_queue(work)
+
+            utils.reporter(msg='Performing Object Download...')
+            with methods.spinner(work_q=work_q):
+                utils.worker_proc(job_action=self.downloaderator,
+                                  num_jobs=num_files,
+                                  concurrency=concurrency,
+                                  t_args=payload,
+                                  queue=work_q)
 
     def downloaderator(self, work_q, payload):
         """Upload files to CloudFiles -Swift-.

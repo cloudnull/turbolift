@@ -99,19 +99,26 @@ class clone(object):
         concurrency = utils.set_concurrency(args=ARGS,
                                             file_count=num_files)
 
-        with methods.spinner():
-            utils.reporter(msg='Loading Work Queue')
-            # Load returned objects into a queue
-            work_q = utils.basic_queue(s_objs)
+        utils.reporter(msg='Loading Work Queue')
 
-        with methods.spinner(work_q=work_q):
-            utils.reporter(msg='Beginning Sync Operation.')
-            # Process the Queue
-            utils.worker_proc(job_action=self.syncerator,
-                              num_jobs=num_files,
-                              concurrency=concurrency,
-                              t_args=payload,
-                              queue=work_q)
+        try:
+            batch_size = utils.batcher(num_files=num_files)
+            for work in utils.batch_gen(data=s_objs,
+                                        batch_size=batch_size,
+                                        count=num_files):
+                # Load returned objects into a queue
+                work_q = utils.basic_queue(work)
+
+                with methods.spinner(work_q=work_q):
+                    utils.reporter(msg='Beginning Sync Operation.')
+                    # Process the Queue
+                    utils.worker_proc(job_action=self.syncerator,
+                                      num_jobs=num_files,
+                                      concurrency=concurrency,
+                                      t_args=payload,
+                                      queue=work_q)
+        except KeyboardInterrupt:
+            utils.emergency_kill(reclaim=True)
 
     def syncerator(self, work_q, payload):
         """Upload files to CloudFiles -Swift-.

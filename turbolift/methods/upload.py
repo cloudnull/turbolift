@@ -46,24 +46,26 @@ class upload(object):
             args=ARGS
         )
 
-        # Load the Queue
-        work_q = utils.basic_queue(iters=f_indexed)
-
         LOG.info('MESSAGE\t: "%s" Files have been found.', num_files)
         LOG.debug('PAYLOAD\t: "%s"', payload)
 
-        with methods.spinner(work_q=work_q):
-            # Set the actions class up
-            self.go = actions.cloud_actions(payload=payload)
-            self.go._container_create(url=payload['url'],
-                                      container=payload['c_name'])
-            self.action = getattr(self.go, 'object_putter')
+        batch_size = utils.batcher(num_files=num_files)
+        for work in utils.batch_gen(data=f_indexed,
+                                    batch_size=batch_size,
+                                    count=num_files):
+            work_q = utils.basic_queue(work)
+            with methods.spinner(work_q=work_q):
+                # Set the actions class up
+                self.go = actions.cloud_actions(payload=payload)
+                self.go._container_create(url=payload['url'],
+                                          container=payload['c_name'])
+                self.action = getattr(self.go, 'object_putter')
 
-            utils.worker_proc(job_action=self.uploaderator,
-                              num_jobs=num_files,
-                              concurrency=concurrency,
-                              t_args=payload,
-                              queue=work_q)
+                utils.worker_proc(job_action=self.uploaderator,
+                                  num_jobs=num_files,
+                                  concurrency=concurrency,
+                                  t_args=payload,
+                                  queue=work_q)
 
         if ARGS.get('delete_remote') is True:
             with methods.spinner(work_q=None):
@@ -121,17 +123,21 @@ class upload(object):
             _num_files = len(_objects)
             LOG.info('MESSAGE\t: "%s" Files have been found to be removed from'
                      ' the REMOTE CONTAINER.', _num_files)
-            _work_q = utils.basic_queue(iters=_objects)
             _concurrency = utils.set_concurrency(args=ARGS,
                                                  file_count=_num_files)
 
             # Delete the difference in Files.
             utils.reporter(msg='Performing Remote Delete')
-            utils.worker_proc(job_action=self.deleterator,
-                              num_jobs=_num_files,
-                              concurrency=_concurrency,
-                              t_args=payload,
-                              queue=_work_q)
+            batch_size = utils.batcher(num_files=_num_files)
+            for work in utils.batch_gen(data=_objects,
+                                        batch_size=batch_size,
+                                        count=_num_files):
+                work_q = utils.basic_queue(work)
+                utils.worker_proc(job_action=self.deleterator,
+                                  num_jobs=_num_files,
+                                  concurrency=_concurrency,
+                                  t_args=payload,
+                                  queue=work_q)
         else:
             utils.reporter(msg='No Difference between REMOTE and LOCAL'
                                ' Directories.')

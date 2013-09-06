@@ -81,17 +81,20 @@ class delete(object):
                 if ARGS.get('object_name'):
                     obj_names = ARGS.get('object_name')
                     obj_list = [obj for obj in obj_list if obj in obj_names]
-                work_q = utils.basic_queue(obj_list)
 
+            batch_size = utils.batcher(num_files=num_files)
             utils.reporter(msg='Performing Object Delete...')
-            with methods.spinner(work_q=work_q):
-                utils.worker_proc(job_action=self.deleterator,
-                                  num_jobs=num_files,
-                                  concurrency=concurrency,
-                                  t_args=payload,
-                                  queue=work_q)
-
-            utils.stupid_hack(wait=2)
+            for work in utils.batch_gen(data=obj_list,
+                                        batch_size=batch_size,
+                                        count=len(obj_list)):
+                # Load returned objects into a queue
+                work_q = utils.basic_queue(work)
+                with methods.spinner(work_q=work_q):
+                    utils.worker_proc(job_action=self.deleterator,
+                                      num_jobs=num_files,
+                                      concurrency=concurrency,
+                                      t_args=payload,
+                                      queue=work_q)
 
         if any([ARGS.get('save_container') is None,
                 objects is not False]):

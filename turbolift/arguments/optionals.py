@@ -71,3 +71,8 @@ def optional_args(parser):
                            action='store_true',
                            help='Turn up verbosity to over 9000',
                            default=os.getenv('TURBO_DEBUG', None))
+    optionals.add_argument('--batch-size',
+                           metavar='[CONCURRENCY]',
+                           type=int,
+                           help='The number of files to process per job.',
+                           default=250000)

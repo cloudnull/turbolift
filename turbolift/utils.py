@@ -194,9 +194,53 @@ def basic_queue(iters=None):
     import multiprocessing
 
     worker_q = multiprocessing.Queue()
-    for _dt in iters:
-        worker_q.put(_dt)
+    if iters is not None:
+        for _dt in iters:
+            worker_q.put(_dt)
     return worker_q
+
+
+def batcher(num_files):
+    """Check the batch size and return it.
+
+    :param num_files:
+    :return int:
+    """
+
+    from turbolift.worker import ARGS
+
+    batch_size = ARGS.get('batch_size')
+    reporter(
+        msg='Job process MAX Batch Size is "%s"' % batch_size,
+        lvl='debug',
+        log=True,
+        prt=False
+    )
+    if num_files > batch_size:
+        ops = num_files / batch_size + 1
+        reporter(
+            msg='This take "%s" operations to complete.' % ops,
+            lvl='warn',
+            log=True,
+            prt=True
+        )
+    return batch_size
+
+
+def batch_gen(data, batch_size, count):
+    """This is a batch Generator which is used for large data sets.
+
+    NOTE ORIGINAL CODE FROM: Paolo Bergantino
+    http://stackoverflow.com/questions/760753/iterate-over-a-python-sequence\
+    -in-multiples-of-n
+
+    :param data:
+    :param batch_size:
+    :return list:
+    """
+
+    for dataset in range(0, count, batch_size):
+        yield data[dataset:dataset + batch_size]
 
 
 def get_from_q(queue):
@@ -206,12 +250,19 @@ def get_from_q(queue):
     :return item|None:
     """
 
+    import turbolift as clds
     import multiprocessing
+    from Queue import Empty
 
     try:
-        return queue.get(timeout=2)
-    except multiprocessing.queues.Empty:
+        wfile = queue.get(timeout=2)
+        # If Work is None return None
+        if wfile is None:
+            wfile = queue.get(timeout=2)
+    except Empty:
         return None
+    else:
+        return wfile
 
 
 def emergency_kill(reclaim=None):
