@@ -78,9 +78,10 @@ class delete(object):
 
                 # Load the queue
                 obj_list = [obj['name'] for obj in objects]
-                if ARGS.get('object_name'):
-                    obj_names = ARGS.get('object_name')
-                    obj_list = [obj for obj in obj_list if obj in obj_names]
+
+            if ARGS.get('object_name'):
+                obj_names = ARGS.get('object_name')
+                obj_list = [obj for obj in obj_list if obj in obj_names]
 
             batch_size = utils.batcher(num_files=num_files)
             utils.reporter(msg='Performing Object Delete...')
