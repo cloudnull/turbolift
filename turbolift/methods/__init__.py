@@ -190,7 +190,7 @@ def compress_files(file_list):
         file_name = '%s.tgz' % set_name
 
         # Set the working File.
-        tmp_file = os.path.join(home_dir, file_name)
+        tmp_file = utils.jpath(root=home_dir, inode=file_name)
 
         # Begin creating the Archive.
         tar = tarfile.open(tmp_file, 'w:gz')
