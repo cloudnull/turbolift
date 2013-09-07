@@ -202,11 +202,20 @@ def remove_file(filename):
 
     import os
 
-    if os.path.exists(filename):
+    if file_exists(filename):
         try:
             os.remove(filename)
         except OSError:
             pass
+
+
+def file_exists(filename):
+    import os
+
+    if os.path.exists(filename):
+        return True
+    else:
+        return False
 
 
 def basic_queue(iters=None):
