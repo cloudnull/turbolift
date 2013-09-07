@@ -38,6 +38,10 @@ Functions of the Application :
   * Set Custom headers on Objects/Containers
 
 
+Turbolift can be managed with a config file. The option ``--system-config`` references a config file.
+Additionally, the Environment Variable ``TURBO_CONFIG`` can be used to reference a config file as well.
+All of Turbolift's options can be set in the config file. This makes managing Turbolift very simple.
+
 Please read `command_line_args.rst`_ for more information on Command Line Arguments and functions.
 
 
