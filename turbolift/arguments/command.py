@@ -62,7 +62,7 @@ def command_actions(subparser, source_args, container_args, cdn_args,
 
     # Provides for the CDN Toggle Function.
     cdn_command = subparser.add_parser(
-        'cdn_command',
+        'cdn-command',
         parents=[cdn_args],
         help='Run CDN Commands on a Container.'
     )
