@@ -8,6 +8,8 @@
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
 import argparse
+import ConfigParser
+import os
 import sys
 
 from turbolift.arguments import archive
@@ -30,11 +32,25 @@ def setup_parser():
     :returns parser, subparser:
     """
 
+    # Accept a config file
+    conf_parser = argparse.ArgumentParser(add_help=False)
+    conf_parser.add_argument('-C',
+                             '--system-config',
+                             metavar='[FILE]',
+                             type=str,
+                             default=os.environ.get('TURBO_CONFIG', None),
+                             help=('Path to your Configuration file. This is'
+                                   ' an optional argument used to spec '
+                                   ' credentials.'))
+
+    conf_parser.parse_known_args()
+
     parser = argparse.ArgumentParser(
         formatter_class=lambda prog: argparse.HelpFormatter(
             prog,
             max_help_position=50
         ),
+        parents=[conf_parser],
         usage='%(prog)s',
         description='Uploads lots of Files Quickly Cloud Files %(prog)s',
         epilog=info.VINFO)
@@ -149,7 +165,6 @@ def args_setup():
     """
 
     parser, subparser = setup_parser()
-
     default_args(parser=parser)
 
     # Shared Arguments
@@ -206,6 +221,7 @@ def get_args():
 
     parser = args_setup()
     args = vars(parser.parse_args())
+    print args
     return understand_args(set_args=args)
 
 
@@ -215,17 +231,6 @@ def understand_args(set_args):
     :param parser:
     :return args:
     """
-
-    def configurator():
-        """Returns Arguments from a configuration file.
-
-        :return set_args:
-        """
-
-        # TODO(kevin) Need to add in the system config file parser
-        # from turbolift.operations import systemconfig
-        # return systemconfig.ConfigurationSetup(args=set_args).config_args()
-        pass
 
     def set_header_args():
         """return base Headers.
@@ -238,9 +243,11 @@ def understand_args(set_args):
                 chl=set_args.get(htp)
             )
 
-    # Parse Config File
-    if set_args.get('system_config'):
-        set_args = configurator()
+    sysconfig = set_args.get('system_config')
+    if sysconfig is not None:
+        config = ConfigParser.SafeConfigParser()
+        config.read([sysconfig])
+        set_args.update(dict(config.items("Turbolift")))
 
     # Return all types of headers
     set_header_args()
