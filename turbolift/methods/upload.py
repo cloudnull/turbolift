@@ -78,6 +78,8 @@ class upload(object):
             try:
                 source = payload['source']
                 container = payload['c_name']
+                if utils.file_exists(wfile) is False:
+                    return None
                 self.go.object_putter(url=payload['url'],
                                       container=container,
                                       source=source,
