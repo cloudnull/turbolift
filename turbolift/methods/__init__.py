@@ -195,7 +195,8 @@ def compress_files(file_list):
         # Begin creating the Archive.
         tar = tarfile.open(tmp_file, 'w:gz')
         for name in file_list:
-            tar.add(name)
+            if utils.file_exists(name) is True:
+                tar.add(name)
         tar.close()
 
         utils.reporter(msg='ARCHIVE CREATED: %s' % tmp_file, prt=False)
@@ -218,13 +219,13 @@ def compress_files(file_list):
                 msg='ARCHIVE CONTENTS VERIFIED: %s files' % count,
             )
     except KeyboardInterrupt:
-        if os.path.exists(tmp_file):
-            os.remove(tmp_file)
+        if utils.file_exists(tmp_file):
+            utils.remove_file(tmp_file)
         utils.emergency_exit('I have stopped at your command,'
                              ' I removed Local Copy of the Archive')
     except Exception as exp:
-        if os.path.exists(tmp_file):
-            os.remove(tmp_file)
+        if utils.file_exists(tmp_file):
+            utils.remove_file(tmp_file)
             utils.emergency_exit(
                 'I am sorry i just don\'t know what you put into me, Removing'
                 ' Local Copy of the Archive.'
