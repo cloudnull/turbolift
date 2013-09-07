@@ -33,29 +33,31 @@ Optional Arguments:
   - ``error-retry`` | Allows for a retry integer to be set, Default is 5
   - ``cc`` | Operational Concurrency
   - ``service-type`` | Override the service type 
-  - ``system-config`` | Allows Turbolift to use a config file for it's credentials. The file MUST be set to permissions 400 or 600
+  - ``system-config`` | Allows Turbolift to use a config file for it's credentials.
   - ``quiet`` | Makes Turbolift Quiet
   - ``verbose`` | Shows Progress While Uploading
   - ``debug`` | Turn up verbosity to over 9000
 
 
+Header Arguments:
+~~~~~~~~~~~~~~~~~
+
+  - ``base-headers`` | Allows for the use of custom headers as the base Header
+  - ``container-headers`` | Allows for custom headers to be set on Container(s)
+  - ``object-headers`` | Allows for custom headers to be set on Object(s)
+
+
 Positional Arguments:
 ~~~~~~~~~~~~~~~~~~~~~
 
-All Positional arguments have additional Help information. To see this additional help, please use ``-h/--help``:
   - ``upload`` | Use the Upload Function for a local Source.
   - ``tsync`` | DEPRECATED, use ``upload --sync``
   - ``archive`` | Compress files or directories into a single archive. Multiple Source Directories can be added to a single Archive.
   - ``delete`` | Deletes all of the files that are found in a container, This will also delete the container by default.
   - ``download`` | Downloads all of the files in a container to a provided source. This also downloads all of the pesudo directories and its contents, while preserving the structure.
   - ``list`` | List all containers or objects in a container.
+  - ``show`` | Information on a container or object in a container.
   - ``clone`` | Clone a container to another container to the same or different region.
-  - ``cdn-toggle`` | Enable / Disable the CDN on a Container. Additional Headers can be set with this function.
+  - ``cdn-command`` | Enable / Disable the CDN on a Container. Additional Headers can be set with this function.
 
-
-Header Arguments:
-~~~~~~~~~~~~~~~~~
-
-  - ``base-headers`` | Allows for the use of customer heads as the base Header
-  - ``container-headers`` | Allows for Metadata to be set on Container(s)
-  - ``object-headers`` | Allows for Metadata to be set on Object(s)
+All Positional arguments ALL have additional Help information. To see this additional help information, please use ``<THE_COMMAND> -h/--help``
