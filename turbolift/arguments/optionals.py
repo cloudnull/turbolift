@@ -44,13 +44,6 @@ def optional_args(parser):
                            type=str,
                            default='cloudFiles',
                            help='Service Type for Use in object storage.'),
-    optionals.add_argument('--system-config',
-                           metavar='[CONFIG-FILE]',
-                           type=str,
-                           default=None,
-                           help=('Path to your Configuration file. This is'
-                                 ' an optional argument used to spec '
-                                 ' credentials.'))
     optionals.add_argument('--disable-colorized',
                            action='store_true',
                            help='Make %(prog)s less pretty.')
