@@ -270,14 +270,21 @@ class cloud_actions(object):
 
         file_l = []
         fpath = filepath
-        for _ in xrange(count / 10000 + 1):
-            for retry in utils.retryloop(attempts=ARGS.get('error_retry')):
-                with mlds.operation(retry):
+
+        # Quote the file path.
+        _filepath = utils.ustr(filepath)
+
+        for retry in utils.retryloop(attempts=ARGS.get('error_retry')):
+            with mlds.operation(retry):
+                while True:
                     # Make a connection
                     conn.request('GET', fpath, headers=fheaders)
                     resp, read = utils.response_get(conn=conn, retry=retry)
                     self.resp_exception(resp=resp, rty=retry)
-                    for obj in utils.json_encode(read):
+                    return_list = utils.json_encode(read)
+                    count -= len(return_list)
+
+                    for obj in return_list:
                         if ARGS.get('time_offset') is not None:
                             # Get the last_modified data from the Object
                             lmobj = obj.get('last_modified')
@@ -287,23 +294,24 @@ class cloud_actions(object):
                             file_l.append(obj)
 
                     if file_l:
-                        # Quote the file path.
-                        _filepath = utils.ustr(filepath)
-                        # Get the last file in the list.
-                        lobj = file_l[-1].get('name')
-                        # Quote the last file in the list.
-                        _lobj = self._quoter(url=lobj)
                         # Set the marker.
-                        fpath = '%s&marker=%s' % (_filepath, _lobj)
+                        fpath = '%s&marker=%s' % (
+                            _filepath,
+                            self._quoter(url=file_l[-1].get('name'))
+                        )
 
-        final_list = utils.unique_list_dicts(dlist=file_l, key='name')
+                    if count <= 0:
+                        break
 
-        utils.reporter(
-            msg='INFO: %s object(s) found' % len(final_list),
-            log=True
-        )
+            final_list = utils.unique_list_dicts(dlist=file_l, key='name')
+            del file_l
 
-        return final_list
+            utils.reporter(
+                msg='INFO: %s object(s) found' % len(final_list),
+                log=True
+            )
+
+            return final_list
 
     def _header_getter(self, conn, rpath, fheaders, retry):
         """perfrom HEAD request on a specified object in the container.
