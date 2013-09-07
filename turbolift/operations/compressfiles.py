@@ -55,7 +55,8 @@ class Compressor(object):
 
             tar = tarfile.open(tmp_file, 'w:gz')
             for name in self.filelist:
-                tar.add(name)
+                if os.path.exists(name):
+                    tar.add(name)
             tar.close()
 
             # Set the Base Path for uploading the file
