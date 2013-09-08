@@ -221,7 +221,6 @@ def get_args():
 
     parser = args_setup()
     args = vars(parser.parse_args())
-    print args
     return understand_args(set_args=args)
 
 
