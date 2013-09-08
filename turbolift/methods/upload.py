@@ -76,13 +76,11 @@ class upload(object):
             if wfile is None:
                 break
             try:
-                source = payload['source']
-                container = payload['c_name']
                 if utils.file_exists(wfile) is False:
                     return None
                 self.go.object_putter(url=payload['url'],
-                                      container=container,
-                                      source=source,
+                                      container=payload['c_name'],
+                                      source=payload['source'],
                                       u_file=wfile)
             except KeyboardInterrupt:
                 utils.emergency_kill(reclaim=True)
@@ -151,7 +149,7 @@ class upload(object):
                 self.go.object_deleter(url=payload['url'],
                                        container=payload['c_name'],
                                        u_file=wfile)
-            except EOFError:
-                utils.emergency_kill()
             except KeyboardInterrupt:
                 utils.emergency_kill(reclaim=True)
+            except EOFError:
+                utils.emergency_kill()
