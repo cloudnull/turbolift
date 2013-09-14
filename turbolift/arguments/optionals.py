@@ -44,9 +44,9 @@ def optional_args(parser):
                            type=str,
                            default='cloudFiles',
                            help='Service Type for Use in object storage.'),
-    optionals.add_argument('--disable-colorized',
+    optionals.add_argument('--colorized',
                            action='store_true',
-                           help='Make %(prog)s less pretty.')
+                           help='Colored output, effects logs and STDOUT.')
     optionals.add_argument('--log-location',
                            type=str,
                            default=os.getenv('TURBO_LOGS', os.getenv('HOME')),
