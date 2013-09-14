@@ -89,19 +89,21 @@ class clone(object):
         utils.reporter(msg='Getting Object list from the Source.')
         with methods.spinner():
             # Get a list of Objects from the Source/Target container.
-            s_objs = self.go.object_lister(url=payload['url'],
-                                           container=payload['c_name'])
-        if s_objs is None:
+            objects, list_count, last_obj = self.go.object_lister(
+                url=payload['url'],
+                container=payload['c_name']
+            )
+        if objects is None:
             raise clds.NoSource('The source container is empty.')
 
         # Get the number of objects and set Concurrency
-        num_files = len(s_objs)
+        num_files = len(objects)
         concurrency = utils.set_concurrency(args=ARGS,
                                             file_count=num_files)
 
         utils.reporter(msg='Beginning Sync Operation.')
         utils.job_processer(num_jobs=num_files,
-                            objects=s_objs,
+                            objects=objects,
                             job_action=self.syncerator,
                             concur=concurrency,
                             payload=payload)

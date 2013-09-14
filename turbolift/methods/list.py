@@ -23,39 +23,45 @@ class list(object):
         self.action = None
 
     def start(self):
-        """Retrieve a long list of all files in a container."""
+        """Return a list of objects from the API for a container."""
+
+        def _list(payload, go, last_obj):
+            """Retrieve a long list of all files in a container.
+
+            :return final_list, list_count, last_obj:
+            """
+
+            if ARGS.get('all_containers') is None:
+                return go.object_lister(url=payload['url'],
+                                        container=payload['c_name'],
+                                        last_obj=last_obj)
+            else:
+                return go.container_lister(url=payload['url'],
+                                           last_obj=last_obj)
 
         # Package up the Payload
-        payload = utils.prep_payload(
-            auth=self.auth,
-            container=ARGS.get('container'),
-            source=None,
-            args=ARGS
-        )
+        payload = utils.prep_payload(auth=self.auth,
+                                     container=ARGS.get('container'),
+                                     source=None,
+                                     args=ARGS)
 
         # Prep Actions.
         self.go = actions.cloud_actions(payload=payload)
 
-        if ARGS.get('verbose'):
-            LOG.info(
-                'Accessing API for a list of Objects in %s', payload['c_name']
-            )
+        LOG.info('API Access for a list of Objects in %s', payload['c_name'])
+        LOG.debug('PAYLOAD\t: "%s"', payload)
 
-        if ARGS.get('debug'):
-            LOG.debug('PAYLOAD\t: "%s"', payload)
-
+        last_obj = None
         with methods.spinner():
-            if ARGS.get('all_containers') is None:
-                objects = self.go.object_lister(url=payload['url'],
-                                                container=payload['c_name'])
-            else:
-                objects = self.go.container_lister(url=payload['url'])
-
+            objects, list_count, last_obj = _list(payload=payload,
+                                                  go=self.go,
+                                                  last_obj=last_obj)
             if ARGS.get('filter') is not None:
-                nfil = ARGS.get('filter')
-                objects = [obj for obj in objects if nfil in obj.get('name')]
+                objects = [obj for obj in objects
+                           if ARGS.get('filter') in obj.get('name')]
 
             # Count the number of objects returned.
+            obj_count = len(objects)
             if objects is False:
                 utils.reporter(msg='Nothing found.')
             elif objects is not None:
@@ -64,13 +70,10 @@ class list(object):
                     utils.reporter(msg='Nothing found.')
                 else:
                     for obj in objects:
+                        obj['bytes'] = int(obj.get('bytes') / 1024)
                         utils.reporter(
-                            msg=('size: %s\t(KB)\t- name: %s '
-                                 % (int(obj.get('bytes')) / 1024,
-                                    obj.get('name')))
+                            msg='SIZE: %(bytes)s KB\t- NAME: %(name)s' % obj
                         )
-                    utils.reporter(
-                        msg='I found "%s" Item(s).' % len(objects)
-                    )
+                    utils.reporter(msg='I found "%d" Item(s).' % obj_count)
             else:
                 utils.reporter(msg='Nothing found.')

@@ -45,6 +45,7 @@ class show(object):
                     url = payload['cnet']
                 else:
                     url = payload['url']
+
                 conn = utils.open_connection(url=url)
                 if ARGS.get('object') is not None:
                     rpath = self.go._quoter(url=url.path,
@@ -63,4 +64,4 @@ class show(object):
                 else:
                     utils.reporter(msg='Object found.')
                     for _re in resp.getheaders():
-                        utils.reporter(msg='%s:\t%s' % _re)
+                        utils.reporter(msg='%s: %s' % _re)

@@ -49,9 +49,10 @@ class delete(object):
             utils.reporter(msg='Getting file list')
             with methods.spinner():
                 # Get all objects in a Container
-                objects = self.action(url=payload['url'],
-                                      container=payload['c_name'])
-
+                objects, list_count, last_obj = self.action(
+                    url=payload['url'],
+                    container=payload['c_name']
+                )
                 # Count the number of objects returned.
                 if objects is False:
                     utils.reporter(msg='No Container found.')
@@ -72,15 +73,14 @@ class delete(object):
                 # Load the queue
                 obj_list = [obj['name'] for obj in objects]
 
-            if ARGS.get('object'):
-                obj_names = ARGS.get('object')
-                obj_list = [obj for obj in obj_list if obj in obj_names]
-                num_files = len(obj_list)
-
-            utils.reporter(
-                msg=('Performing Object Delete for "%s" object(s)...'
-                     % num_files)
-            )
+                if ARGS.get('object'):
+                    obj_names = ARGS.get('object')
+                    obj_list = [obj for obj in obj_list if obj in obj_names]
+                    num_files = len(obj_list)
+                utils.reporter(
+                    msg=('Performing Object Delete for "%s" object(s)...'
+                         % num_files)
+                )
             utils.job_processer(num_jobs=num_files,
                                 objects=obj_list,
                                 job_action=self.deleterator,

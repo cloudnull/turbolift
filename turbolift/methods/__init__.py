@@ -33,7 +33,8 @@ def get_local_files():
         :return True|False:
         """
         if all([not os.path.islink(item),
-                not os.path.ismount(item)]):
+                not os.path.ismount(item),
+                not os.path.getsize(item) > 4831838208]):
             return True
         else:
             return False
@@ -45,7 +46,11 @@ def get_local_files():
         :return:
         """
 
-        location = os.path.expanduser(location.encode('utf8'))
+        location = os.path.expanduser(
+            os.path.realpath(
+                location.encode('utf8')
+            )
+        )
         if os.path.isdir(location):
             root_dir = '%s' % location
             r_walk = os.walk(root_dir)
@@ -62,7 +67,7 @@ def get_local_files():
         if not isinstance(d_paths, list):
             d_paths = [d_paths]
 
-        # Local Index Pathh
+        # Local Index Path
         c_index = [indexer(location=d_path) for d_path in d_paths]
 
         # make sure my files are only files, and compare it with the not_list

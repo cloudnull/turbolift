@@ -50,8 +50,10 @@ class download(object):
         utils.reporter(msg='getting file list')
         with methods.spinner():
             # Get all objects in a Container
-            objects = self.action(url=payload['url'],
-                                  container=payload['c_name'])
+            objects, list_count, last_obj = self.action(
+                url=payload['url'],
+                container=payload['c_name']
+            )
 
             # Count the number of objects returned.
             if objects is False:

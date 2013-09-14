@@ -21,7 +21,7 @@ def header_args(parser):
                                         ' Here are the default headers')
     headers.add_argument('-BH', '--base-headers',
                          metavar='[K=V]',
-                         default=[],
+                         default=["Connection=Keep-alive"],
                          action='append',
                          help=('These are the basic headers used for'
                                ' all Turbolift operations. Anything'

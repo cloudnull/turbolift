@@ -258,7 +258,7 @@ class cloud_actions(object):
                 lvl='debug'
             )
 
-    def _list_getter(self, conn, count, filepath, fheaders):
+    def _list_getter(self, conn, count, filepath, fheaders, last_obj=None):
         """Get a list of all objects in a container.
 
         :param conn:
@@ -268,11 +268,24 @@ class cloud_actions(object):
         :return list:
         """
 
+        def _last_marker(filepath, last_obj):
+            """Set Marker.
+
+            :param filepath:
+            :param last_obj:
+            :return str:
+            """
+
+            return '%s&marker=%s' % (filepath, last_obj)
+
         file_l = []
-        fpath = filepath
+        list_count = 0
 
         # Quote the file path.
-        _filepath = utils.ustr(filepath)
+        fpath = _fpath = '%s/?limit=10000&format=json' % utils.ustr(filepath)
+        if last_obj is not None:
+            fpath = _last_marker(filepath=fpath,
+                                 last_obj=self._quoter(url=last_obj))
 
         for retry in utils.retryloop(attempts=ARGS.get('error_retry')):
             with mlds.operation(retry):
@@ -282,36 +295,38 @@ class cloud_actions(object):
                     resp, read = utils.response_get(conn=conn, retry=retry)
                     self.resp_exception(resp=resp, rty=retry)
                     return_list = utils.json_encode(read)
-                    count -= len(return_list)
+
+                    # Get count
+                    get_count = len(return_list)
+                    list_count += get_count
 
                     for obj in return_list:
-                        if ARGS.get('time_offset') is not None:
-                            # Get the last_modified data from the Object
-                            lmobj = obj.get('last_modified')
-                            if crds.time_delta(lmobj=lmobj) is True:
+                        _to = ARGS.get('time_offset')
+                        if _to is not None:
+                            # Get the last_modified data from the Object.
+                            if crds.time_delta(lmobj=_to) is True:
                                 file_l.append(obj)
                         else:
                             file_l.append(obj)
 
                     if file_l:
-                        # Set the marker.
-                        fpath = '%s&marker=%s' % (
-                            _filepath,
-                            self._quoter(url=file_l[-1].get('name'))
-                        )
-
+                        last_obj = file_l[-1].get('name')
+                        # Set the marker
+                        fpath = _last_marker(filepath=_fpath,
+                                             last_obj=last_obj)
                     if count <= 0:
                         break
+                    elif list_count == count:
+                        break
+                    # TODO(kevin) Limit obj return to 250000
+                    # elif list_count >= 250000:
+                    #     break
 
-            final_list = utils.unique_list_dicts(dlist=file_l, key='name')
-            del file_l
-
-            utils.reporter(
-                msg='INFO: %s object(s) found' % len(final_list),
-                log=True
-            )
-
-            return final_list
+        final_list = utils.unique_list_dicts(dlist=file_l, key='name')
+        utils.reporter(msg='INFO: %d object(s) found' % len(final_list),
+                       log=True)
+        del file_l
+        return final_list, list_count, last_obj
 
     def _header_getter(self, conn, rpath, fheaders, retry):
         """perfrom HEAD request on a specified object in the container.
@@ -446,7 +461,7 @@ class cloud_actions(object):
                               fheaders=self.payload['headers'],
                               retry=retry)
 
-    def container_lister(self, url):
+    def container_lister(self, url, last_obj=None):
         """Builds a long list of objects found in a container.
 
         NOTE: This could be millions of Objects.
@@ -480,13 +495,11 @@ class cloud_actions(object):
                     return None
 
                 # Set the number of loops that we are going to do
-                _fpath = '%s/?limit=10000&format=json' % fpath
-                return self._list_getter(
-                    conn=conn,
-                    count=container_count,
-                    filepath=_fpath,
-                    fheaders=self.payload['headers']
-                )
+                return self._list_getter(conn=conn,
+                                         count=container_count,
+                                         filepath=fpath,
+                                         fheaders=self.payload['headers'],
+                                         last_obj=last_obj)
 
     def object_putter(self, url, container, source, u_file):
         """This is the Sync method which uploads files to the swift repository
@@ -594,13 +607,15 @@ class cloud_actions(object):
                                  source=source,
                                  retry=retry)
 
-    def object_lister(self, url, container):
+    def object_lister(self, url, container, object_count=None, last_obj=None):
         """Builds a long list of objects found in a container.
 
         NOTE: This could be millions of Objects.
 
         :param url:
         :param container:
+        :param object_count:
+        :param last_obj:
         :return None | list:
         """
 
@@ -618,33 +633,30 @@ class cloud_actions(object):
                                            rpath=fpath,
                                            fheaders=self.payload['headers'],
                                            retry=retry)
-
-                if not resp.status == 404:
-                    head_check = dict(resp.getheaders())
-                    object_count = head_check.get('x-container-object-count')
-                    if object_count:
-                        object_count = int(object_count)
-                        if not object_count > 0:
-                            return None
-                    else:
-                        return None
-                else:
-                    return False
-
                 if resp.status == 404:
                     utils.reporter(
                         msg='Not found. %s | %s' % (resp.status, resp.msg)
                     )
-                    return None
+                    return None, None, None
                 else:
+                    if object_count is None:
+                        head_check = dict(resp.getheaders())
+                        object_count = head_check.get(
+                            'x-container-object-count'
+                        )
+                        if object_count:
+                            object_count = int(object_count)
+                            if not object_count > 0:
+                                return None, None, None
+                        else:
+                            return None, None, None
+
                     # Set the number of loops that we are going to do
-                    _fpath = '%s/?limit=10000&format=json' % fpath
-                    return self._list_getter(
-                        conn=conn,
-                        count=object_count,
-                        filepath=_fpath,
-                        fheaders=self.payload['headers']
-                    )
+                    return self._list_getter(conn=conn,
+                                             count=object_count,
+                                             filepath=fpath,
+                                             fheaders=self.payload['headers'],
+                                             last_obj=last_obj)
 
     def object_syncer(self, surl, turl, scontainer, tcontainer, obj):
         """Download an Object from one Container and the upload it to a target.
