@@ -24,8 +24,12 @@ def reporter(msg, prt=True, lvl='info', log=False, color=False):
     if ARGS.get('quiet') is None:
         if prt is True or ARGS.get('verbose') is True:
             if lvl is 'error':
+                if ARGS.get('colorized') is True:
+                    msg = bcolors(msg, lvl)
                 print(msg)
             else:
+                if ARGS.get('colorized') is True:
+                    msg = bcolors(msg, lvl)
                 print(msg)
 
     # Log message
@@ -33,7 +37,10 @@ def reporter(msg, prt=True, lvl='info', log=False, color=False):
             lvl in ['debug', 'warn', 'error'],
             log is True]):
         logger = getattr(LOG, lvl)
-        logger(msg)
+        if ARGS.get('colorized'):
+            logger(bcolors(msg, lvl))
+        else:
+            logger(msg)
 
 
 def bcolors(msg, color):
@@ -52,6 +59,7 @@ def bcolors(msg, color):
               'info': '\033[92m',
               'warn': '\033[93m',
               'error': '\033[91m',
+              'critical': '\033[91m',
               'ENDC': '\033[0m'}
 
     if color in colors:
