@@ -33,9 +33,9 @@ def get_local_files():
         :return True|False:
         """
         if all([not os.path.islink(item),
-                not os.path.ismount(item),
-                not os.path.getsize(item) > 4831838208]):
-            return True
+                not os.path.ismount(item)]):
+            if not os.path.getsize(item) > 4831838208:
+                return True
         else:
             return False
 
@@ -46,21 +46,18 @@ def get_local_files():
         :return:
         """
 
-        location = os.path.expanduser(
-            os.path.realpath(
-                location.encode('utf8')
-            )
+        _location = utils.real_full_path(
+            location.encode('utf8')
         )
-        if os.path.isdir(location):
-            root_dir = '%s' % location
-            r_walk = os.walk(root_dir)
+        if os.path.isdir(_location):
+            r_walk = os.walk(_location)
             indexes = [(root, fls) for root, sfs, fls in r_walk]
             return [utils.jpath(root=inx[0], inode=ind)
                     for inx in indexes for ind in inx[1]]
-        elif os.path.isfile(location):
-            return [location]
+        elif os.path.isfile(_location):
+            return [_location]
         else:
-            raise clds.NoFileProvided('No Path was Found for %s' % location)
+            raise clds.NoFileProvided('No Path was Found for %s' % _location)
 
     try:
         d_paths = ARGS.get('source')

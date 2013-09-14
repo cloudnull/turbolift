@@ -466,8 +466,8 @@ def get_sfile(ufile, source):
 
     from turbolift.worker import ARGS
 
-    if ARGS.get('preserve-path'):
-        return source
+    if ARGS.get('preserve_path'):
+        return os.path.join(source, ufile).lstrip(os.sep)
     if os.path.isfile(source):
         return os.path.basename(source)
     elif source is '.':
@@ -475,6 +475,22 @@ def get_sfile(ufile, source):
     else:
         base, sfile = ufile.split(source)
         return os.sep.join(sfile.split(os.sep)[1:])
+
+
+def real_full_path(object):
+    """Return a string with the real full path of an object.
+
+    :param object:
+    :return str:
+    """
+
+    import os
+
+    return os.path.realpath(
+        os.path.expanduser(
+            object
+        )
+    )
 
 
 def get_local_source(args):
@@ -486,11 +502,11 @@ def get_local_source(args):
 
     import os
 
-    _local_path = os.path.expanduser(args.get('source'))
-    if os.path.isdir(_local_path):
-        return _local_path.rstrip(os.sep)
+    local_path = real_full_path(args.get('source'))
+    if os.path.isdir(local_path):
+        return local_path.rstrip(os.sep)
     else:
-        return os.path.split(_local_path)[0].rstrip(os.sep)
+        return os.path.split(local_path)[0].rstrip(os.sep)
 
 
 def open_connection(url):
