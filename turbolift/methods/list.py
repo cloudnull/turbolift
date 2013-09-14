@@ -61,7 +61,6 @@ class list(object):
                            if ARGS.get('filter') in obj.get('name')]
 
             # Count the number of objects returned.
-            obj_count = len(objects)
             if objects is False:
                 utils.reporter(msg='Nothing found.')
             elif objects is not None:
@@ -74,6 +73,6 @@ class list(object):
                         utils.reporter(
                             msg='SIZE: %(bytes)s KB\t- NAME: %(name)s' % obj
                         )
-                    utils.reporter(msg='I found "%d" Item(s).' % obj_count)
+                    utils.reporter(msg='I found "%d" Item(s).' % num_files)
             else:
                 utils.reporter(msg='Nothing found.')
