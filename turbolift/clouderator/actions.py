@@ -278,15 +278,17 @@ class cloud_actions(object):
 
             return '%s&marker=%s' % (filepath, last_obj)
 
+        # Set Basic Data
         file_l = []
         list_count = 0
 
         # Quote the file path.
         fpath = _fpath = '%s/?limit=10000&format=json' % utils.ustr(filepath)
         if last_obj is not None:
-            fpath = _last_marker(filepath=fpath,
-                                 last_obj=self._quoter(url=last_obj))
-
+            fpath = _last_marker(
+                filepath=fpath,
+                last_obj=self._quoter(url=last_obj)
+            )
         for retry in utils.retryloop(attempts=ARGS.get('error_retry')):
             with mlds.operation(retry):
                 while True:
@@ -297,8 +299,7 @@ class cloud_actions(object):
                     return_list = utils.json_encode(read)
 
                     # Get count
-                    get_count = len(return_list)
-                    list_count += get_count
+                    list_count += len(return_list)
 
                     for obj in return_list:
                         _to = ARGS.get('time_offset')
@@ -312,19 +313,23 @@ class cloud_actions(object):
                     if file_l:
                         last_obj = file_l[-1].get('name')
                         # Set the marker
-                        fpath = _last_marker(filepath=_fpath,
-                                             last_obj=last_obj)
+                        fpath = _last_marker(
+                            filepath=_fpath,
+                            last_obj=last_obj
+                        )
                     if count <= 0:
                         break
-                    elif list_count == count:
+                    elif list_count >= count:
                         break
-                    # TODO(kevin) Limit obj return to 250000
+                    # TODO(kevin) Limit obj return to 250K entries.
                     # elif list_count >= 250000:
                     #     break
 
         final_list = utils.unique_list_dicts(dlist=file_l, key='name')
-        utils.reporter(msg='INFO: %d object(s) found' % len(final_list),
-                       log=True)
+        utils.reporter(
+            msg='INFO: %d object(s) found' % len(final_list),
+            log=True
+        )
         del file_l
         return final_list, list_count, last_obj
 
