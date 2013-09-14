@@ -9,7 +9,7 @@
 # =============================================================================
 
 
-def reporter(msg, prt=True, lvl='info', log=False):
+def reporter(msg, prt=True, lvl='info', log=False, color=False):
     """Print Messages and Log it.
 
     :param msg:
