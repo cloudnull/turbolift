@@ -85,17 +85,16 @@ def spinner(work_q=None):
     :return:
     """
 
-    # Start Spinning
+    # Stop Spinning
     if not ARGS.get('verbose') or ARGS.get('quiet'):
-        itd = utils.IndicatorThread(
-            work_q=work_q
-        ).indicator_thread()
-
-    yield
-
-    # Start Spinning
-    if not ARGS.get('verbose') or ARGS.get('quiet'):
-        itd.terminate()
+        try:
+            set_itd = utils.IndicatorThread(work_q=work_q)
+            itd = set_itd.indicator_thread()
+            yield
+        finally:
+            itd.terminate()
+    else:
+        yield
 
 
 @contextlib.contextmanager
@@ -114,8 +113,6 @@ def operation(retry, conn=None, obj=None, cleanup=None):
     try:
         yield retry
     except clds.RetryError:
-        if cleanup is not None:
-            cleanup()
         utils.reporter(
             msg=('Failed to perform action after "%s" times'
                  '\nADDITIONAL DATA: %s\nTB: %s'
@@ -123,8 +120,6 @@ def operation(retry, conn=None, obj=None, cleanup=None):
             lvl='error'
         )
     except clds.NoSource as exp:
-        if cleanup is not None:
-            cleanup()
         utils.reporter(
             msg=('No Source. Message: %s\nADDITIONAL DATA: %s\nTB: %s'
                  % (traceback.format_exc(), exp, obj)),
@@ -132,8 +127,6 @@ def operation(retry, conn=None, obj=None, cleanup=None):
         )
         retry()
     except clds.SystemProblem as exp:
-        if cleanup is not None:
-            cleanup()
         utils.reporter(
             msg='System Problems Found %s\nADDITIONAL DATA: %s' % (exp, obj),
             lvl='error'
@@ -144,8 +137,6 @@ def operation(retry, conn=None, obj=None, cleanup=None):
             cleanup()
         utils.emergency_kill(reclaim=True)
     except IOError as exp:
-        if cleanup is not None:
-            cleanup()
         utils.reporter(
             msg=('IO ERROR: %s. ADDITIONAL DATA: %s'
                  '\nMESSAGE %s will retry.'
@@ -155,8 +146,6 @@ def operation(retry, conn=None, obj=None, cleanup=None):
         )
         retry()
     except Exception as exp:
-        if cleanup is not None:
-            cleanup()
         utils.reporter(
             msg=('Failed Operation. ADDITIONAL DATA: %s\n%s will retry\nTB: %s'
                  % (obj, info.__appname__, traceback.format_exc())),
@@ -164,6 +153,8 @@ def operation(retry, conn=None, obj=None, cleanup=None):
         )
         retry()
     finally:
+        if cleanup is not None:
+            cleanup()
         if conn is not None:
             conn.close()
 
