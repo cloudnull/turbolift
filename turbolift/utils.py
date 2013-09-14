@@ -455,10 +455,10 @@ def mkdir_p(path):
             pass
         else:
             raise clds.DirectoryFailure(
-                'The path provided "%s" is occupied and not be used as a '
-                'directory. System was halted on Download, becaue The '
+                'The path provided "%s" is occupied and can not be used as a '
+                'directory. System was halted on Download, because The '
                 'provided path is a file and can not be turned into a '
-                'directory.'
+                'directory.' % path
             )
 
 
