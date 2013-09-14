@@ -526,7 +526,7 @@ class cloud_actions(object):
             conn = utils.open_connection(url=url)
 
             # Open connection and perform operation
-            with mlds.operation(retry, conn):
+            with mlds.operation(retry, conn, obj=u_file):
                 # Get the path ready for action
                 sfile = utils.get_sfile(ufile=u_file, source=source)
                 rpath = self._quoter(url=url.path,

@@ -21,13 +21,13 @@ def reporter(msg, prt=True, lvl='info', log=False, color=False):
     from turbolift.worker import LOG
 
     # Print a Message
-    if ARGS.get('quiet') is None:
-        if prt is True or ARGS.get('verbose') is True:
-            if lvl is 'error':
-                if ARGS.get('colorized') is True:
-                    msg = bcolors(msg, lvl)
-                print(msg)
-            else:
+    if prt is True or ARGS.get('verbose') is True:
+        if lvl is 'error':
+            if ARGS.get('colorized') is True:
+                msg = bcolors(msg, lvl)
+            print(msg)
+        else:
+            if ARGS.get('quiet') is None:
                 if ARGS.get('colorized') is True:
                     msg = bcolors(msg, lvl)
                 print(msg)

@@ -86,15 +86,15 @@ def spinner(work_q=None):
     """
 
     # Stop Spinning
-    if not ARGS.get('verbose') or ARGS.get('quiet'):
+    if any([ARGS.get('verbose') is True, ARGS.get('quiet') is True]):
+        yield
+    else:
         try:
             set_itd = utils.IndicatorThread(work_q=work_q)
             itd = set_itd.indicator_thread()
             yield
         finally:
             itd.terminate()
-    else:
-        yield
 
 
 @contextlib.contextmanager
