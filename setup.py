@@ -8,8 +8,10 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
+import os
 import setuptools
 import sys
+
 from turbolift import info
 
 REQUIRES = []
@@ -20,8 +22,22 @@ if sys.version_info < (2, 6, 0):
 elif sys.version_info < (2, 7, 0):
     REQUIRES.append('argparse')
 
-with open('README') as r_file:
-    LDINFO = r_file.read()
+first = ['1-general.rst']
+path = os.path.join(os.getcwd(), 'docs')
+for doc in first + sorted(os.listdir(path)):
+    if doc[0].isdigit():
+        if doc is '1-general.rst':
+            fpath = doc
+        else:
+            os.path.join(path, doc)
+
+        with open(fpath, 'rb') as docr:
+            objr = docr.read()
+        with open('README', 'ab') as readme:
+            readme.write(objr)
+
+with open('README', 'rb') as r_file:
+    LDINFO = r_file
 
 setuptools.setup(
     name=info.__appname__,
@@ -32,7 +48,11 @@ setuptools.setup(
     long_description=LDINFO,
     license='GNU General Public License v3 or later (GPLv3+)',
     packages=['turbolift',
-              'turbolift.operations'],
+              'turbolift.arguments',
+              'turbolift.authentication',
+              'turbolift.clouderator',
+              'turbolift.logger',
+              'turbolift.methods'],
     url=info.__url__,
     install_requires=REQUIRES,
     classifiers=[
@@ -48,4 +68,5 @@ setuptools.setup(
         'Topic :: Utilities',
         'Topic :: Software Development :: Libraries :: Python Modules'],
     entry_points={
-        "console_scripts": ["turbolift = turbolift.executable:run_turbolift"]})
+        "console_scripts": ["turbolift = turbolift.executable:run_turbolift"]}
+)

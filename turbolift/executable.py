@@ -9,34 +9,35 @@
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
 import multiprocessing
+import sys
 
-# Local Files to Import
 from turbolift import arguments
-from turbolift.operations import baseofoperations
+from turbolift.logger import logger
+from turbolift import utils
+from turbolift import worker
 
 
 def run_turbolift():
     """This is the run section of the application Turbolift."""
 
     multiprocessing.freeze_support()
-    tur_arg = arguments.get_values()
-    try:
-        ops = baseofoperations.BaseCamp(tur_arg)
 
-        if tur_arg.get('con_per_dir'):
-            ops.con_per_dir()
+    if len(sys.argv) <= 1:
+        arguments.get_help()
+        sys.exit('Give me something to do and I will do it')
+    else:
+        args = arguments.get_args()
+        log = logger.load_in(log_level=args.get('log_level', 'info'),
+                             log_location=args.get('log_location', '/var/log'))
+        log.debug('set arguments %s', args)
+        worker.load_constants(log_method=log, args=args)
+        try:
+            worker.start_work()
+        except KeyboardInterrupt:
+            utils.emergency_kill(reclaim=True)
+        finally:
+            utils.reporter(msg='All Done!', color=True)
 
-        elif tur_arg.get('archive'):
-            ops.archive()
-
-        elif any([tur_arg.get('upload'), tur_arg.get('tsync')]):
-            ops.file_upload()
-
-        elif any([tur_arg.get('download'), tur_arg.get('delete')]):
-            ops.delete_download()
-
-    except KeyboardInterrupt:
-        print('Caught KeyboardInterrupt, I\'M ON FIRE!!!!')
 
 if __name__ == "__main__":
     multiprocessing.freeze_support()

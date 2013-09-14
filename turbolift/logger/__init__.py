@@ -7,39 +7,3 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
-
-
-class NoSource(Exception):
-    """No Source Exception."""
-
-    pass
-
-
-class AuthenticationProblem(Exception):
-    """Authentication Problem Exception."""
-
-    pass
-
-
-class SystemProblem(Exception):
-    """System Problem Exception."""
-
-    pass
-
-
-class DirectoryFailure(Exception):
-    """Directory Failure Exception."""
-
-    pass
-
-
-class RetryError(Exception):
-    """Retry Error Exception."""
-
-    pass
-
-
-class NoFileProvided(Exception):
-    """No File Provided Exception."""
-
-    pass
