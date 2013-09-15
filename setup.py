@@ -22,14 +22,14 @@ if sys.version_info < (2, 6, 0):
 elif sys.version_info < (2, 7, 0):
     REQUIRES.append('argparse')
 
-first = ['1-general.rst']
 path = os.path.join(os.getcwd(), 'docs')
-for doc in first + sorted(os.listdir(path)):
-    if doc[0].isdigit():
-        if doc is '1-general.rst':
+if os.path.exists(path):
+    first = ['README']
+    for doc in first + sorted(os.listdir(path)):
+        if doc is 'README':
             fpath = doc
         else:
-            os.path.join(path, doc)
+            fpath = os.path.join(path, doc)
 
         with open(fpath, 'rb') as docr:
             objr = docr.read()
@@ -37,7 +37,7 @@ for doc in first + sorted(os.listdir(path)):
             readme.write(objr)
 
 with open('README', 'rb') as r_file:
-    LDINFO = r_file
+    LDINFO = r_file.read()
 
 setuptools.setup(
     name=info.__appname__,
