@@ -112,13 +112,6 @@ def operation(retry, conn=None, obj=None, cleanup=None):
     """
     try:
         yield retry
-    except clds.RetryError:
-        utils.reporter(
-            msg=('Failed to perform action after "%s" times'
-                 '\nADDITIONAL DATA: %s\nTB: %s'
-                 % (ARGS.get('error_retry'), obj, traceback.format_exc())),
-            lvl='error'
-        )
     except clds.NoSource as exp:
         utils.reporter(
             msg=('No Source. Message: %s\nADDITIONAL DATA: %s\nTB: %s'

@@ -59,7 +59,7 @@ def bcolors(msg, color):
               'info': '\033[92m',
               'warn': '\033[93m',
               'error': '\033[91m',
-              'critical': '\033[91m',
+              'critical': '\033[95m',
               'ENDC': '\033[0m'}
 
     if color in colors:
@@ -565,16 +565,12 @@ def response_get(conn, retry, resp_only=False):
             else:
                 read = resp.read()
     except httplib.BadStatusLine as exp:
-        reporter(msg=('BAD STATUS-LINE ON METHOD MESSAGE %s -'
-                      ' INFO: conn %s retry %s'
-                      % (exp, conn, retry)),
+        reporter(msg=('BAD STATUS-LINE ON METHOD MESSAGE %s' % exp),
                  lvl='error',
                  prt=True)
         retry()
     except httplib.ResponseNotReady as exp:
-        reporter(msg=('RESPONSE NOT READY MESSAGE %s -'
-                      ' INFO: conn %s retry %s'
-                      % (exp, conn, retry)),
+        reporter(msg=('RESPONSE NOT READY MESSAGE %s' % exp),
                  lvl='error',
                  prt=True)
         retry()
@@ -600,7 +596,7 @@ def ustr(obj):
         return obj
 
 
-def retryloop(attempts, timeout=None, delay=None, backoff=1):
+def retryloop(attempts, timeout=None, delay=None, backoff=1, obj=None):
     """Enter the amount of retries you want to perform.
 
     The timeout allows the application to quit on "X".
@@ -624,8 +620,6 @@ def retryloop(attempts, timeout=None, delay=None, backoff=1):
 
     import time
 
-    import turbolift as clds
-
     starttime = time.time()
     success = set()
     for _ in range(attempts):
@@ -639,7 +633,10 @@ def retryloop(attempts, timeout=None, delay=None, backoff=1):
         if delay:
             time.sleep(delay)
             delay = delay * backoff
-    raise clds.RetryError
+    reporter(msg=('RetryError: FAILED TO PROCESS "%s" after "%s" Attempts'
+                  % (obj, attempts)),
+             lvl='critical',
+             log=True)
 
 
 def container_headers(headers):
@@ -858,7 +855,7 @@ class IndicatorThread(object):
         from turbolift import methods
         from turbolift import utils
 
-        with methods.operation(retry=utils.emergency_kill()):
+        with methods.operation(retry=utils.emergency_kill(reclaim=True)):
             while self.system:
                 busy_chars = ['|', '/', '-', '\\']
                 for _cr in busy_chars:

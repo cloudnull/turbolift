@@ -36,7 +36,7 @@ def run_turbolift():
         except KeyboardInterrupt:
             utils.emergency_kill(reclaim=True)
         finally:
-            utils.reporter(msg='All Done!', color=True)
+            utils.reporter(msg='All Done!')
 
 
 if __name__ == "__main__":

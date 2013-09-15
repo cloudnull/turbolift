@@ -57,7 +57,10 @@ class cloud_actions(object):
                 raise clds.SystemProblem('Failure making Connection')
             elif resp.status == 503:
                 utils.stupid_hack(wait=10)
-                raise clds.SystemProblem('503')
+                raise clds.SystemProblem('SWIFT-API FAILURE')
+            elif resp.status == 504:
+                utils.stupid_hack(wait=10)
+                raise clds.SystemProblem('Gateway Time-out')
             elif resp.status >= 300:
                 raise clds.SystemProblem('SWIFT-API FAILURE -> REQUEST')
         except clds.SystemProblem as exp:
@@ -66,7 +69,7 @@ class cloud_actions(object):
                      'TYPE %s MESSAGE %s' % (exp, resp.status, resp.reason,
                                              resp._method, resp.msg)),
                 prt=True,
-                lvl='error',
+                lvl='warn',
                 log=True
             )
             rty()
@@ -99,14 +102,16 @@ class cloud_actions(object):
             return True
 
     def _container_create(self, url, container):
-        """Create a continer if it is not Found.
+        """Create a container if it is not Found.
 
         :param url:
         :param container:
         """
 
         rty_count = ARGS.get('error_retry')
-        for retry in utils.retryloop(attempts=rty_count, delay=5):
+        for retry in utils.retryloop(attempts=rty_count,
+                                     delay=5,
+                                     obj=container):
             conn = utils.open_connection(url=url)
 
             rpath = self._quoter(url=url.path,
@@ -289,7 +294,8 @@ class cloud_actions(object):
                 filepath=fpath,
                 last_obj=self._quoter(url=last_obj)
             )
-        for retry in utils.retryloop(attempts=ARGS.get('error_retry')):
+        for retry in utils.retryloop(attempts=ARGS.get('error_retry'),
+                                     obj='Object List Creation'):
             with mlds.operation(retry):
                 while True:
                     # Make a connection
@@ -411,8 +417,8 @@ class cloud_actions(object):
         :param url:
         :param container:
         """
-
-        for retry in utils.retryloop(attempts=5, delay=2):
+        rty_count = ARGS.get('error_retry')
+        for retry in utils.retryloop(attempts=rty_count, delay=2, obj=sfile):
             # Open Connection
             conn = utils.open_connection(url=url)
             with mlds.operation(retry, conn):
@@ -452,7 +458,8 @@ class cloud_actions(object):
         """
 
         for retry in utils.retryloop(attempts=ARGS.get('error_retry'),
-                                     delay=2):
+                                     delay=2,
+                                     obj=container):
             # Open Connection
             conn = utils.open_connection(url=url)
 
@@ -475,7 +482,8 @@ class cloud_actions(object):
         :return None | list:
         """
 
-        for retry in utils.retryloop(attempts=ARGS.get('error_retry')):
+        for retry in utils.retryloop(attempts=ARGS.get('error_retry'),
+                                     obj='Container List'):
             # Open Connection
             conn = utils.open_connection(url=url)
 
@@ -521,7 +529,7 @@ class cloud_actions(object):
         :param u_file:
         """
 
-        for retry in utils.retryloop(attempts=5, delay=2):
+        for retry in utils.retryloop(attempts=5, delay=2, obj=u_file):
             # Open Connection
             conn = utils.open_connection(url=url)
 
@@ -563,8 +571,8 @@ class cloud_actions(object):
         :param container:
         :param u_file:
         """
-
-        for retry in utils.retryloop(attempts=5, delay=2):
+        rty_count = ARGS.get('error_retry')
+        for retry in utils.retryloop(attempts=rty_count, delay=2, obj=u_file):
             # Open Connection
             conn = utils.open_connection(url=url)
 
@@ -594,7 +602,8 @@ class cloud_actions(object):
         :param u_file:
         """
 
-        for retry in utils.retryloop(attempts=5, delay=2):
+        rty_count = ARGS.get('error_retry')
+        for retry in utils.retryloop(attempts=rty_count, delay=2, obj=u_file):
             # Open Connection
             conn = utils.open_connection(url=url)
 
@@ -625,7 +634,8 @@ class cloud_actions(object):
         :return None | list:
         """
 
-        for retry in utils.retryloop(attempts=ARGS.get('error_retry')):
+        for retry in utils.retryloop(attempts=ARGS.get('error_retry'),
+                                     obj='Object List'):
             # Open Connection
             conn = utils.open_connection(url=url)
 
@@ -712,7 +722,8 @@ class cloud_actions(object):
 
         fheaders = self.payload['headers']
         for retry in utils.retryloop(attempts=ARGS.get('error_retry'),
-                                     delay=5):
+                                     delay=5,
+                                     obj=obj['name']):
             # Open connection and perform operation
             fmt, date, date_delta, now = utils.time_stamp()
             spath = self._quoter(url=surl.path,
@@ -766,7 +777,8 @@ class cloud_actions(object):
                         retry()
 
                 for nretry in utils.retryloop(attempts=ARGS.get('error_retry'),
-                                              delay=5):
+                                              delay=5,
+                                              obj=obj):
                     # open connection for target upload.
                     conn = utils.open_connection(url=turl)
                     with mlds.operation(retry,
