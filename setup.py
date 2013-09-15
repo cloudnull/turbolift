@@ -22,20 +22,6 @@ if sys.version_info < (2, 6, 0):
 elif sys.version_info < (2, 7, 0):
     REQUIRES.append('argparse')
 
-path = os.path.join(os.getcwd(), 'docs')
-if os.path.exists(path):
-    first = ['README']
-    for doc in first + sorted(os.listdir(path)):
-        if doc is 'README':
-            fpath = doc
-        else:
-            fpath = os.path.join(path, doc)
-
-        with open(fpath, 'rb') as docr:
-            objr = docr.read()
-        with open('README', 'ab') as readme:
-            readme.write(objr)
-
 with open('README', 'rb') as r_file:
     LDINFO = r_file.read()
 

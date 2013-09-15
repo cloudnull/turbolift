@@ -42,10 +42,10 @@ Turbolift can be managed with a config file. The option ``--system-config`` refe
 Additionally, the Environment Variable ``TURBO_CONFIG`` can be used to reference a config file as well.
 All of Turbolift's options can be set in the config file. This makes managing Turbolift very simple.
 
-Please read `command_line_args.rst`_ for more information on Command Line Arguments and functions.
+Please read `command_line_args`_ for more information on Command Line Arguments and functions.
 
 
-If you would like to setup Turbolift to use an environment variable file I would recommend you have a look at the `turboliftrc_example`_ file and the `environment_vars.rst`_ document.
+If you would like to setup Turbolift to use an environment variable file I would recommend you have a look at the `turboliftrc_example`_ file and the `environment_vars`_ document.
 
 
 Prerequisites :
@@ -62,7 +62,7 @@ Installation :
     python setup.py install
 
 Installation NOTICE :
-  If you are installing on a system that is not Running Python => 2.6 but < 3.0, please review the document `INSTALL_EMBED.rst`_. This is a tested installation of Turbolift on Ubuntu 8.04, which ships with Python 2.5. The guide is a simple walk through for compiling stand alone python and installing Turbolift in that stand alone installation.
+  If you are installing on a system that is not Running Python => 2.6 but < 3.0, please review the document `INSTALL_EMBED`_. This is a tested installation of Turbolift on Ubuntu 8.04, which ships with Python 2.5. The guide is a simple walk through for compiling stand alone python and installing Turbolift in that stand alone installation.
 
 Python Modules Needed, for full operation :
   NOTE : All of the modules needed should be part of the "standard" Library as of Python 2.6.  The setup file will
@@ -96,15 +96,15 @@ The application has been tested on :
   * CentOS[RHEL] 6
 
 
-For information on Benchmarks from my own testing, please have a look here at the `benchmarks.rst`_ file.
+For information on Benchmarks from my own testing, please have a look here at the `benchmarks`_ file.
 
 
 Turbolift is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation. The License in service for this program is GPLv3. please see http://www.gnu.org/licenses/gpl-3.0.txt for more information.
 
 
-.. _INSTALL_EMBED.rst: docs/INSTALL_EMBED.rst
-.. _command_line_args.rst: docs/2-command_line_args.rst
-.. _environment_vars.rst: docs/3-environment_vars.rst
-.. _benchmarks.rst: docs/4-benchmarks.rst
-.. _turboliftrc_example: turboliftrc_example
-.. _turbolift_example_script: docs/EXAMPLE_BACKUP_SCRIPT.sh
+.. _INSTALL_EMBED: https://github.com/cloudnull/turbolift/wiki/Install-Embed-Ubuntu
+.. _command_line_args: https://github.com/cloudnull/turbolift/wiki/Command-Line-Args
+.. _environment_vars: https://github.com/cloudnull/turbolift/wiki/Environment-Vars
+.. _benchmarks: https://github.com/cloudnull/turbolift/wiki/Benchmarks
+.. _turboliftrc_example: https://github.com/cloudnull/turbolift/wiki/Turbolift.rc-Example
+.. _turbolift_example_script: https://github.com/cloudnull/turbolift/wiki/Example-Script
