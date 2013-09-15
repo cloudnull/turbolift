@@ -83,6 +83,9 @@ Here is the Basic Usage
 Run ``turbolift -h`` for a full list of available flags and operations
 
 
+Turbolift can easily be set to run on via script or as a CRON job, please see, `turbolift_example_script`_ for more ideas / information on using Turbolift as a script.
+
+
 Systems Tested on
 -----------------
 
@@ -101,3 +104,4 @@ For information on Benchmarks from my own testing, please have a look here at th
 .. _environment_vars.rst: docs/3-environment_vars.rst
 .. _benchmarks.rst: docs/4-benchmarks.rst
 .. _turboliftrc_example: turboliftrc_example
+.. _turbolift_example_script: docs/EXAMPLE_BACKUP_SCRIPT.sh

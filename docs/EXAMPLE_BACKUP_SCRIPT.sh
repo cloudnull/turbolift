@@ -9,24 +9,26 @@
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
 
+# THIS IS REQUIRED, replace the quoted values with the correct information.
 APIKEY="<API-KEY>"
 USERNAME="<USER-NAME>"
 REGION="<BACKUP-REGION>"
+
+
+# Auth URL for Rackspace Cloud.
 AUTHURL="identity.api.rackspacecloud.com/v2.0"
 
 
-# Space Separated list of places or objects you want backed up.
+# THIS IS REQUIRED - Space Separated list of places or objects you want backed up.
 # Example: BACKUP_LIST="/home/kevin /etc/something /some/other/dir"
 BACKUP_LIST=""
 
 
-# THESE ARGUMENTS ARE NOT REQUIRED
-# ================================
-
-# OPTIONAL! Turbolift Arguments, see `turbolift -h` for more information.
+# THIS IS OPTIONAL - Turbolift Arguments, see `turbolift -h` for more information.
 OPTIONAL_ARGS=""
 
-# OPTIONAL! Turbolift Additional Arguments, see `turbolift upload -h` for more information.
+
+# THIS IS OPTIONAL - Turbolift Additional Arguments, see `turbolift upload -h` for more information.
 ADDITIONAL_ARGS="--sync"
 
 
@@ -36,9 +38,9 @@ ADDITIONAL_ARGS="--sync"
 # Set Turbolift
 TURBOLIFT="turbolift -u ${USERNAME} -a ${APIKEY} --os-auth-url ${AUTHURL} --os-region ${REGION} ${OPTIONAL_ARGS}"
 
-# Backup Action
+# Backup Action - NOTICE THAT all "/" or "\" will be replaced with "_" in the container name, upon creation.
 for BACKUP_DIR in ${BACKUP_LIST}
 do
-${TURBOLIFT} upload ${ADDITIONAL_ARGS} -s ${BACKUP_DIR} -c ${HOSTNAME}-$(echo ${BACKUP_DIR} | sed 's/\//\_/g') --sync 
-sleep 5
+${TURBOLIFT} upload ${ADDITIONAL_ARGS} -s ${BACKUP_DIR} -c ${HOSTNAME}-$(echo ${BACKUP_DIR} | sed 's/\//\_/g') ${ADDITIONAL_ARGS}
+sleep 2
 done
