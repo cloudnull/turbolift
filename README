@@ -48,6 +48,9 @@ Please read `command_line_args`_ for more information on Command Line Arguments 
 If you would like to setup Turbolift to use an environment variable file I would recommend you have a look at the `turboliftrc_example`_ file and the `environment_vars`_ document.
 
 
+Please also review the `Turbolift Wiki`_ for more information.
+
+
 Prerequisites :
   * For all the things to work right please make sure you have ``python-dev``.
   * All systems require the ``python-setuptools`` package.
@@ -108,3 +111,4 @@ Turbolift is free software: you can redistribute it and/or modify it under the t
 .. _benchmarks: https://github.com/cloudnull/turbolift/wiki/Benchmarks
 .. _turboliftrc_example: https://github.com/cloudnull/turbolift/wiki/Turbolift.rc-Example
 .. _turbolift_example_script: https://github.com/cloudnull/turbolift/wiki/Example-Script
+.. _Turbolift Wiki: https://github.com/cloudnull/turbolift/wiki
