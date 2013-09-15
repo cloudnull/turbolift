@@ -99,6 +99,9 @@ The application has been tested on :
 For information on Benchmarks from my own testing, please have a look here at the `benchmarks.rst`_ file.
 
 
+Turbolift is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation. The License in service for this program is GPLv3. please see http://www.gnu.org/licenses/gpl-3.0.txt for more information.
+
+
 .. _INSTALL_EMBED.rst: docs/INSTALL_EMBED.rst
 .. _command_line_args.rst: docs/2-command_line_args.rst
 .. _environment_vars.rst: docs/3-environment_vars.rst
