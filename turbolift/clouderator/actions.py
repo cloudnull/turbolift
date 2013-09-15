@@ -84,7 +84,7 @@ class cloud_actions(object):
         :param fheaders:
         :return True|False:
         """
-        # Upload File to Object
+
         if skip is True:
             return True
         elif ARGS.get('sync'):
@@ -251,17 +251,21 @@ class cloud_actions(object):
                 prt=False,
                 lvl='debug'
             )
-            with open(fpath, 'rb') as f_open:
-                conn.request('PUT', rpath, body=f_open, headers=fheaders)
-            resp, read = utils.response_get(conn=conn, retry=retry)
-            self.resp_exception(resp=resp, rty=retry)
 
-            utils.reporter(
-                msg=('MESSAGE %s %s %s'
-                     % (resp.status, resp.reason, resp.msg)),
-                prt=False,
-                lvl='debug'
-            )
+            if utils.file_exists(fpath) is False:
+                return None
+            else:
+                with open(fpath, 'rb') as f_open:
+                    conn.request('PUT', rpath, body=f_open, headers=fheaders)
+                resp, read = utils.response_get(conn=conn, retry=retry)
+                self.resp_exception(resp=resp, rty=retry)
+
+                utils.reporter(
+                    msg=('MESSAGE %s %s %s'
+                         % (resp.status, resp.reason, resp.msg)),
+                    prt=False,
+                    lvl='debug'
+                )
 
     def _list_getter(self, conn, count, filepath, fheaders, last_obj=None):
         """Get a list of all objects in a container.

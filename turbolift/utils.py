@@ -218,12 +218,15 @@ def remove_file(filename):
 
 
 def file_exists(filename):
+    """Return True|False if a File Exists.
+
+    :param filename:
+    :return True|False:
+    """
+
     import os
 
-    if os.path.exists(filename):
-        return True
-    else:
-        return False
+    return os.path.exists(filename)
 
 
 def basic_queue(iters=None):
