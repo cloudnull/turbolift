@@ -85,12 +85,11 @@ def spinner(work_q=None):
     :return:
     """
 
-    # Stop Spinning
     if any([ARGS.get('verbose') is True, ARGS.get('quiet') is True]):
         yield
     else:
+        set_itd = utils.IndicatorThread(work_q=work_q)
         try:
-            set_itd = utils.IndicatorThread(work_q=work_q)
             itd = set_itd.indicator_thread()
             yield
         finally:
@@ -138,7 +137,7 @@ def operation(retry, conn=None, obj=None, cleanup=None):
             lvl='error'
         )
         retry()
-    except Exception as exp:
+    except Exception:
         utils.reporter(
             msg=('Failed Operation. ADDITIONAL DATA: %s\n%s will retry\nTB: %s'
                  % (obj, info.__appname__, traceback.format_exc())),
