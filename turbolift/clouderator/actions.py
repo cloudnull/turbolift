@@ -533,7 +533,9 @@ class cloud_actions(object):
         :param u_file:
         """
 
-        for retry in utils.retryloop(attempts=5, delay=2, obj=u_file):
+        for retry in utils.retryloop(attempts=ARGS.get('error_retry'),
+                                     delay=2,
+                                     obj=u_file):
             # Open Connection
             conn = utils.open_connection(url=url)
 
