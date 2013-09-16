@@ -858,7 +858,7 @@ class IndicatorThread(object):
         from turbolift import methods
         from turbolift import utils
 
-        with methods.operation(retry=utils.emergency_kill(reclaim=True)):
+        with methods.operation(retry=utils.emergency_kill):
             while self.system:
                 busy_chars = ['|', '/', '-', '\\']
                 for _cr in busy_chars:
@@ -877,7 +877,7 @@ class IndicatorThread(object):
                     sys.stdout.write('\rProcessing - [ %(spin)s ] - %(qsize)s'
                                      % {"qsize": _qz, "spin": _cr})
                     sys.stdout.flush()
-                    time.sleep(.05)
+                    time.sleep(.1)
                     self.system = self.system
 
     def indicator_thread(self):
