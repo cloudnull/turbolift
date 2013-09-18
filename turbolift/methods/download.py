@@ -76,6 +76,11 @@ class download(object):
 
         utils.reporter(msg='Building Directory Structure.')
         with methods.spinner():
+            if ARGS.get('object'):
+                obj_names = ARGS.get('object')
+                obj_list = [obj for obj in obj_list if obj in obj_names]
+            else:
+                num_files = len(obj_list)
             unique_dirs = []
             for obj in obj_list:
                 full_path = utils.jpath(root=payload['source'], inode=obj)
@@ -88,7 +93,7 @@ class download(object):
                 utils.mkdir_p(path=udir)
 
         utils.reporter(msg='Performing Object Download.')
-        utils.job_processer(num_jobs=len(obj_list),
+        utils.job_processer(num_jobs=num_files,
                             objects=obj_list,
                             job_action=self.downloaderator,
                             concur=concurrency,

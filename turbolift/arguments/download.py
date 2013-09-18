@@ -38,3 +38,9 @@ def download_actions(subparser, source_args, container_args, time_args):
                                 ' metadata restore those permissions on the'
                                 ' local object'),
                           default=None)
+    download.add_argument('-o', '--object',
+                          metavar='[NAME]',
+                          default=[],
+                          action='append',
+                          help=('Name of a specific Object that you want'
+                                ' to Download.'))
