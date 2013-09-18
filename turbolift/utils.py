@@ -401,9 +401,22 @@ def worker_proc(job_action, concurrency, queue, t_args=None, opt=None):
                                         args=(queue, t_args))
                 for _ in xrange(concurrency)]
 
-    for _job in jobs:
-        _job.Daemon = True
-        _job.start()
+    while len(multiprocessing.active_children()) < concurrency:
+        reporter(msg='Tread Starting Cycle',
+                 lvl='debug',
+                 log=True)
+        difference = concurrency - len(multiprocessing.active_children())
+        if not jobs[:difference]:
+            break
+
+        for _job in jobs[:difference]:
+            _job.Daemon = True
+            _job.start()
+
+        if len(multiprocessing.active_children()) == concurrency:
+            break
+        else:
+            stupid_hack(wait=2)
 
     for job in jobs:
         job.join()
