@@ -72,7 +72,8 @@ def md5_checker(resp, local_f):
 def time_delta(lmobj, compare_time=None):
     """Check to see if a date delta exists based on filter for an object.
 
-    :param obj:
+    :param lmobj:
+    :param compare_time:
     :return True|False:
     """
 
