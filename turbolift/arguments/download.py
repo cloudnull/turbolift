@@ -49,7 +49,7 @@ def download_actions(subparser, source_args, container_args, time_args):
     dwfilter.add_argument('-d',
                           '--dir',
                           metavar='[NAME]',
-                          default=[],
-                          action='append',
+                          default=None,
+                          type=str,
                           help=('Name of a directory path that you want'
                                 ' to Download.'))
