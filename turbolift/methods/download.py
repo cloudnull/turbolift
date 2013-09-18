@@ -79,6 +79,9 @@ class download(object):
             if ARGS.get('object'):
                 obj_names = ARGS.get('object')
                 obj_list = [obj for obj in obj_list if obj in obj_names]
+            elif ARGS.get('path'):
+                objpath = ARGS.get('path')
+                obj_list = [obj for obj in obj_list if obj.startswith(objpath)]
             else:
                 num_files = len(obj_list)
             unique_dirs = []

@@ -38,9 +38,18 @@ def download_actions(subparser, source_args, container_args, time_args):
                                 ' metadata restore those permissions on the'
                                 ' local object'),
                           default=None)
-    download.add_argument('-o', '--object',
+    dwfilter = download.add_mutually_exclusive_group()
+    dwfilter.add_argument('-o',
+                          '--object',
                           metavar='[NAME]',
                           default=[],
                           action='append',
                           help=('Name of a specific Object that you want'
+                                ' to Download.'))
+    dwfilter.add_argument('-d',
+                          '--dir',
+                          metavar='[NAME]',
+                          default=[],
+                          action='append',
+                          help=('Name of a directory path that you want'
                                 ' to Download.'))
