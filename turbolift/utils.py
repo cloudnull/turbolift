@@ -418,9 +418,6 @@ def worker_proc(job_action, concurrency, queue, t_args=None, opt=None):
         else:
             stupid_hack(wait=2)
 
-    for job in jobs:
-        job.join()
-
 
 def job_processer(num_jobs, objects, job_action, concur, payload, opt=None):
     """Process all jobs in batches.
