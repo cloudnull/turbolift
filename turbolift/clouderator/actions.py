@@ -285,7 +285,7 @@ class cloud_actions(object):
             :return str:
             """
 
-            return '%s&marker=%s' % (filepath, last_obj)
+            return '%s&marker=%s' % (filepath, self._quoter(url=last_obj))
 
         # Set Basic Data
         file_l = []
