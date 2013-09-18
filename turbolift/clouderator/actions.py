@@ -754,8 +754,7 @@ class cloud_actions(object):
                 conn = utils.open_connection(url=surl)
                 with mlds.operation(retry,
                                     conn=conn,
-                                    obj=obj,
-                                    cleanup=_cleanup):
+                                    obj=obj):
 
                     # make a temp file.
                     tfile = utils.create_tmp()
