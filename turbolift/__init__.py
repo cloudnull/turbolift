@@ -7,6 +7,11 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
+import os
+import signal
+
+LOG = None
+ARGS = None
 
 
 class NoLogLevelSet(Exception):
@@ -55,3 +60,37 @@ class NoTenantIdFound(Exception):
     """No Tenant ID was found."""
 
     pass
+
+
+def emergency_kill(reclaim=None):
+    """Exit process.
+
+    :return kill pid:
+    """
+
+    if reclaim is not None:
+        return os.kill(os.getpid(), signal.SIGKILL)
+    else:
+        return os.kill(os.getpid(), signal.SIGCHLD)
+
+
+def emergency_exit(msg):
+    """Exit process.
+
+    :param msg:
+    :return exit.status:
+    """
+
+    raise SystemExit(msg)
+
+
+def load_constants(log_method, args):
+    """Setup In Memory Persistent Logging.
+
+    :param log_method: Set method for logging
+    :param args: Arguments that have been parsed for in application use.
+    """
+
+    global LOG, ARGS
+    LOG = log_method
+    ARGS = args

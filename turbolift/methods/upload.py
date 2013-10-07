@@ -7,11 +7,16 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
+import turbolift as turbo
+import turbolift.utils.basic_utils as basic
+import turbolift.utils.http_utils as http
+import turbolift.utils.multi_utils as multi
+import turbolift.utils.report_utils as report
+
+from turbolift import ARGS
 from turbolift.clouderator import actions
+from turbolift import LOG
 from turbolift import methods
-from turbolift import utils
-from turbolift.worker import ARGS
-from turbolift.worker import LOG
 
 
 class upload(object):
@@ -34,58 +39,42 @@ class upload(object):
         num_files = len(f_indexed)
 
         # Get The rate of concurrency
-        concurrency = utils.set_concurrency(args=ARGS, file_count=num_files)
+        concurrency = multi.set_concurrency(args=ARGS, file_count=num_files)
 
         # Package up the Payload
-        payload = utils.prep_payload(
-            auth=self.auth,
-            container=ARGS.get('container', utils.rand_string()),
-            source=utils.get_local_source(args=ARGS),
-            args=ARGS
+        payload = multi.manager_dict(
+            http.prep_payload(
+                auth=self.auth,
+                container=ARGS.get('container', basic.rand_string()),
+                source=basic.get_local_source(),
+                args=ARGS
+            )
         )
 
         LOG.info('MESSAGE\t: "%s" Files have been found.', num_files)
         LOG.debug('PAYLOAD\t: "%s"', payload)
 
         # Set the actions class up
-        self.go = actions.cloud_actions(payload=payload)
-        self.go._container_create(url=payload['url'],
-                                  container=payload['c_name'])
+        self.go = actions.CloudActions(payload=payload)
 
-        utils.job_processer(num_jobs=num_files,
-                            objects=f_indexed,
-                            job_action=self.uploaderator,
-                            concur=concurrency,
-                            payload=payload)
+        kwargs = {'url': payload['url'],
+                  'container': payload['c_name']}
+        # get that the container exists if not create it.
+        self.go.container_create(**kwargs)
+        kwargs['source'] = payload['source']
+        kwargs['cf_job'] = getattr(self.go, 'object_putter')
+
+        multi.job_processer(
+            num_jobs=num_files,
+            objects=f_indexed,
+            job_action=multi.doerator,
+            concur=concurrency,
+            kwargs=kwargs
+        )
 
         if ARGS.get('delete_remote') is True:
             self.remote_delete(payload=payload,
                                f_indexed=f_indexed)
-
-    def uploaderator(self, work_q, payload):
-        """Upload files to CloudFiles -Swift-.
-
-        :param work_q:
-        :param payload:
-        """
-
-        # Get work from the Queue
-        while True:
-            wfile = utils.get_from_q(queue=work_q)
-            # If Work is None return None
-            if wfile is None:
-                break
-            try:
-                if utils.file_exists(wfile) is False:
-                    return None
-                self.go.object_putter(url=payload['url'],
-                                      container=payload['c_name'],
-                                      source=payload['source'],
-                                      u_file=wfile)
-            except KeyboardInterrupt:
-                utils.emergency_kill(reclaim=True)
-            except EOFError:
-                utils.emergency_kill()
 
     def remote_delete(self, payload, f_indexed):
         """If Remote Delete was True run.
@@ -101,55 +90,42 @@ class upload(object):
         :return:
         """
 
-        utils.reporter(msg='Getting file list for REMOTE DELETE')
-        objects = self.go.object_lister(url=payload['url'],
-                                        container=payload['c_name'])
+        report.reporter(msg='Getting file list for REMOTE DELETE')
+        objects = self.go.object_lister(
+            url=payload['url'], container=payload['c_name']
+        )
         source = payload['source']
-        obj_names = [utils.jpath(root=source,
-                                 inode=obj.get('name')) for obj in objects]
+        obj_names = [basic.jpath(root=source, inode=obj.get('name'))
+                     for obj in objects[0]]
 
         # From the remote system see if we have differences in the local system
-        _objects = utils.return_diff().difference(target=f_indexed,
-                                                  source=obj_names)
-        if _objects:
+        objects = multi.return_diff().difference(target=f_indexed,
+                                                 source=obj_names)
+        if objects:
             # Set Basic Data for file delete.
-            _num_files = len(_objects)
+            num_files = len(objects)
             LOG.info('MESSAGE\t: "%s" Files have been found to be removed from'
-                     ' the REMOTE CONTAINER.', _num_files)
-
-            _concurrency = utils.set_concurrency(args=ARGS,
-                                                 file_count=_num_files)
-
+                     ' the REMOTE CONTAINER.', num_files)
+            concurrency = multi.set_concurrency(
+                args=ARGS, file_count=num_files
+            )
             # Delete the difference in Files.
-            utils.reporter(msg='Performing Remote Delete')
-            utils.job_processer(num_jobs=_num_files,
-                                objects=_objects,
-                                job_action=self.deleterator,
-                                concur=_concurrency,
-                                payload=payload)
+            report.reporter(msg='Performing Remote Delete')
+
+            objects = [basic.get_sfile(
+                ufile=obj, source=payload['source']
+            ) for obj in objects]
+            kwargs = {'url': payload['url'],
+                      'container': payload['c_name'],
+                      'cf_job': getattr(self.go, 'object_deleter')}
+            multi.job_processer(
+                num_jobs=num_files,
+                objects=objects,
+                job_action=multi.doerator,
+                concur=concurrency,
+                kwargs=kwargs
+            )
         else:
-            utils.reporter(msg='No Difference between REMOTE and LOCAL'
-                               ' Directories.')
-
-    def deleterator(self, work_q, payload):
-        """Delete files to CloudFiles -Swift-.
-
-        :param work_q:
-        :param payload:
-        """
-
-        # Get work from the Queue
-        while True:
-            wfile = utils.get_from_q(queue=work_q)
-            # If Work is None return None
-            if wfile is None:
-                break
-            try:
-                wfile = utils.get_sfile(ufile=wfile, source=payload['source'])
-                self.go.object_deleter(url=payload['url'],
-                                       container=payload['c_name'],
-                                       u_file=wfile)
-            except KeyboardInterrupt:
-                utils.emergency_kill(reclaim=True)
-            except EOFError:
-                utils.emergency_kill()
+            report.reporter(
+                msg='No Difference between REMOTE and LOCAL Directories.'
+            )

@@ -3,11 +3,12 @@
 import httplib
 import traceback
 
-import turbolift as clds
+import turbolift as turbo
+import turbolift.utils.http_utils as http
+
+from turbolift import ARGS
 from turbolift import info
-from turbolift import utils
-from turbolift.worker import ARGS
-from turbolift.worker import LOG
+from turbolift import LOG
 
 
 def parse_reqtype():
@@ -46,10 +47,10 @@ def get_surl(region, cf_list, lookup):
 
     for srv in cf_list:
         if region in srv.get('region'):
-            net = utils.parse_url(url=srv.get(lookup))
+            net = http.parse_url(url=srv.get(lookup))
             return net
     else:
-        raise clds.SystemProblem(
+        raise turbo.SystemProblem(
             'Region "%s" was not found in your Service Catalog.' % region
         )
 
@@ -73,8 +74,8 @@ def parse_auth_response(auth_response):
     else:
         LOG.error('No Token Found to Parse.\nHere is the DATA: %s\n%s',
                   auth_response, traceback.format_exc())
-        raise clds.NoTenantIdFound('When attempting to grab the '
-                                   'tenant or user nothing was found.')
+        raise turbo.NoTenantIdFound('When attempting to grab the '
+                                    'tenant or user nothing was found.')
 
     scat = access.pop('serviceCatalog')
     for srv in scat:
@@ -89,7 +90,7 @@ def parse_auth_response(auth_response):
     elif ARGS.get('os_rax_auth') is not None:
         region = ARGS.get('os_rax_auth')
     else:
-        raise clds.SystemProblem('No Region Set')
+        raise turbo.SystemProblem('No Region Set')
 
     if cfl is not None:
         inet = get_surl(region=region, cf_list=cfl, lookup='internalURL')
@@ -111,7 +112,7 @@ def parse_region():
     elif ARGS.get('os_rax_auth'):
         region = ARGS.get('os_rax_auth')
     else:
-        raise clds.SystemProblem('You Are required to specify a REGION')
+        raise turbo.SystemProblem('You Are required to specify a REGION')
 
     if region is 'LON':
         return ARGS.get('os_auth_url', 'lon.%s' % base_auth_url), True
@@ -125,8 +126,8 @@ def parse_region():
                 return ARGS.get('os_auth_url'), False
         else:
             LOG.error('FAILURE: No Region Found. ARGS DUMP:\t %s', ARGS)
-            raise clds.AuthenticationProblem('You Are required to specify a'
-                                             ' REGION and an AUTHURL')
+            raise turbo.AuthenticationProblem('You Are required to specify a'
+                                              ' REGION and an AUTHURL')
 
 
 def request_process(aurl, req):
@@ -138,7 +139,7 @@ def request_process(aurl, req):
     :return read_resp:
     """
 
-    conn = utils.open_connection(url=aurl)
+    conn = http.open_connection(url=aurl)
 
     # Make the request for authentication
     try:

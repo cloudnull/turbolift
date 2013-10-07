@@ -11,7 +11,7 @@ import logging
 import logging.handlers as lhs
 import os
 
-import turbolift as clds
+import turbolift as tbl
 from turbolift import info
 
 
@@ -41,7 +41,7 @@ class Logging(object):
                 "%(asctime)s - %(name)s:%(levelname)s ==> %(message)s"
             )
         else:
-            raise clds.NoLogLevelSet(
+            raise tbl.NoLogLevelSet(
                 'I died because you did not set a known log level'
             )
 

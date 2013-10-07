@@ -45,7 +45,7 @@ def command_actions(subparser, source_args, container_args, cdn_args,
     )
     lister.set_defaults(list=True)
 
-    list_group = lister.add_mutually_exclusive_group()
+    list_group = lister.add_mutually_exclusive_group(required=True)
     list_group.add_argument('-c',
                             '--container',
                             metavar='[CONTAINER]',

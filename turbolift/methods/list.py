@@ -7,11 +7,12 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
+import turbolift.utils.http_utils as http
+import turbolift.utils.multi_utils as multi
+import turbolift.utils.report_utils as report
+
+from turbolift import ARGS
 from turbolift.clouderator import actions
-from turbolift import methods
-from turbolift import utils
-from turbolift.worker import ARGS
-from turbolift.worker import LOG
 
 
 class list(object):
@@ -40,19 +41,29 @@ class list(object):
                                            last_obj=last_obj)
 
         # Package up the Payload
-        payload = utils.prep_payload(auth=self.auth,
-                                     container=ARGS.get('container'),
-                                     source=None,
-                                     args=ARGS)
+        payload = http.prep_payload(
+            auth=self.auth,
+            container=ARGS.get('container'),
+            source=None,
+            args=ARGS
+        )
 
         # Prep Actions.
-        self.go = actions.cloud_actions(payload=payload)
+        self.go = actions.CloudActions(payload=payload)
 
-        LOG.info('API Access for a list of Objects in %s', payload['c_name'])
-        LOG.debug('PAYLOAD\t: "%s"', payload)
+        report.reporter(
+            msg='API Access for a list of Objects in %s' % payload['c_name'],
+            log=True
+        )
+        report.reporter(
+            msg='PAYLOAD\t: "%s"' % payload,
+            log=True,
+            lvl='debug',
+            prt=False
+        )
 
         last_obj = None
-        with methods.spinner():
+        with multi.spinner():
             objects, list_count, last_obj = _list(payload=payload,
                                                   go=self.go,
                                                   last_obj=last_obj)
@@ -60,19 +71,23 @@ class list(object):
                 objects = [obj for obj in objects
                            if ARGS.get('filter') in obj.get('name')]
 
-            # Count the number of objects returned.
-            if objects is False:
-                utils.reporter(msg='Nothing found.')
-            elif objects is not None:
-                num_files = len(objects)
-                if num_files < 1:
-                    utils.reporter(msg='Nothing found.')
-                else:
-                    for obj in objects:
-                        obj['bytes'] = int(obj.get('bytes') / 1024)
-                        utils.reporter(
-                            msg='SIZE: %(bytes)s KB\t- NAME: %(name)s' % obj
-                        )
-                    utils.reporter(msg='I found "%d" Item(s).' % num_files)
+        # Count the number of objects returned.
+        if objects is False:
+            report.reporter(msg='Nothing found.')
+        elif objects is not None:
+            num_files = len(objects)
+            if num_files < 1:
+                report.reporter(msg='Nothing found.')
             else:
-                utils.reporter(msg='Nothing found.')
+                return_objects = []
+                for obj in objects:
+                    for item in ['hash', 'last_modified', 'content_type']:
+                        if item in obj:
+                            obj.pop(item)
+                    return_objects.append(obj)
+                report.reporter(
+                    msg=report.print_horiz_table(return_objects)
+                )
+                report.reporter(msg='I found "%d" Item(s).' % num_files)
+        else:
+            report.reporter(msg='Nothing found.')

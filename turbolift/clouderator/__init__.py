@@ -10,8 +10,10 @@
 import hashlib
 import os
 
-from turbolift import utils
-from turbolift.worker import ARGS
+import turbolift.utils.basic_utils as basic
+import turbolift.utils.report_utils as report
+
+from turbolift import ARGS
 
 
 def md5_checker(resp, local_f):
@@ -44,7 +46,7 @@ def md5_checker(resp, local_f):
 
         if rmd5sum != lmd5sum:
             if ARGS.get('verbose'):
-                utils.reporter(
+                report.reporter(
                     msg=('MESSAGE: CheckSumm Mis-Match %s != %s STATUS'
                          ' : %s %s - Local File %s' % (lmd5sum,
                                                        rmd5sum,
@@ -54,14 +56,14 @@ def md5_checker(resp, local_f):
                 )
             return True
         else:
-            utils.reporter(
+            report.reporter(
                 msg='MESSAGE: CheckSum Match %s = %s' % (lmd5sum, rmd5sum),
                 prt=False
             )
 
             return False
     else:
-        utils.reporter(
+        report.reporter(
             msg='MESSAGE: Local File Not Found %s' % local_f,
             prt=False
         )
@@ -86,7 +88,7 @@ def time_delta(lmobj, compare_time=None):
     def weeks(delta, factor):
         return delta(weeks=factor)
 
-    fmt, date, delta, now = utils.time_stamp()
+    fmt, date, delta, now = basic.time_stamp()
 
     # Set time objects
     odate = date.strptime(lmobj, fmt)

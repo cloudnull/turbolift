@@ -7,12 +7,14 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
-import turbolift as clds
-from turbolift.authentication import auth_utils
+import turbolift as turbo
+import turbolift.utils.auth_utils as auth
+import turbolift.utils.http_utils as http
+import turbolift.utils.multi_utils as multi
+import turbolift.utils.report_utils as report
+
+from turbolift import ARGS
 from turbolift.clouderator import actions
-from turbolift import methods
-from turbolift import utils
-from turbolift.worker import ARGS
 
 
 class clone(object):
@@ -39,7 +41,7 @@ class clone(object):
         """
 
         # Package up the Payload
-        payload = utils.prep_payload(
+        payload = http.prep_payload(
             auth=self.auth,
             container=ARGS.get('source_container'),
             source=None,
@@ -47,12 +49,12 @@ class clone(object):
         )
 
         # Prep action class
-        self.go = actions.cloud_actions(payload=payload)
+        self.go = actions.CloudActions(payload=payload)
 
         # Ensure we have a target region.
         target_region = ARGS.get('target_region')
         if target_region is None:
-            raise clds.NoSource('No target Region was specified.')
+            raise turbo.NoSource('No target Region was specified.')
         else:
             target_region = target_region.upper()
 
@@ -63,71 +65,55 @@ class clone(object):
             target_type = 'publicURL'
 
         # Format the target URL
-        target_url = auth_utils.get_surl(
+        target_url = auth.get_surl(
             region=target_region, cf_list=payload['acfep'], lookup=target_type
         )
         if target_url is None:
-            raise clds.NoSource('No url was found from the target region')
+            raise turbo.NoSource('No url was found from the target region')
         else:
             payload['turl'] = target_url
 
         # Ensure we have a target Container.
         target_container = ARGS.get('target_container')
         if target_container is None:
-            raise clds.NoSource('No target Container was specified.')
+            raise turbo.NoSource('No target Container was specified.')
         else:
             payload['tc_name'] = target_container
 
         # Check if the source and target containers exist. If not Create them.
         # Source Container.
-        self.go._container_create(url=payload['url'],
-                                  container=payload['c_name'])
+        self.go.container_create(url=payload['url'],
+                                 container=payload['c_name'])
         # Target Container.
-        self.go._container_create(url=target_url,
-                                  container=target_container)
+        self.go.container_create(url=target_url,
+                                 container=target_container)
 
-        utils.reporter(msg='Getting Object list from the Source.')
-        with methods.spinner():
+        report.reporter(msg='Getting Object list from the Source.')
+        with multi.spinner():
             # Get a list of Objects from the Source/Target container.
             objects, list_count, last_obj = self.go.object_lister(
                 url=payload['url'],
                 container=payload['c_name']
             )
         if objects is None:
-            raise clds.NoSource('The source container is empty.')
+            raise turbo.NoSource('The source container is empty.')
 
         # Get the number of objects and set Concurrency
         num_files = len(objects)
-        concurrency = utils.set_concurrency(args=ARGS,
+        concurrency = multi.set_concurrency(args=ARGS,
                                             file_count=num_files)
 
-        utils.reporter(msg='Beginning Sync Operation.')
-        utils.job_processer(num_jobs=num_files,
-                            objects=objects,
-                            job_action=self.syncerator,
-                            concur=concurrency,
-                            payload=payload)
+        report.reporter(msg='Beginning Sync Operation.')
+        kwargs = {'surl': payload['url'],
+                  'turl': payload['turl'],
+                  'scontainer': payload['c_name'],
+                  'tcontainer': payload['tc_name'],
+                  'cf_job': getattr(self.go, 'object_syncer')}
 
-    def syncerator(self, work_q, payload):
-        """Upload files to CloudFiles -Swift-.
-
-        :param work_q:
-        :param payload:
-        """
-
-        # Get work from the Queue
-        while True:
-            wfile = utils.get_from_q(queue=work_q)
-            # If Work is None return None
-            if wfile is None:
-                break
-            try:
-                self.go.object_syncer(surl=payload['url'],
-                                      turl=payload['turl'],
-                                      scontainer=payload['c_name'],
-                                      tcontainer=payload['tc_name'],
-                                      obj=wfile)
-            except EOFError:
-                utils.emergency_kill()
-            except KeyboardInterrupt:
-                utils.emergency_kill(reclaim=True)
+        multi.job_processer(
+            num_jobs=num_files,
+            objects=objects,
+            job_action=multi.doerator,
+            concur=concurrency,
+            kwargs=kwargs
+        )

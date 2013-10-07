@@ -7,11 +7,14 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
+import turbolift.utils.basic_utils as basic
+import turbolift.utils.http_utils as http
+import turbolift.utils.multi_utils as multi
+import turbolift.utils.report_utils as report
+
+from turbolift import ARGS
 from turbolift.clouderator import actions
-from turbolift import methods
-from turbolift import utils
-from turbolift.worker import ARGS
-from turbolift.worker import LOG
+from turbolift import LOG
 
 
 class delete(object):
@@ -25,29 +28,11 @@ class delete(object):
     def start(self):
         """Retrieve a long list of all files in a container."""
 
-        # Package up the Payload
-        payload = utils.prep_payload(
-            auth=self.auth,
-            container=ARGS.get('container'),
-            source=None,
-            args=ARGS
-        )
-        self.go = actions.cloud_actions(payload=payload)
-        self.action = getattr(self.go, 'object_lister')
-        LOG.info(
-            'Accessing API for a list of Objects in %s', payload['c_name']
-        )
-        LOG.debug('PAYLOAD\t: "%s"', payload)
+        def _deleterator(payload):
+            """Multipass Object Delete."""
 
-        # Make 2 passes when deleting objects.
-        utils.reporter(
-            msg='This operation will make 2 passes when deleting objects.'
-        )
-
-        # Multipass Object Delete.
-        for _ in range(2):
-            utils.reporter(msg='Getting file list')
-            with methods.spinner():
+            report.reporter(msg='Getting file list')
+            with multi.spinner():
                 # Get all objects in a Container
                 objects, list_count, last_obj = self.action(
                     url=payload['url'],
@@ -55,62 +40,71 @@ class delete(object):
                 )
                 # Count the number of objects returned.
                 if objects is False:
-                    utils.reporter(msg='No Container found.')
-                    break
+                    report.reporter(msg='No Container found.')
+                    return
                 elif objects is not None:
                     num_files = len(objects)
                     if num_files < 1:
-                        utils.reporter(msg='No Objects found.')
-                        break
+                        report.reporter(msg='No Objects found.')
+                        return
                 else:
-                    utils.reporter(msg='Nothing found.')
-                    break
+                    report.reporter(msg='Nothing found.')
+                    return
 
                 # Get The rate of concurrency
-                concurrency = utils.set_concurrency(args=ARGS,
+                concurrency = multi.set_concurrency(args=ARGS,
                                                     file_count=num_files)
-
                 # Load the queue
                 obj_list = [obj['name'] for obj in objects]
 
                 if ARGS.get('object'):
                     obj_names = ARGS.get('object')
                     obj_list = [obj for obj in obj_list if obj in obj_names]
+                    if not obj_list:
+                        return 'Nothing Found to Delete.'
                     num_files = len(obj_list)
-                utils.reporter(
+                report.reporter(
                     msg=('Performing Object Delete for "%s" object(s)...'
                          % num_files)
                 )
-            utils.job_processer(num_jobs=num_files,
-                                objects=obj_list,
-                                job_action=self.deleterator,
-                                concur=concurrency,
-                                payload=payload)
+                kwargs = {'url': payload['url'],
+                          'container': payload['c_name'],
+                          'cf_job': getattr(self.go, 'object_deleter')}
+            multi.job_processer(
+                num_jobs=num_files,
+                objects=obj_list,
+                job_action=multi.doerator,
+                concur=concurrency,
+                kwargs=kwargs
+            )
+            _deleterator(payload=payload)
+
+        # Package up the Payload
+        payload = http.prep_payload(
+            auth=self.auth,
+            container=ARGS.get('container'),
+            source=None,
+            args=ARGS
+        )
+        report.reporter(
+            msg='PAYLOAD\t: "%s"' % payload,
+            log=True,
+            lvl='debug',
+            prt=False
+        )
+        self.go = actions.CloudActions(payload=payload)
+        self.action = getattr(self.go, 'object_lister')
+        report.reporter(
+            msg='Accessing API for list of Objects in %s' % payload['c_name'],
+            log=True,
+            lvl='info',
+            prt=True
+        )
+        # Delete the objects and report when done.
+        _deleterator(payload=payload)
 
         if ARGS.get('save_container') is None and not ARGS.get('object'):
-            utils.reporter(msg='Performing Container Delete.')
-            with methods.spinner():
+            report.reporter(msg='Performing Container Delete.')
+            with multi.spinner():
                 self.go.container_deleter(url=payload['url'],
                                           container=payload['c_name'])
-
-    def deleterator(self, work_q, payload):
-        """Upload files to CloudFiles -Swift-.
-
-        :param work_q:
-        :param payload:
-        """
-
-        # Get work from the Queue
-        while True:
-            wfile = utils.get_from_q(queue=work_q)
-            # If Work is None return None
-            if wfile is None:
-                break
-            try:
-                self.go.object_deleter(url=payload['url'],
-                                       container=payload['c_name'],
-                                       u_file=wfile)
-            except EOFError:
-                utils.emergency_kill()
-            except KeyboardInterrupt:
-                utils.emergency_kill(reclaim=True)

@@ -10,7 +10,8 @@
 import argparse
 import ConfigParser
 import os
-import sys
+
+import turbolift.utils.basic_utils as basic
 
 from turbolift.arguments import archive
 from turbolift.arguments import authgroup
@@ -23,7 +24,6 @@ from turbolift.arguments import optionals
 from turbolift.arguments import tsync
 from turbolift.arguments import upload
 from turbolift import info
-from turbolift import utils
 
 
 def setup_parser():
@@ -238,7 +238,7 @@ def understand_args(set_args):
         """
 
         for htp in ['object_headers', 'container_headers', 'base_headers']:
-            set_args[htp] = utils.keys2dict(
+            set_args[htp] = basic.keys2dict(
                 chl=set_args.get(htp)
             )
 
@@ -258,11 +258,13 @@ def understand_args(set_args):
         set_args['os_rax_auth'] = set_args['os_rax_auth'].upper()
 
     if set_args.get('os_user') is None:
-        sys.exit('\nNo Username was provided, use [--os-user]\n')
+        raise SystemExit('\nNo Username was provided, use [--os-user]\n')
 
     if not any([set_args.get('os_apikey'), set_args.get('os_password')]):
-        sys.exit('No APIKey or Password was provided, use [--os-apikey]'
-                 ' or [--os-password]')
+        raise SystemExit(
+            'No APIKey or Password was provided,'
+            ' use [--os-apikey] or [--os-password]'
+        )
 
     if set_args.get('archive') is True:
         set_args['cc'] = 1
@@ -285,4 +287,4 @@ def understand_args(set_args):
         print('DEFAULT ARGUMENTS : %s\n' % set_args)
 
     # Parse and return the arguments
-    return utils.dict_pop_none(dictionary=set_args)
+    return basic.dict_pop_none(dictionary=set_args)

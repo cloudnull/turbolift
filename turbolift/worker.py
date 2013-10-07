@@ -7,20 +7,7 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
-LOG = None
-ARGS = None
-
-
-def load_constants(log_method, args):
-    """Setup In Memory Persistent Logging.
-
-    :param log_method: Set method for logging
-    :param args: Arguments that have been parsed for in application use.
-    """
-
-    global LOG, ARGS
-    LOG = log_method
-    ARGS = args
+from turbolift import ARGS
 
 
 def start_work():
@@ -42,12 +29,13 @@ def start_work():
 
         return getattr(module, name)
 
+    # Low imports for load in module.
     import pkgutil
 
-    import turbolift as clds
+    # Low imports for load in module.
+    import turbolift as turbo
     from turbolift.authentication import authentication as auth
     from turbolift import methods as met
-    from turbolift import utils
 
     try:
         for mod, name, package in pkgutil.iter_modules(met.__path__):
@@ -57,7 +45,6 @@ def start_work():
                 actions(auth=auth.authenticate()).start()
                 break
         else:
-            raise clds.SystemProblem('No Method set for processing')
+            raise turbo.SystemProblem('No Method set for processing')
     except KeyboardInterrupt:
-        utils.emergency_kill(reclaim=True)
-        utils.emergency_exit(msg='Caught KeyboardInterrupt, I\'M ON FIRE!!!!')
+        turbo.emergency_kill(reclaim=True)

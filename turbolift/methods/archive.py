@@ -9,11 +9,14 @@
 # =============================================================================
 import os
 
+import turbolift.utils.basic_utils as basic
+import turbolift.utils.http_utils as http
+import turbolift.utils.multi_utils as multi
+import turbolift.utils.report_utils as report
+
+from turbolift import ARGS
 from turbolift.clouderator import actions
 from turbolift import methods
-from turbolift import utils
-from turbolift.worker import ARGS
-from turbolift.worker import LOG
 
 
 class archive(object):
@@ -34,30 +37,35 @@ class archive(object):
         # Index Local Files for Upload
         f_indexed = methods.get_local_files()
         num_files = len(f_indexed)
-        utils.reporter(msg='MESSAGE: "%s" Files have been found.' % num_files)
+        report.reporter(msg='MESSAGE: "%s" Files have been found.' % num_files)
 
         # Package up the Payload
-        payload = utils.prep_payload(
+        payload = http.prep_payload(
             auth=self.auth,
-            container=ARGS.get('container', utils.rand_string()),
+            container=ARGS.get('container', basic.rand_string()),
             source=None,
             args=ARGS
         )
 
-        LOG.debug('PAYLOAD\t: "%s"', payload)
+        report.reporter(
+            msg='PAYLOAD\t: "%s"' % payload,
+            log=True,
+            lvl='debug',
+            prt=False
+        )
 
         # Set the actions class up
-        self.go = actions.cloud_actions(payload=payload)
-        self.go._container_create(
+        self.go = actions.CloudActions(payload=payload)
+        self.go.container_create(
             url=payload['url'], container=payload['c_name']
         )
         self.action = getattr(self.go, 'object_putter')
 
-        with methods.spinner():
+        with multi.spinner():
             # Compression Job
             wfile = methods.compress_files(file_list=f_indexed)
             source, name = os.path.split(wfile)
-            utils.reporter(msg='MESSAGE: "%s" is being uploaded.' % name)
+            report.reporter(msg='MESSAGE: "%s" is being uploaded.' % name)
 
             # Perform the upload
             self.action(url=payload['url'],
@@ -67,4 +75,4 @@ class archive(object):
 
             # Remove the archive unless instructed not too.
             if ARGS.get('no_cleanup') is None:
-                utils.remove_file(wfile)
+                basic.remove_file(wfile)

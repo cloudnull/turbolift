@@ -7,11 +7,12 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
+import turbolift.utils.http_utils as http
+import turbolift.utils.multi_utils as multi
+import turbolift.utils.report_utils as report
+
+from turbolift import ARGS
 from turbolift.clouderator import actions
-from turbolift import methods
-from turbolift import utils
-from turbolift.worker import ARGS
-from turbolift.worker import LOG
 
 
 class show(object):
@@ -26,7 +27,7 @@ class show(object):
         """Retrieve a long list of all files in a container."""
 
         # Package up the Payload
-        payload = utils.prep_payload(
+        payload = http.prep_payload(
             auth=self.auth,
             container=None,
             source=None,
@@ -34,34 +35,25 @@ class show(object):
         )
 
         # Prep Actions.
-        self.go = actions.cloud_actions(payload=payload)
+        self.go = actions.CloudActions(payload=payload)
 
-        LOG.debug('PAYLOAD\t: "%s"', payload)
+        report.reporter(
+            msg='PAYLOAD\t: "%s"' % payload,
+            log=True,
+            lvl='debug',
+            prt=False
+        )
 
-        with methods.spinner():
-            for retry in utils.retryloop(attempts=ARGS.get('error_retry'),
-                                         delay=1):
-                if ARGS.get('cdn_info'):
-                    url = payload['cnet']
-                else:
-                    url = payload['url']
+        with multi.spinner():
+            if ARGS.get('cdn_info'):
+                url = payload['cnet']
+            else:
+                url = payload['url']
 
-                conn = utils.open_connection(url=url)
-                if ARGS.get('object') is not None:
-                    rpath = self.go._quoter(url=url.path,
-                                            cont=ARGS.get('container'),
-                                            ufile=ARGS.get('object'))
-                else:
-                    rpath = self.go._quoter(url=url.path,
-                                            cont=ARGS.get('container'))
+            message = self.go.detail_show(url=url)
 
-                resp = self.go._header_getter(conn=conn,
-                                              rpath=rpath,
-                                              fheaders=payload['headers'],
-                                              retry=retry)
-                if resp.status == 404:
-                    utils.reporter(msg='Nothing found.')
-                else:
-                    utils.reporter(msg='Object found.')
-                    for _re in resp.getheaders():
-                        utils.reporter(msg='%s: %s' % _re)
+        if isinstance(message, list):
+            report.reporter(msg='Item Found...')
+            report.reporter(msg=report.print_virt_table(dict(message)))
+        else:
+            report.reporter(msg=message)

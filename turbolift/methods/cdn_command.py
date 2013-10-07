@@ -7,11 +7,13 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
+import turbolift.utils.basic_utils as basic
+import turbolift.utils.http_utils as http
+import turbolift.utils.multi_utils as multi
+import turbolift.utils.report_utils as report
+
+from turbolift import ARGS
 from turbolift.clouderator import actions
-from turbolift import methods
-from turbolift import utils
-from turbolift.worker import ARGS
-from turbolift.worker import LOG
 
 
 class cdn_command(object):
@@ -29,24 +31,29 @@ class cdn_command(object):
         TAR Ball to a specified container.
         """
 
-        utils.reporter(
+        report.reporter(
             msg='Toggling CDN on Container %s.' % ARGS.get('container')
         )
 
         # Package up the Payload
-        payload = utils.prep_payload(
+        payload = http.prep_payload(
             auth=self.auth,
-            container=ARGS.get('container', utils.rand_string()),
+            container=ARGS.get('container', basic.rand_string()),
             source=None,
             args=ARGS
         )
 
-        LOG.debug('PAYLOAD: "%s"', payload)
+        report.reporter(
+            msg='PAYLOAD\t: "%s"' % payload,
+            log=True,
+            lvl='debug',
+            prt=False
+        )
 
         # Set the actions class up
-        self.go = actions.cloud_actions(payload=payload)
+        self.go = actions.CloudActions(payload=payload)
 
-        with methods.spinner():
+        with multi.spinner():
             if ARGS.get('purge'):
                 for obj in ARGS.get('purge'):
                     # Perform the purge

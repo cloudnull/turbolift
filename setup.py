@@ -8,17 +8,18 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
-import os
 import setuptools
 import sys
 
 from turbolift import info
 
-REQUIRES = []
+REQUIRES = ['prettytable']
 
 if sys.version_info < (2, 6, 0):
     sys.stderr.write("Turbolift Presently requires Python 2.6.0 or greater \n")
-    sys.exit('\nUpgrade python because you version of it is VERY deprecated\n')
+    raise SystemExit(
+        '\nUpgrade python because you version of it is VERY deprecated\n'
+    )
 elif sys.version_info < (2, 7, 0):
     REQUIRES.append('argparse')
 
