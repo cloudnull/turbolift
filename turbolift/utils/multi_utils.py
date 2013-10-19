@@ -230,6 +230,8 @@ def job_processer(num_jobs, objects, job_action, concur, kwargs=None,
                         queue=work_q,
                         opt=opt,
                         kwargs=kwargs)
+            basic.stupid_hack(wait=1)
+        work_q.close()
 
 
 def set_concurrency(args, file_count):
