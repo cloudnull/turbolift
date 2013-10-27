@@ -9,9 +9,9 @@
 # =============================================================================
 
 
-def delete_actions(subparser, del_args, container_args):
+def delete_actions(subparser, del_args, container_args, regex):
     delaction = subparser.add_parser('delete',
-                                     parents=[del_args, container_args],
+                                     parents=[del_args, container_args, regex],
                                      help=('Deletes everything in a given'
                                            ' container Including the'
                                            ' container.'))

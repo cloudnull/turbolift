@@ -7,6 +7,7 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
+import turbolift.utils.basic_utils as basic
 import turbolift.utils.http_utils as http
 import turbolift.utils.multi_utils as multi
 import turbolift.utils.report_utils as report
@@ -15,7 +16,7 @@ from turbolift import ARGS
 from turbolift.clouderator import actions
 
 
-class list(object):
+class List(object):
     """Setup and run the list Method."""
 
     def __init__(self, auth):
@@ -67,6 +68,13 @@ class list(object):
             objects, list_count, last_obj = _list(payload=payload,
                                                   go=self.go,
                                                   last_obj=last_obj)
+            if ARGS.get('pattern_match'):
+                objects = basic.match_filter(
+                    idx_list=objects,
+                    pattern=ARGS['pattern_match'],
+                    dict_type=True
+                )
+
             if ARGS.get('filter') is not None:
                 objects = [obj for obj in objects
                            if ARGS.get('filter') in obj.get('name')]

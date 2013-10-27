@@ -15,7 +15,7 @@ from turbolift import ARGS
 from turbolift.clouderator import actions
 
 
-class show(object):
+class Show(object):
     """Setup and run the list Method."""
 
     def __init__(self, auth):

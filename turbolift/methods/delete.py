@@ -17,7 +17,7 @@ from turbolift.clouderator import actions
 from turbolift import LOG
 
 
-class delete(object):
+class Delete(object):
     """Setup and run the list Method."""
 
     def __init__(self, auth):
@@ -38,12 +38,22 @@ class delete(object):
                     url=payload['url'],
                     container=payload['c_name']
                 )
+
+                if ARGS.get('pattern_match'):
+                    objects = basic.match_filter(
+                        idx_list=objects,
+                        pattern=ARGS['pattern_match'],
+                        dict_type=True
+                    )
+
                 # Count the number of objects returned.
                 if objects is False:
                     report.reporter(msg='No Container found.')
                     return
                 elif objects is not None:
-                    num_files = len(objects)
+                    # Load the queue
+                    obj_list = [obj['name'] for obj in objects]
+                    num_files = len(obj_list)
                     if num_files < 1:
                         report.reporter(msg='No Objects found.')
                         return
@@ -54,8 +64,6 @@ class delete(object):
                 # Get The rate of concurrency
                 concurrency = multi.set_concurrency(args=ARGS,
                                                     file_count=num_files)
-                # Load the queue
-                obj_list = [obj['name'] for obj in objects]
 
                 if ARGS.get('object'):
                     obj_names = ARGS.get('object')
@@ -103,7 +111,8 @@ class delete(object):
         # Delete the objects and report when done.
         _deleterator(payload=payload)
 
-        if ARGS.get('save_container') is None and not ARGS.get('object'):
+        sup_args = [ARGS.get('object'), ARGS.get('pattern_match')]
+        if ARGS.get('save_container') is None and not any(sup_args):
             report.reporter(msg='Performing Container Delete.')
             with multi.spinner():
                 self.go.container_deleter(url=payload['url'],

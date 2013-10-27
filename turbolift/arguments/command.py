@@ -10,7 +10,7 @@
 
 
 def command_actions(subparser, source_args, container_args, cdn_args,
-                    time_args):
+                    time_args, regex):
     """Uploading Arguments.
 
     :param subparser:
@@ -40,7 +40,7 @@ def command_actions(subparser, source_args, container_args, cdn_args,
     # Provides for the list Function.
     lister = subparser.add_parser(
         'list',
-        parents=[time_args],
+        parents=[time_args, regex],
         help='List Objects in a container.'
     )
     lister.set_defaults(list=True)
@@ -67,14 +67,14 @@ def command_actions(subparser, source_args, container_args, cdn_args,
         help='Run CDN Commands on a Container.'
     )
     cdn_command.set_defaults(cdn_command=True)
-
     cdn_command.add_argument('-c',
                              '--container',
                              metavar='[CONTAINER]',
                              help='Target Container.',
+                             required=True,
                              default=None)
 
-    cdn_command_group = cdn_command.add_mutually_exclusive_group()
+    cdn_command_group = cdn_command.add_mutually_exclusive_group(required=True)
     cdn_command_group.add_argument('--purge',
                                    metavar='[NAME]',
                                    help=('Purge a specific Object from the'
@@ -89,4 +89,4 @@ def command_actions(subparser, source_args, container_args, cdn_args,
     cdn_command_group.add_argument('--disable',
                                    action='store_false',
                                    default=None,
-                                   help=('Disable the CDN for a Container'))
+                                   help='Disable the CDN for a Container')

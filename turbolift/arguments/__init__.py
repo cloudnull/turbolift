@@ -89,7 +89,8 @@ def shared_args():
                           help=('This will allow the container to remain'
                                 ' untouched and intact, but only the'
                                 ' container.'))
-    del_args.add_argument('-o', '--object',
+    del_args.add_argument('-o',
+                          '--object',
                           metavar='[NAME]',
                           default=[],
                           action='append',
@@ -98,7 +99,8 @@ def shared_args():
 
     # Container Arguments
     container_args = argparse.ArgumentParser(add_help=False)
-    container_args.add_argument('-c', '--container',
+    container_args.add_argument('-c',
+                                '--container',
                                 metavar='<name>',
                                 required=True,
                                 help='Specifies the Container')
@@ -113,7 +115,8 @@ def shared_args():
 
     # Local Multi-Source Arguments
     msource_args = argparse.ArgumentParser(add_help=False)
-    msource_args.add_argument('-s', '--source',
+    msource_args.add_argument('-s',
+                              '--source',
                               metavar='<locals>',
                               default=[],
                               action='append',
@@ -138,8 +141,16 @@ def shared_args():
                            help=('If Offset is used the default time factor'
                                  ' is "1".'))
 
+    # Filter Arguments
+    regex = argparse.ArgumentParser(add_help=False)
+    regex.add_argument('-m',
+                       '--pattern-match',
+                       metavar='[REGEX]',
+                       help="Filter files by pattern, This is a Regex Search",
+                       default=False)
+
     return (cdn_args, del_args, container_args, source_args, msource_args,
-            time_args)
+            time_args, regex)
 
 
 def default_args(parser):
@@ -168,7 +179,7 @@ def args_setup():
     default_args(parser=parser)
 
     # Shared Arguments
-    cdn, remove, container, source, msource, timeargs = shared_args()
+    cdn, remove, container, source, msource, timeargs, regexarg = shared_args()
 
     # Optional Arguments
     authgroup.auth_group(parser=parser)
@@ -176,30 +187,49 @@ def args_setup():
     optionals.optional_args(parser=parser)
 
     # Subparser Positional Arguments
-    archive.archive_actions(subparser=subparser,
-                            multi_source_args=msource,
-                            container_args=container)
-    delete.delete_actions(subparser=subparser,
-                          del_args=remove,
-                          container_args=container)
-    download.download_actions(subparser=subparser,
-                              source_args=source,
-                              container_args=container,
-                              time_args=timeargs)
-    tsync.tsync_actions(subparser=subparser,
-                        source_args=source,
-                        container_args=container)
-    upload.upload_actions(subparser=subparser,
-                          source_args=source,
-                          container_args=container,
-                          time_args=timeargs)
-    command.command_actions(subparser=subparser,
-                            source_args=source,
-                            container_args=container,
-                            cdn_args=cdn,
-                            time_args=timeargs)
-    clone.clone_actions(subparser=subparser,
-                        time_args=timeargs)
+    archive.archive_actions(
+        subparser=subparser,
+        multi_source_args=msource,
+        container_args=container,
+        regex=regexarg
+    )
+    delete.delete_actions(
+        subparser=subparser,
+        del_args=remove,
+        container_args=container,
+        regex=regexarg
+    )
+    download.download_actions(
+        subparser=subparser,
+        source_args=source,
+        container_args=container,
+        time_args=timeargs,
+        regex=regexarg
+    )
+    tsync.tsync_actions(
+        subparser=subparser,
+        source_args=source,
+        container_args=container,
+    )
+    upload.upload_actions(
+        subparser=subparser,
+        source_args=source,
+        container_args=container,
+        time_args=timeargs,
+        regex=regexarg
+    )
+    command.command_actions(
+        subparser=subparser,
+        source_args=source,
+        container_args=container,
+        cdn_args=cdn,
+        time_args=timeargs,
+        regex=regexarg
+    )
+    clone.clone_actions(
+        subparser=subparser,
+        time_args=timeargs
+    )
     return parser
 
 

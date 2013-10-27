@@ -40,8 +40,9 @@ def start_work():
     try:
         for mod, name, package in pkgutil.iter_modules(met.__path__):
             if ARGS.get(name) is not None:
+                titled_name = name.title().replace('_', '')
                 method = get_method(method=met, name=name)
-                actions = get_actions(module=method, name=name)
+                actions = get_actions(module=method, name=titled_name)
                 actions(auth=auth.authenticate()).start()
                 break
         else:

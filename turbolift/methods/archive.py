@@ -19,7 +19,7 @@ from turbolift.clouderator import actions
 from turbolift import methods
 
 
-class archive(object):
+class Archive(object):
     """Setup and run the archive Method."""
 
     def __init__(self, auth):
@@ -36,6 +36,12 @@ class archive(object):
 
         # Index Local Files for Upload
         f_indexed = methods.get_local_files()
+
+        if ARGS.get('pattern_match'):
+            f_indexed = basic.match_filter(
+                idx_list=f_indexed, pattern=ARGS['pattern_match']
+            )
+
         num_files = len(f_indexed)
         report.reporter(msg='MESSAGE: "%s" Files have been found.' % num_files)
 
