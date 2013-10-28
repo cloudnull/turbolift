@@ -17,7 +17,7 @@ from turbolift.clouderator import actions
 from turbolift import LOG
 
 
-class download(object):
+class Download(object):
     """Setup and run the list Method."""
 
     def __init__(self, auth):
@@ -59,6 +59,13 @@ class download(object):
                 url=payload['url'],
                 container=payload['c_name']
             )
+
+            if ARGS.get('pattern_match'):
+                objects = basic.match_filter(
+                    idx_list=objects,
+                    pattern=ARGS['pattern_match'],
+                    dict_type=True
+                )
 
             # Count the number of objects returned.
             if objects is False:

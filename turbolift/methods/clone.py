@@ -9,6 +9,7 @@
 # =============================================================================
 import turbolift as turbo
 import turbolift.utils.auth_utils as auth
+import turbolift.utils.basic_utils as basic
 import turbolift.utils.http_utils as http
 import turbolift.utils.multi_utils as multi
 import turbolift.utils.report_utils as report
@@ -17,7 +18,7 @@ from turbolift import ARGS
 from turbolift.clouderator import actions
 
 
-class clone(object):
+class Clone(object):
     """Setup and run the stream Method.
 
     The method will create a list of objects in a "Source" container, then
@@ -95,6 +96,14 @@ class clone(object):
                 url=payload['url'],
                 container=payload['c_name']
             )
+
+            if ARGS.get('pattern_match'):
+                objects = basic.match_filter(
+                    idx_list=objects,
+                    pattern=ARGS['pattern_match'],
+                    dict_type=True
+                )
+
         if objects is None:
             raise turbo.NoSource('The source container is empty.')
 

@@ -19,7 +19,7 @@ from turbolift import LOG
 from turbolift import methods
 
 
-class upload(object):
+class Upload(object):
     """Setup and run the upload Method."""
 
     def __init__(self, auth):
@@ -36,6 +36,12 @@ class upload(object):
 
         # Index Local Files for Upload
         f_indexed = methods.get_local_files()
+
+        if ARGS.get('pattern_match'):
+            f_indexed = basic.match_filter(
+                idx_list=f_indexed, pattern=ARGS['pattern_match']
+            )
+
         num_files = len(f_indexed)
 
         # Get The rate of concurrency

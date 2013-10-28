@@ -9,7 +9,7 @@
 # =============================================================================
 
 
-def upload_actions(subparser, source_args, container_args, time_args):
+def upload_actions(subparser, source_args, container_args, time_args, regex):
     """Uploading Arguments.
 
     :param subparser:
@@ -20,7 +20,7 @@ def upload_actions(subparser, source_args, container_args, time_args):
 
     upload = subparser.add_parser(
         'upload',
-        parents=[source_args, container_args, time_args],
+        parents=[source_args, container_args, time_args, regex],
         help='Upload files to SWIFT, -CloudFiles-'
     )
     upload.set_defaults(upload=True)

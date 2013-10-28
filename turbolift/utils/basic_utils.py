@@ -14,6 +14,7 @@ import json
 import os
 import pwd
 import random
+import re
 import string
 import time
 
@@ -360,3 +361,21 @@ def stupid_hack(most=10, wait=None):
         time.sleep(wait)
     else:
         time.sleep(random.randrange(1, most))
+
+
+def match_filter(idx_list, pattern, dict_type=False, dict_key='name'):
+    """Match items in indexed files.
+
+    :param idx_list:
+    :return list
+    """
+
+    if idx_list:
+        if dict_type is False:
+            return [obj for obj in idx_list
+                    if re.search(pattern, obj)]
+        elif dict_type is True:
+            return [obj for obj in idx_list
+                    if re.search(pattern, obj.get(dict_key))]
+    else:
+        return idx_list

@@ -16,7 +16,7 @@ from turbolift import ARGS
 from turbolift.clouderator import actions
 
 
-class cdn_command(object):
+class CdnCommand(object):
     """Setup and run the archive Method."""
 
     def __init__(self, auth):
