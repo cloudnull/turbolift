@@ -119,18 +119,6 @@ def parse_url(url, auth=False):
     :return aurl:
     """
 
-    def is_https(iurl):
-        """Check URL to determine the Connection type.
-
-        :param iurl:
-        :return 'complete url string.':
-        """
-
-        if 'rackspace' in iurl:
-            return 'https://%s' % iurl
-        else:
-            return 'http://%s' % iurl
-
     if all([auth is True, 'tokens' not in url]):
             url = urlparse.urljoin(url, 'tokens')
 
@@ -140,7 +128,7 @@ def parse_url(url, auth=False):
         else:
             return urlparse.urlparse(url)
     else:
-        return urlparse.urlparse(is_https(iurl=url))
+        return urlparse.urlparse('http://%s' % url)
 
 
 def prep_payload(auth, container, source, args):

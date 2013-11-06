@@ -19,8 +19,7 @@ def parse_reqtype():
 
     setup = {'username': ARGS.get('os_user')}
     if ARGS.get('os_token') is not None:
-        auth_body = {'auth': {'token': {'id': ARGS.get('os_token')},
-                              'tenantName': ARGS.get('os_tenant')}}
+        auth_body = {'auth': {'token': {'id': ARGS.get('os_token')}}}
     elif ARGS.get('os_apikey') is not None:
         prefix = 'RAX-KSKEY:apiKeyCredentials'
         setup['apiKey'] = ARGS.get('os_apikey')
@@ -32,6 +31,10 @@ def parse_reqtype():
     else:
         LOG.error(traceback.format_exc())
         raise AttributeError('No Password, APIKey, or Token Specified')
+
+    if ARGS.get('os_tenant'):
+        auth_body['auth']['tenantName'] = ARGS.get('os_tenant')
+
     LOG.debug('AUTH Request Type > %s', auth_body)
     return auth_body
 
@@ -46,9 +49,12 @@ def get_surl(region, cf_list, lookup):
     """
 
     for srv in cf_list:
-        if region in srv.get('region'):
-            net = http.parse_url(url=srv.get(lookup))
-            return net
+        region_get = srv.get('region')
+        if any([region in region_get, region.lower() in region_get]):
+            if srv.get(lookup) is None:
+                return None
+            else:
+                return http.parse_url(url=srv.get(lookup))
     else:
         raise turbo.SystemProblem(
             'Region "%s" was not found in your Service Catalog.' % region
@@ -61,6 +67,16 @@ def parse_auth_response(auth_response):
     :param auth_response: the full object returned from an auth call
     :returns: tuple (token, tenant, username, internalurl, externalurl, cdnurl)
     """
+
+    def _service_ep(scat, types_list):
+        for srv in scat:
+            if srv.get('name') in types_list:
+                index_id = types_list.index(srv.get('name'))
+                index = types_list[index_id]
+                if srv.get('name') == index:
+                    return srv.get('endpoints')
+        else:
+            return None
 
     access = auth_response.get('access')
     token = access.get('token').get('id')
@@ -77,20 +93,18 @@ def parse_auth_response(auth_response):
         raise turbo.NoTenantIdFound('When attempting to grab the '
                                     'tenant or user nothing was found.')
 
-    scat = access.pop('serviceCatalog')
-    for srv in scat:
-        if srv.get('name') in info.__srv_types__:
-            if srv.get('name') == 'cloudFilesCDN':
-                cdn = srv.get('endpoints')
-            if srv.get('name') == ARGS.get('service_type'):
-                cfl = srv.get('endpoints')
-
     if ARGS.get('os_region') is not None:
         region = ARGS.get('os_region')
     elif ARGS.get('os_rax_auth') is not None:
         region = ARGS.get('os_rax_auth')
+    elif ARGS.get('os_hp_auth') is not None:
+        region = ARGS.get('os_hp_auth')
     else:
         raise turbo.SystemProblem('No Region Set')
+
+    scat = access.pop('serviceCatalog')
+    cfl = _service_ep(scat, info.__srv_types__)
+    cdn = _service_ep(scat, info.__cdn_types__)
 
     if cfl is not None:
         inet = get_surl(region=region, cf_list=cfl, lookup='internalURL')
@@ -98,6 +112,8 @@ def parse_auth_response(auth_response):
 
     if cdn is not None:
         cnet = get_surl(region=region, cf_list=cdn, lookup='publicURL')
+    else:
+        cnet = None
 
     return token, tenant, user, inet, enet, cnet, cfl
 
@@ -105,29 +121,29 @@ def parse_auth_response(auth_response):
 def parse_region():
     """Pull region/auth url information from context."""
 
-    base_auth_url = 'identity.api.rackspacecloud.com/v2.0/tokens'
-
-    if ARGS.get('os_region'):
-        region = ARGS.get('os_region')
-    elif ARGS.get('os_rax_auth'):
+    if ARGS.get('os_rax_auth'):
         region = ARGS.get('os_rax_auth')
-    else:
-        raise turbo.SystemProblem('You Are required to specify a REGION')
+        auth_url = 'https://identity.api.rackspacecloud.com/v2.0/tokens'
+        if region is 'LON':
+            return ARGS.get('os_auth_url', 'lon.%s' % auth_url)
+        elif region.lower() in info.__rax_regions__:
+            return ARGS.get('os_auth_url', '%s' % auth_url)
 
-    if region is 'LON':
-        return ARGS.get('os_auth_url', 'lon.%s' % base_auth_url), True
-    elif region.lower() in info.__rax_regions__:
-        return ARGS.get('os_auth_url', '%s' % base_auth_url), True
-    else:
-        if ARGS.get('os_auth_url'):
-            if 'racksapce' in ARGS.get('os_auth_url'):
-                return ARGS.get('os_auth_url', '%s' % base_auth_url), True
-            else:
-                return ARGS.get('os_auth_url'), False
+    elif ARGS.get('os_hp_auth'):
+        region = ARGS.get('os_hp_auth')
+        auth_url = 'https://%s.identity.hpcloudsvc.com:35357/v2.0/tokens' % region
+        return ARGS.get('os_auth_url', '%s' % auth_url)
+
+    elif ARGS.get('os_auth_url'):
+        if 'rackspace' in ARGS.get('os_auth_url'):
+            return ARGS.get('os_auth_url')
         else:
-            LOG.error('FAILURE: No Region Found. ARGS DUMP:\t %s', ARGS)
-            raise turbo.AuthenticationProblem('You Are required to specify a'
-                                              ' REGION and an AUTHURL')
+            return ARGS.get('os_auth_url')
+
+    else:
+        raise turbo.SystemProblem(
+            'You Are required to specify an Auth URL, Region or Plugin'
+        )
 
 
 def request_process(aurl, req):

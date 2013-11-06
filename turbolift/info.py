@@ -10,11 +10,11 @@
 
 __author__ = "Kevin Carter"
 __contact__ = "Kevin Carter"
-__email__ = "kevin@bkintegration.com"
+__email__ = "kevin@cloudnull.com"
 __copyright__ = "2013 All Rights Reserved"
 __license__ = "GPLv3+"
 __date__ = "2013-09-14"
-__version__ = "2.0.2"
+__version__ = "2.0.3"
 __status__ = "Production"
 __appname__ = "turbolift"
 __description__ = 'OpenStack Swift -Cloud Files- Uploader'
@@ -22,7 +22,9 @@ __url__ = 'https://github.com/cloudnull/turbolift.git'
 
 # Service Information
 __rax_regions__ = ['dfw', 'ord', 'iad', 'lon', 'syd', 'hk']
-__srv_types__ = ['cloudFilesCDN', 'cloudFiles', 'objectServer']
+__hpc_regions__ = ['region-b.geo-1']
+__srv_types__ = ['cloudFiles', 'objectServer', 'Object Storage']
+__cdn_types__ = ['cloudFilesCDN', 'CDN']
 
 # The Version Of the Application
 __VN__ = '%s' % __version__

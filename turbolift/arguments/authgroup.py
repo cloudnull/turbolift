@@ -53,9 +53,14 @@ def auth_group(parser):
                               default=os.environ.get('OS_REGION_NAME', None))
     a_regiontype.add_argument('--os-rax-auth',
                               choices=info.__rax_regions__,
-                              help=('Rackspace Cloud Authentication,'
+                              help=('Authentication Plugin for Rackspace Cloud'
                                     ' env[OS_RAX_AUTH]'),
                               default=os.getenv('OS_RAX_AUTH', None))
+    a_regiontype.add_argument('--os-hp-auth',
+                              choices=info.__hpc_regions__,
+                              help=('Authentication Plugin for HP Cloud'
+                                    ' env[OS_HP_AUTH]'),
+                              default=os.getenv('OS_HP_AUTH', None))
 
     authgroup.add_argument('--os-auth-url',
                            metavar='[AUTH_URL]',

@@ -24,7 +24,7 @@ def authenticate():
     """
 
     # Setup the request variables
-    url, rax = auth.parse_region()
+    url = auth.parse_region()
     a_url = http.parse_url(url=url, auth=True)
     auth_json = auth.parse_reqtype()
 
