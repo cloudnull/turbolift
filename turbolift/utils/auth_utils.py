@@ -98,7 +98,7 @@ def parse_auth_response(auth_response):
     elif ARGS.get('os_hp_auth') is not None:
         if ARGS.get('os_tenant') is None:
             raise turbo.NoTenantIdFound(
-                'You need to use have a tenant set to use HP Cloud'
+                'You need to have a tenant set to use HP Cloud'
             )
         region = ARGS.get('os_hp_auth')
     elif ARGS.get('os_region') is not None:
