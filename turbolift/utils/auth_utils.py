@@ -20,13 +20,13 @@ def parse_reqtype():
     setup = {'username': ARGS.get('os_user')}
     if ARGS.get('os_token') is not None:
         auth_body = {'auth': {'token': {'id': ARGS.get('os_token')}}}
-    elif ARGS.get('os_apikey') is not None:
-        prefix = 'RAX-KSKEY:apiKeyCredentials'
-        setup['apiKey'] = ARGS.get('os_apikey')
-        auth_body = {'auth': {prefix: setup}}
     elif ARGS.get('os_password') is not None:
         prefix = 'passwordCredentials'
         setup['password'] = ARGS.get('os_password')
+        auth_body = {'auth': {prefix: setup}}
+    elif ARGS.get('os_apikey') is not None:
+        prefix = 'RAX-KSKEY:apiKeyCredentials'
+        setup['apiKey'] = ARGS.get('os_apikey')
         auth_body = {'auth': {prefix: setup}}
     else:
         LOG.error(traceback.format_exc())
@@ -93,12 +93,16 @@ def parse_auth_response(auth_response):
         raise turbo.NoTenantIdFound('When attempting to grab the '
                                     'tenant or user nothing was found.')
 
-    if ARGS.get('os_region') is not None:
-        region = ARGS.get('os_region')
-    elif ARGS.get('os_rax_auth') is not None:
+    if ARGS.get('os_rax_auth') is not None:
         region = ARGS.get('os_rax_auth')
     elif ARGS.get('os_hp_auth') is not None:
+        if ARGS.get('os_tenant') is None:
+            raise turbo.NoTenantIdFound(
+                'You need to have a tenant set to use HP Cloud'
+            )
         region = ARGS.get('os_hp_auth')
+    elif ARGS.get('os_region') is not None:
+        region = ARGS.get('os_region')
     else:
         raise turbo.SystemProblem('No Region Set')
 
@@ -109,6 +113,14 @@ def parse_auth_response(auth_response):
     if cfl is not None:
         inet = get_surl(region=region, cf_list=cfl, lookup='internalURL')
         enet = get_surl(region=region, cf_list=cfl, lookup='publicURL')
+    else:
+        need_tenant = 'Maybe you need to specify "os-tenant"?'
+        gen_message = ('No Service Endpoints were found for use with Swift. '
+                       'If you have Swift available to you, '
+                       'Check Your Credentials, ')
+        if ARGS.get('os_tenant') is None:
+            gen_message = gen_message + need_tenant
+        raise turbo.SystemProblem(gen_message)
 
     if cdn is not None:
         cnet = get_surl(region=region, cf_list=cdn, lookup='publicURL')
