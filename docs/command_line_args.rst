@@ -19,7 +19,7 @@ Authentication Arguments:
   - ``os-tenant`` | Specify the users tenantID
   - ``os-token`` | Specify a token for TOKEN Authentication
   - ``os-region`` | Specify an Endpoint
-  - ``os-rax-auth`` | Specify a Rackspace Cloud Auth-URL and Endpoint [ dfw, ord, lon, iad, syd ].
+  - ``os-rax-auth`` | Specify a Rackspace Cloud Auth-URL and Endpoint [ dfw, ord, lon, iad, syd, hkg ].
   - ``os-hp-auth`` | Specify an HP Cloud Auth-URL and Endpoint [ region-b.geo-1 ]. Notice that HP only have ONE Swift region at this time.
   - ``os-auth-url`` | Specify the Auth URL
   - ``os-version`` | Gives Version Number
