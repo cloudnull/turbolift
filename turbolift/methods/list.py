@@ -27,6 +27,12 @@ class List(object):
     def start(self):
         """Return a list of objects from the API for a container."""
 
+        def _check_list(list_object):
+            if list_object:
+                return list_object
+            else:
+                return None, None, None
+
         def _list(payload, go, last_obj):
             """Retrieve a long list of all files in a container.
 
@@ -34,12 +40,20 @@ class List(object):
             """
 
             if ARGS.get('all_containers') is None:
-                return go.object_lister(url=payload['url'],
-                                        container=payload['c_name'],
-                                        last_obj=last_obj)
+                return _check_list(
+                    list_object=go.object_lister(
+                        url=payload['url'],
+                        container=payload['c_name'],
+                        last_obj=last_obj
+                    )
+                )
             else:
-                return go.container_lister(url=payload['url'],
-                                           last_obj=last_obj)
+                return _check_list(
+                    list_object=go.container_lister(
+                        url=payload['url'],
+                        last_obj=last_obj
+                    )
+                )
 
         # Package up the Payload
         payload = http.prep_payload(
