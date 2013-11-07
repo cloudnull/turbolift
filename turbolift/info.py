@@ -22,7 +22,7 @@ __url__ = 'https://github.com/cloudnull/turbolift.git'
 
 # Service Information
 __rax_regions__ = ['dfw', 'ord', 'iad', 'lon', 'syd', 'hkg']
-__hpc_regions__ = ['region-b.geo-1']
+__hpc_regions__ = ['region-b.geo-1', 'region-a.geo-1']
 __srv_types__ = ['cloudFiles', 'objectServer', 'Object Storage']
 __cdn_types__ = ['cloudFilesCDN', 'CDN']
 
