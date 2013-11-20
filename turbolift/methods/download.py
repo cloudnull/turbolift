@@ -84,7 +84,7 @@ class Download(object):
             concurrency = multi.set_concurrency(args=ARGS,
                                                 file_count=num_files)
             # Load the queue
-            obj_list = [obj['name'] for obj in objects]
+            obj_list = [obj['name'] for obj in objects if obj.get('name')]
 
         report.reporter(msg='Building Directory Structure.')
         with multi.spinner():
