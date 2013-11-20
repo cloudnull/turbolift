@@ -178,6 +178,21 @@ def batch_gen(data, batch_size, count):
         yield data[dataset:dataset + batch_size]
 
 
+def collision_rename(file_name):
+    """Rename file on Collision.
+
+    If the file name is a directory and already exists rename the file to
+    %s.renamed, else return the file_name
+
+    :param file_name:
+    :return file_name:
+    """
+    if os.path.isdir(file_name):
+        return '%s.renamed' % file_name
+    else:
+        return file_name
+
+
 def mkdir_p(path):
     """'mkdir -p' in Python
 
@@ -209,7 +224,7 @@ def set_unique_dirs(object_list, root_dir):
 
     unique_dirs = []
     for obj in object_list:
-        full_path = jpath(root=root_dir, inode=obj)
+        full_path = jpath(root=root_dir, inode=obj.lstrip(os.sep))
         dir_path = full_path.split(
             os.path.basename(full_path)
         )[0].rstrip(os.sep)

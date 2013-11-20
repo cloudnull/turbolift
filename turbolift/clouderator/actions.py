@@ -129,6 +129,8 @@ class CloudActions(object):
 
             # Perform Object GET
             conn.request('GET', rpath, headers=fheaders)
+            local_f = basic.collision_rename(file_name=local_f)
+
             # Open our source file and write it
             with open(local_f, 'ab') as f_name:
                 resp = http.response_get(conn=conn,
