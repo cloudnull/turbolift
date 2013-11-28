@@ -15,6 +15,8 @@ import turbolift.utils.basic_utils as basic
 import turbolift.utils.http_utils as http
 import turbolift.utils.report_utils as report
 
+from turbolift.authentication.authentication import get_new_token
+
 from turbolift import ARGS
 
 
@@ -39,7 +41,7 @@ class CloudActions(object):
                     log=True
                 )
                 basic.stupid_hack()
-                self.payload['headers']['X-Auth-Token'] = auth.get_new_token()
+                self.payload['headers']['X-Auth-Token'] = get_new_token()
                 rty()
             elif resp.status == 404:
                 report.reporter(
