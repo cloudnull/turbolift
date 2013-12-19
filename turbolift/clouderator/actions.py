@@ -690,14 +690,14 @@ class CloudActions(object):
                                              fheaders=self.payload['headers'],
                                              last_obj=last_obj)
 
-    def object_syncer(self, surl, turl, scontainer, tcontainer, obj):
+    def object_syncer(self, surl, turl, scontainer, tcontainer, u_file):
         """Download an Object from one Container and the upload it to a target.
 
         :param surl:
         :param turl:
         :param scontainer:
         :param tcontainer:
-        :param obj:
+        :param u_file:
         """
 
         def _cleanup():
@@ -705,10 +705,10 @@ class CloudActions(object):
             if locals().get('tfile') is not None:
                 basic.remove_file(tfile)
 
-        def _time_difference(resp, obj):
+        def _time_difference(obj_resp, obj):
             if ARGS.get('save_newer') is True:
                 # Get the source object last modified time.
-                compare_time = resp.getheader('last_modified')
+                compare_time = obj_resp.getheader('last_modified')
                 if compare_time is None:
                     return True
                 elif cloud.time_delta(compare_time=compare_time,
@@ -719,52 +719,53 @@ class CloudActions(object):
             else:
                 return True
 
-        def _compare(resp, obj):
-            if resp.status == 404:
+        def _compare(obj_resp, obj):
+            if obj_resp.status == 404:
                 report.reporter(
                     msg='Target Object %s not found' % obj['name'],
                     prt=False
                 )
                 return True
-            elif resp.getheader('etag') != obj['hash']:
+            elif obj_resp.getheader('etag') != obj['hash']:
                 report.reporter(
-                    msg='Checksum Mismatch on Target Object %s' % obj['name'],
+                    msg=('Checksum Mismatch on Target Object %s'
+                         % u_file['name']),
                     prt=False,
                     lvl='debug'
                 )
-                return _time_difference(resp, obj)
+                return _time_difference(obj_resp, obj)
             else:
                 return False
 
         fheaders = self.payload['headers']
         for retry in basic.retryloop(attempts=ARGS.get('error_retry'),
                                      delay=5,
-                                     obj=obj['name']):
+                                     obj=u_file['name']):
             # Open connection and perform operation
             fmt, date, date_delta, now = basic.time_stamp()
             spath = http.quoter(url=surl.path,
                                 cont=scontainer,
-                                ufile=obj['name'])
+                                ufile=u_file['name'])
             tpath = http.quoter(url=turl.path,
                                 cont=tcontainer,
-                                ufile=obj['name'])
+                                ufile=u_file['name'])
 
             conn = http.open_connection(url=turl)
-            with meth.operation(retry, conn=conn, obj=obj):
+            with meth.operation(retry, conn=conn, obj=u_file):
                 resp = self._header_getter(conn=conn,
                                            rpath=tpath,
                                            fheaders=fheaders,
                                            retry=retry)
 
                 # If object comparison is True GET then PUT object
-                if _compare(resp=resp, obj=obj) is not True:
+                if _compare(resp, u_file) is not True:
                     return None
             try:
                 # Open Connection for source Download
                 conn = http.open_connection(url=surl)
                 with meth.operation(retry,
                                     conn=conn,
-                                    obj=obj):
+                                    obj=u_file):
 
                     # make a temp file.
                     tfile = basic.create_tmp()
@@ -791,12 +792,12 @@ class CloudActions(object):
 
                 for nretry in basic.retryloop(attempts=ARGS.get('error_retry'),
                                               delay=5,
-                                              obj=obj):
+                                              obj=u_file):
                     # open connection for target upload.
                     conn = http.open_connection(url=turl)
                     with meth.operation(retry,
                                         conn=conn,
-                                        obj=obj,
+                                        obj=u_file,
                                         cleanup=_cleanup):
                         resp = self._header_getter(conn=conn,
                                                    rpath=tpath,
