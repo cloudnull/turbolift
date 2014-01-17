@@ -34,7 +34,9 @@ def run_turbolift():
         except KeyboardInterrupt:
             turbo.emergency_kill(reclaim=True)
         finally:
-            print('All Done!')
+            if args.get('quiet') is not True:
+                print('All Done!')
+            log.info('Job Finished.')
 
 
 if __name__ == "__main__":
