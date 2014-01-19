@@ -7,12 +7,13 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
+import errno
 import httplib
+import socket
 import traceback
 import urllib
 import urlparse
 
-import turbolift as turbo
 import turbolift.utils.basic_utils as basic
 import turbolift.utils.report_utils as report
 
@@ -48,24 +49,25 @@ def response_get(conn, retry, resp_only=False):
     """
 
     try:
-        if resp_only is True:
-            return conn.getresponse()
-        else:
-            resp = conn.getresponse()
-            if resp is None:
-                raise turbo.DirectoryFailure('Response Was NONE.')
-            else:
-                read = resp.read()
+        # Get response
+        resp = conn.getresponse()
+    except socket.error as exp:
+        report.reporter(
+            msg='Socket Error %s' % exp,
+            lvl='error',
+            prt=True
+        )
+        retry()
     except httplib.BadStatusLine as exp:
         report.reporter(
-            msg=('BAD STATUS-LINE ON METHOD MESSAGE %s' % exp),
+            msg='BAD STATUS-LINE ON METHOD MESSAGE %s' % exp,
             lvl='error',
             prt=True
         )
         retry()
     except httplib.ResponseNotReady as exp:
         report.reporter(
-            msg=('RESPONSE NOT READY MESSAGE %s' % exp),
+            msg='RESPONSE NOT READY MESSAGE %s' % exp,
             lvl='error',
             prt=True
         )
@@ -79,7 +81,10 @@ def response_get(conn, retry, resp_only=False):
         )
         retry()
     else:
-        return resp, read
+        if resp_only is True:
+            return resp
+        else:
+            return resp, resp.read()
 
 
 def open_connection(url):
