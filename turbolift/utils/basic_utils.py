@@ -16,6 +16,7 @@ import pwd
 import random
 import re
 import string
+import tempfile
 import time
 
 import turbolift as turbo
@@ -109,9 +110,8 @@ def create_tmp():
 
     :return str:
     """
-    import tempfile
 
-    return tempfile.mktemp()
+    return tempfile.mkstemp()[1]
 
 
 def remove_file(filename):
