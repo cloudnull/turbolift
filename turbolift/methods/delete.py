@@ -14,7 +14,6 @@ import turbolift.utils.report_utils as report
 
 from turbolift import ARGS
 from turbolift.clouderator import actions
-from turbolift import LOG
 
 
 class Delete(object):
