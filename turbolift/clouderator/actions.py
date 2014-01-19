@@ -10,7 +10,6 @@
 import turbolift as turbo
 import turbolift.clouderator as cloud
 import turbolift.methods as meth
-import turbolift.utils.auth_utils as auth
 import turbolift.utils.basic_utils as basic
 import turbolift.utils.http_utils as http
 import turbolift.utils.report_utils as report
