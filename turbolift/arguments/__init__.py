@@ -257,15 +257,11 @@ def get_args():
 def understand_args(set_args):
     """parse the arguments.
 
-    :param parser:
-    :return args:
+    :return set_args:
     """
 
     def set_header_args():
-        """return base Headers.
-
-        :return set_args:
-        """
+        """return base Headers."""
 
         for htp in ['object_headers', 'container_headers', 'base_headers']:
             set_args[htp] = basic.keys2dict(
@@ -273,6 +269,7 @@ def understand_args(set_args):
             )
 
     sysconfig = set_args.get('system_config')
+
     if sysconfig is not None:
         config = ConfigParser.SafeConfigParser()
         config.read([sysconfig])
@@ -291,25 +288,21 @@ def understand_args(set_args):
         raise SystemExit('\nNo Username was provided, use [--os-user]\n')
 
     if not any([set_args.get('os_apikey'), set_args.get('os_password')]):
-        raise SystemExit(
-            'No APIKey or Password was provided,'
-            ' use [--os-apikey] or [--os-password]'
-        )
+        raise SystemExit('No APIKey or Password was provided,'
+                         ' use [--os-apikey] or [--os-password]')
 
     if set_args.get('archive') is True:
         set_args['cc'] = 1
 
     if set_args.get('tsync'):
-        import time
         import warnings
         set_args['upload'] = True
         set_args['sync'] = True
         set_args['tsync'] = None
         warnings.simplefilter("always")
-        msg = ('The "tsync" method has been replaced by "upload --sync"'
+        msg = ('The "tsync" method has been replaced by [upload --sync]'
                ' Please check "upload --help" for more information.')
         warnings.warn(msg, PendingDeprecationWarning)
-        time.sleep(1)
 
     if set_args.get('debug') is True:
         set_args['verbose'] = True
