@@ -13,7 +13,8 @@ import sys
 
 from turbolift import info
 
-REQUIRES = ['prettytable']
+with open('requirements.txt') as f:
+    required = f.read().splitlines()
 
 if sys.version_info < (2, 6, 0):
     sys.stderr.write("Turbolift Presently requires Python 2.6.0 or greater \n")
@@ -21,7 +22,7 @@ if sys.version_info < (2, 6, 0):
         '\nUpgrade python because you version of it is VERY deprecated\n'
     )
 elif sys.version_info < (2, 7, 0):
-    REQUIRES.append('argparse')
+    required.append('argparse')
 
 with open('README', 'rb') as r_file:
     LDINFO = r_file.read()
@@ -42,7 +43,7 @@ setuptools.setup(
               'turbolift.methods',
               'turbolift.utils'],
     url=info.__url__,
-    install_requires=REQUIRES,
+    install_requires=required,
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Information Technology',
