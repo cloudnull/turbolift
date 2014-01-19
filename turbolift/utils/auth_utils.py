@@ -1,5 +1,12 @@
-"""Utilities For Authenticating against All Openstack / Rax Clouds."""
-
+# =============================================================================
+# Copyright [2013] [Kevin Carter]
+# License Information :
+# This software has no warranty, it is provided 'as is'. It is your
+# responsibility to validate the behavior of the routines and its accuracy
+# using the code provided. Consult the GNU General Public license for further
+# details (see GNU General Public License).
+# http://www.gnu.org/licenses/gpl.html
+# =============================================================================
 import httplib
 import traceback
 
@@ -50,11 +57,12 @@ def get_surl(region, cf_list, lookup):
 
     for srv in cf_list:
         region_get = srv.get('region')
+        lookup_get = srv.get(lookup)
         if any([region in region_get, region.lower() in region_get]):
-            if srv.get(lookup) is None:
+            if lookup_get is None:
                 return None
             else:
-                return http.parse_url(url=srv.get(lookup))
+                return http.parse_url(url=lookup_get)
     else:
         raise turbo.SystemProblem(
             'Region "%s" was not found in your Service Catalog.' % region
@@ -115,11 +123,11 @@ def parse_auth_response(auth_response):
         enet = get_surl(region=region, cf_list=cfl, lookup='publicURL')
     else:
         need_tenant = 'Maybe you need to specify "os-tenant"?'
-        gen_message = ('No Service Endpoints were found for use with Swift. '
-                       'If you have Swift available to you, '
-                       'Check Your Credentials, ')
+        gen_message = ('No Service Endpoints were found for use with Swift.'
+                       ' If you have Swift available to you,'
+                       ' Check Your Credentials. ')
         if ARGS.get('os_tenant') is None:
-            gen_message = gen_message + need_tenant
+            gen_message += need_tenant
         raise turbo.SystemProblem(gen_message)
 
     if cdn is not None:
@@ -135,23 +143,22 @@ def parse_region():
 
     if ARGS.get('os_rax_auth'):
         region = ARGS.get('os_rax_auth')
-        auth_url = 'https://identity.api.rackspacecloud.com/v2.0/tokens'
+        auth_url = 'identity.api.rackspacecloud.com/v2.0/tokens'
         if region is 'LON':
-            return ARGS.get('os_auth_url', 'lon.%s' % auth_url)
+            return ARGS.get('os_auth_url', 'https://lon.%s' % auth_url)
         elif region.lower() in info.__rax_regions__:
-            return ARGS.get('os_auth_url', '%s' % auth_url)
-
+            return ARGS.get('os_auth_url', 'https://%s' % auth_url)
+        else:
+            raise turbo.SystemProblem('No Known RAX Region Was Specified')
     elif ARGS.get('os_hp_auth'):
         region = ARGS.get('os_hp_auth')
-        auth_url = 'https://%s.identity.hpcloudsvc.com:35357/v2.0/tokens' % region
-        return ARGS.get('os_auth_url', '%s' % auth_url)
-
-    elif ARGS.get('os_auth_url'):
-        if 'rackspace' in ARGS.get('os_auth_url'):
-            return ARGS.get('os_auth_url')
+        auth_url = 'https://%s.identity.hpcloudsvc.com:35357/v2.0/tokens'
+        if region.lower() in info.__hpc_regions__:
+            return ARGS.get('os_auth_url', auth_url % region)
         else:
-            return ARGS.get('os_auth_url')
-
+            raise turbo.SystemProblem('No Known HP Region Was Specified')
+    elif ARGS.get('os_auth_url'):
+        return ARGS.get('os_auth_url')
     else:
         raise turbo.SystemProblem(
             'You Are required to specify an Auth URL, Region or Plugin'
@@ -163,7 +170,6 @@ def request_process(aurl, req):
 
     :param aurl:
     :param req:
-    :param https:
     :return read_resp:
     """
 
@@ -188,8 +194,11 @@ def request_process(aurl, req):
             raise httplib.HTTPException('Failed to authenticate %s'
                                         % status_code)
 
-        LOG.debug('Connection successful MSG: %s - STATUS: %s', resp.reason,
-                  resp.status)
+        LOG.debug(
+            'Connection successful MSG: %s - STATUS: %s',
+            resp.reason,
+            resp.status
+        )
         return resp_read
     finally:
         conn.close()
