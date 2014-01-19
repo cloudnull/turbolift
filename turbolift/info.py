@@ -11,10 +11,10 @@
 __author__ = "Kevin Carter"
 __contact__ = "Kevin Carter"
 __email__ = "kevin@cloudnull.com"
-__copyright__ = "2013 All Rights Reserved"
+__copyright__ = "2014 All Rights Reserved"
 __license__ = "GPLv3+"
 __date__ = "2013-09-14"
-__version__ = "2.0.3"
+__version__ = "2.0.4"
 __status__ = "Production"
 __appname__ = "turbolift"
 __description__ = 'OpenStack Swift -Cloud Files- Uploader'
