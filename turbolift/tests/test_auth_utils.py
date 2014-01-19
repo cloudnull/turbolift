@@ -36,7 +36,7 @@ FAKE_300_FAILURE = tests.FakeHttpResponse(
 
 
 class TestAuthenticate(unittest.TestCase):
-    """Test Authentication Method."""
+    """Test Auth Utils Methods."""
 
     if not hasattr(unittest.TestCase, 'assertIsInstance'):
         def assertIsInstance(self, obj, cls, msg=None):
