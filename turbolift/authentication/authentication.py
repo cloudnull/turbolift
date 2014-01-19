@@ -19,8 +19,6 @@ def authenticate():
     Authentication
 
     Set a DC Endpoint and Authentication URL for the OpenStack environment
-
-    :param auth_dict: required parameters are auth_url
     """
 
     # Setup the request variables
