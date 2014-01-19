@@ -25,18 +25,9 @@ def set_headers(headers):
     :return headers:
     """
 
-    def _base_headers(headers):
-        """Set and return custom headers.
-
-        :param headers:
-        :return headers:
-        """
-
-        return headers.update(ARGS.get('base_headers'))
-
     # Set the headers if some custom ones were specified
     if ARGS.get('base_headers'):
-        _base_headers(headers=headers)
+        headers.update(ARGS.get('base_headers'))
 
     return headers
 
