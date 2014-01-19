@@ -7,7 +7,6 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
-import turbolift as turbo
 import turbolift.utils.basic_utils as basic
 import turbolift.utils.http_utils as http
 import turbolift.utils.multi_utils as multi
