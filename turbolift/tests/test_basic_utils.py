@@ -125,18 +125,6 @@ class TestAuthenticate(unittest.TestCase):
         self.assertEqual(return_batch_size, 1)
         self.assertTrue(mock_reporter.called)
 
-    def test_batch_gen(self):
-        count = 0
-        test_objects = ['obj', 'obj']
-        for work in basic_utils.batch_gen(data=test_objects,
-                                          batch_size=1,
-                                          count=2):
-            count += 1
-            self.assertEqual(work, ['obj'])
-
-        if count != 2:
-            self.fail('Generator did not produce 2 jobs from the batcher.')
-
     def test_collision(self):
         self.assertEqual(basic_utils.collision_rename('test'), 'test')
 
