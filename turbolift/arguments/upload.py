@@ -24,6 +24,10 @@ def upload_actions(subparser, source_args, container_args, time_args, regex):
         help='Upload files to SWIFT, -CloudFiles-'
     )
     upload.set_defaults(upload=True)
+    upload.add_argument('--exclude',
+                        action='append',
+                        help='Exclude a pattern when uploading',
+                        default=[])
     upload.add_argument('--sync',
                         action='store_true',
                         help=('Looks at local file vs Remote File and if a '
