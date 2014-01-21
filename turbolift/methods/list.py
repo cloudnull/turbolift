@@ -82,7 +82,7 @@ class List(object):
             objects, list_count, last_obj = _list(payload=payload,
                                                   go=self.go,
                                                   last_obj=last_obj)
-            if ARGS.get('pattern_match'):
+            if 'pattern_match' in ARGS:
                 objects = basic.match_filter(
                     idx_list=objects,
                     pattern=ARGS['pattern_match'],
