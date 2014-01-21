@@ -13,6 +13,7 @@ import traceback
 import urllib
 import urlparse
 
+import turbolift as turbo
 import turbolift.utils.basic_utils as basic
 import turbolift.utils.report_utils as report
 
@@ -49,7 +50,14 @@ def response_get(conn, retry, resp_only=False):
 
     try:
         # Get response
-        resp = conn.getresponse()
+        if resp_only is True:
+            return conn.getresponse()
+        else:
+            resp = conn.getresponse()
+            if resp is None:
+                raise turbo.DirectoryFailure('Response Was NONE.')
+            else:
+                return resp, resp.read()
     except socket.error as exp:
         report.reporter(
             msg='Socket Error %s' % exp,
@@ -79,11 +87,6 @@ def response_get(conn, retry, resp_only=False):
             prt=True
         )
         retry()
-    else:
-        if resp_only is True:
-            return resp
-        else:
-            return resp, resp.read()
 
 
 def open_connection(url):
