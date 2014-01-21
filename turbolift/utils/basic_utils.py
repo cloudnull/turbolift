@@ -219,7 +219,7 @@ def set_unique_dirs(object_list, root_dir):
     """From an object list create a list of unique directories.
 
     :param object_list:
-    :param source:
+    :param root_dir:
     """
 
     unique_dirs = []
