@@ -68,9 +68,21 @@ def get_local_files():
         # Local Index Path
         c_index = [indexer(location=d_path) for d_path in d_paths]
 
-        # make sure my files are only files, and compare it with the not_list
+        # make sure my files are only files, and not in the the not_list
         f_index = [item for subl in c_index
                    for item in subl if not_list(item=item)]
+
+        if ARGS.get('exclude'):
+            for item in f_index:
+                for exclude in ARGS['exclude']:
+                    if exclude in item:
+                        try:
+                            index = f_index.index(item)
+                        except ValueError:
+                            pass
+                        else:
+                            f_index.pop(index)
+
     except Exception as exp:
         raise turbo.SystemProblem('Died for some reason. MESSAGE:\t%s' % exp)
     else:
