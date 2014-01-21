@@ -14,6 +14,7 @@ import unittest
 
 import mock
 
+import turbolift
 from turbolift.utils import basic_utils
 
 
@@ -124,24 +125,93 @@ class TestAuthenticate(unittest.TestCase):
         self.assertEqual(return_batch_size, 1)
         self.assertTrue(mock_reporter.called)
 
-    # def test_batch_gen(self):
-    #     self.fail('no test made yet')
-    #
-    # def test_collision_rename(self):
-    #     self.fail('no test made yet')
-    #
-    # def test_mkdir_p(self):
-    #     self.fail('no test made yet')
-    #
-    # def test_set_unique_dirs(self):
-    #     self.fail('no test made yet')
-    #
-    # def test_get_sfile(self):
-    #     self.fail('no test made yet')
-    #
-    # def test_real_full_path(self):
-    #     self.fail('no test made yet')
-    #
+    def test_batch_gen(self):
+        count = 0
+        test_objects = ['obj', 'obj']
+        for work in basic_utils.batch_gen(data=test_objects,
+                                          batch_size=1,
+                                          count=2):
+            count += 1
+            self.assertEqual(work, ['obj'])
+
+        if count != 2:
+            self.fail('Generator did not produce 2 jobs from the batcher.')
+
+    def test_collision(self):
+        self.assertEqual(basic_utils.collision_rename('test'), 'test')
+
+    def test_collision_rename_directory(self):
+        dir_name = tempfile.mkdtemp()
+        dir_rename = basic_utils.collision_rename(dir_name)
+        self.assertEqual('%s.renamed' % dir_name, dir_rename)
+        os.removedirs(dir_name)
+
+    def test_mkdir_p(self):
+        dir_name = tempfile.mkdtemp()
+        if not os.path.exists(dir_name):
+            self.fail('Failed to create base directory')
+        else:
+            long_dir_name = os.path.join(dir_name, 'test/path')
+            basic_utils.mkdir_p(long_dir_name)
+            if not os.path.exists(long_dir_name):
+                self.fail('Failed to create recursive directories.')
+
+    def test_mkdir_p_failure(self):
+        os = mock.Mock(side_effect=OSError('TEST EXCEPTION'))
+        with mock.patch('turbolift.utils.basic_utils.os.makedirs', os):
+            self.assertRaises(
+                turbolift.DirectoryFailure, basic_utils.mkdir_p, 'test'
+            )
+
+    def test_set_unique_dirs(self):
+        fake_object_list = [
+            'testone/1',
+            'testone/1',
+            'testtwo/2',
+            'testtwo/2',
+            'testthree/3'
+        ]
+        return_object_list = basic_utils.set_unique_dirs(
+            object_list=fake_object_list, root_dir='/test/dir/'
+        )
+        self.assertNotEqual(len(fake_object_list), len(return_object_list))
+
+    def test_get_sfile_with_preserver_path(self):
+        args = {'preserve_path': True}
+        with mock.patch('turbolift.utils.basic_utils.turbo.ARGS', args):
+            obj = basic_utils.get_sfile(ufile='object1', source='test/dir')
+            self.assertEqual(obj, 'test/dir/object1')
+
+    @mock.patch('turbolift.utils.basic_utils.turbo.ARGS', {})
+    def test_get_sfile_isfile(self):
+        os = mock.Mock().return_value(True)
+        with mock.patch('turbolift.utils.basic_utils.os.path.isfile', os):
+            obj = basic_utils.get_sfile(ufile='object1', source='test/dir')
+            self.assertEqual(obj, 'dir')
+
+    @mock.patch('turbolift.utils.basic_utils.turbo.ARGS', {})
+    def test_get_sfile_dot_source(self):
+        def fake_cwd():
+            return '/some/dir'
+
+        with mock.patch('turbolift.utils.basic_utils.os.getcwd', fake_cwd):
+            obj = basic_utils.get_sfile(ufile='object1', source='.')
+            self.assertEqual(obj, '/some/dir')
+
+    @mock.patch('turbolift.utils.basic_utils.turbo.ARGS', {})
+    def test_get_sfile_dot_source(self):
+        obj = basic_utils.get_sfile(ufile='/test/object1', source='/test')
+        self.assertEqual(obj, 'object1')
+
+    def test_real_full_path_relitive_path(self):
+        os.environ['HOME'] = '/home/test'
+        obj = basic_utils.real_full_path(object='~/test/dir')
+        self.assertEqual(obj, '/home/test/test/dir')
+
+    def test_real_full_path(self):
+        obj = basic_utils.real_full_path(object='/test/dir')
+        self.assertEqual(obj, '/test/dir')
+
     # def test_get_local_source(self):
     #     self.fail('no test made yet')
     #
