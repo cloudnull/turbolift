@@ -162,22 +162,6 @@ def batcher(num_files):
     return batch_size
 
 
-def batch_gen(data, batch_size, count):
-    """This is a batch Generator which is used for large data sets.
-
-    NOTE ORIGINAL CODE FROM: Paolo Bergantino
-    http://stackoverflow.com/questions/760753/iterate-over-a-python-sequence\
-    -in-multiples-of-n
-
-    :param data:
-    :param batch_size:
-    :return list:
-    """
-
-    for dataset in range(0, count, batch_size):
-        yield data[dataset:dataset + batch_size]
-
-
 def collision_rename(file_name):
     """Rename file on Collision.
 
