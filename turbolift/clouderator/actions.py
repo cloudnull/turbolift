@@ -210,9 +210,7 @@ class CloudActions(object):
         # perform Object Delete
         conn.request('DELETE', rpath, headers=fheaders)
 
-        resp = http.response_get(
-            conn=conn, retry=retry, resp_only=True
-        )
+        resp, read = http.response_get(conn=conn, retry=retry)
         self.resp_exception(resp=resp, rty=retry)
 
         report.reporter(
@@ -244,10 +242,15 @@ class CloudActions(object):
             else:
                 with open(fpath, 'rb') as f_open:
                     conn.request('PUT', rpath, body=f_open, headers=fheaders)
-                resp = http.response_get(
-                    conn=conn, retry=retry, resp_only=True
-                )
+                resp, read = http.response_get(conn=conn, retry=retry)
                 self.resp_exception(resp=resp, rty=retry)
+
+                report.reporter(
+                    msg=('MESSAGE %s %s %s'
+                         % (resp.status, resp.reason, resp.msg)),
+                    prt=False,
+                    lvl='debug'
+                )
 
     def _list_getter(self, conn, count, filepath, fheaders, last_obj=None):
         """Get a list of all objects in a container.
@@ -344,9 +347,7 @@ class CloudActions(object):
 
         # perform Object HEAD request
         conn.request('HEAD', rpath, headers=fheaders)
-        resp = http.response_get(
-            conn=conn, retry=retry, resp_only=True
-        )
+        resp, read = http.response_get(conn=conn, retry=retry)
         self.resp_exception(resp=resp, rty=retry)
 
         report.reporter(
@@ -367,9 +368,7 @@ class CloudActions(object):
 
         # perform Object POST request for header update.
         conn.request('POST', rpath, headers=fheaders)
-        resp = http.response_get(
-            conn=conn, retry=retry, resp_only=True
-        )
+        resp, read = http.response_get(conn=conn, retry=retry)
         self.resp_exception(resp=resp, rty=retry)
 
         report.reporter(
@@ -437,9 +436,7 @@ class CloudActions(object):
                     )
 
                     conn.request('PUT', rpath, headers=self.payload['headers'])
-                    resp = http.response_get(
-                        conn=conn, retry=retry, resp_only=True
-                    )
+                    resp, read = http.response_get(conn=conn, retry=retry)
                     self.resp_exception(resp=resp, rty=retry)
 
                     report.reporter(msg='Container "%s" Created' % container)
@@ -466,9 +463,7 @@ class CloudActions(object):
                                         ufile=sfile)
                     # perform CDN Object DELETE
                     conn.request('DELETE', rpath, headers=cheaders)
-                    resp = http.response_get(
-                        conn=conn, retry=retry, resp_only=True
-                    )
+                    resp, read = http.response_get(conn=conn, retry=retry)
                     self.resp_exception(resp=resp, rty=retry)
                 else:
                     rpath = http.quoter(url=url.path,
@@ -476,9 +471,7 @@ class CloudActions(object):
                     http.cdn_toggle(headers=cheaders)
                     # perform CDN Enable POST
                     conn.request('PUT', rpath, headers=cheaders)
-                    resp = http.response_get(
-                        conn=conn, retry=retry, resp_only=True
-                    )
+                    resp, read = http.response_get(conn=conn, retry=retry)
                     self.resp_exception(resp=resp, rty=retry)
 
                 report.reporter(
@@ -766,7 +759,6 @@ class CloudActions(object):
                                      delay=5,
                                      obj=u_file['name']):
             # Open connection and perform operation
-            fmt, date, date_delta, now = basic.time_stamp()
             spath = http.quoter(url=surl.path,
                                 cont=scontainer,
                                 ufile=u_file['name'])
