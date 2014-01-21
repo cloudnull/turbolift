@@ -34,7 +34,8 @@ class Upload(object):
         """
 
         # Index Local Files for Upload
-        f_indexed = methods.get_local_files()
+        with multi.spinner():
+            f_indexed = methods.get_local_files()
 
         if ARGS.get('pattern_match'):
             f_indexed = basic.match_filter(
