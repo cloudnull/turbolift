@@ -99,14 +99,17 @@ class Delete(object):
             lvl='debug',
             prt=False
         )
+
         self.go = actions.CloudActions(payload=payload)
         self.action = getattr(self.go, 'object_lister')
+
         report.reporter(
             msg='Accessing API for list of Objects in %s' % payload['c_name'],
             log=True,
             lvl='info',
             prt=True
         )
+
         # Delete the objects and report when done.
         _deleterator(payload=payload)
 
