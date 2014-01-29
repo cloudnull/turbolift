@@ -37,7 +37,7 @@ if [ ! "$(which mysql)" ];then
 fi
 
 # Make sure mysqldump CLI clients are found.
-if [ "$(which mysqldump)" ];then
+if [ ! "$(which mysqldump)" ];then
   echo "mysqldump client not installed"
   exit 1
 fi
@@ -92,7 +92,7 @@ if [ "$(which turbolift)"  ];then
     turbolift --quiet \
               --system-config ${TURBOLIFT_CONFIG} \
               upload \
-              -c site-backup \
+              -c backup-databases \
               -s "${BACKUP_LOCATION}"
   fi
 fi
