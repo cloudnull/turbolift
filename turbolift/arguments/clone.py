@@ -55,3 +55,8 @@ def clone_actions(subparser, time_args):
                              ' is newer than the source. If "True" upload is'
                              ' skipped.'),
                        default=False)
+    clone.add_argument('--add-only',
+                       action='store_true',
+                       help=('Clone the object only if it doesn\'t exist in'
+                             ' the target container.'),
+                       default=False)

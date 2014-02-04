@@ -743,6 +743,12 @@ class CloudActions(object):
                     prt=False
                 )
                 return True
+            elif ARGS.get('add_only'):
+                report.reporter(
+                    msg='Target Object %s already exists' % obj['name'],
+                    prt=True
+                )
+                return False
             elif obj_resp.getheader('etag') != obj['hash']:
                 report.reporter(
                     msg=('Checksum Mismatch on Target Object %s'
