@@ -130,7 +130,7 @@ def worker_proc(job_action, concurrency, queue, kwargs, opt):
             for _ in xrange(concurrency)]
 
     report.reporter(
-        msg='Tread Starting Cycle',
+        msg='Thread Starting Cycle',
         lvl='info',
         log=True,
         prt=True
