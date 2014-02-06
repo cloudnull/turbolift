@@ -395,14 +395,9 @@ class CloudActions(object):
 
                 # Check that the status was a good one
                 if resp.status_code == 404:
-                    report.reporter(
-                        msg='Creating Container ==> %s' % container
-                    )
-                    http.put_request(
-                        url=url, rpath=rpath, headers=fheaders
-                    )
+                    report.reporter(msg='Creating Container => %s' % container)
+                    http.put_request(url=url, rpath=rpath, headers=fheaders)
                     self.resp_exception(resp=resp)
-
                     report.reporter(msg='Container "%s" Created' % container)
                     return True
                 else:
