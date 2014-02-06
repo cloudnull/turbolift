@@ -32,11 +32,11 @@ def download_actions(subparser, source_args, container_args, time_args, regex):
                           default=None,
                           type=str,
                           help='file Path to begin the download from')
-    download.add_argument('--max-download',
+    download.add_argument('--max-jobs',
                           metavar='[INT]',
                           default=None,
                           type=int,
-                          help='Max number of objects to be downloaded')
+                          help='Max number of processed on a single pass')
     download.add_argument('--sync',
                           action='store_true',
                           help=('Looks at local file vs Remote File and if a'

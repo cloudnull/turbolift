@@ -55,6 +55,11 @@ def command_actions(subparser, source_args, container_args, cdn_args,
                             action='store_true',
                             help='Target Container.',
                             default=None)
+    lister.add_argument('--max-jobs',
+                        metavar='[INT]',
+                        default=None,
+                        type=int,
+                        help='Max number of processed on a single pass')
     lister.add_argument('--filter',
                         metavar='[NAME]',
                         help='Filter returned list by name.',
