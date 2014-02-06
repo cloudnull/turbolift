@@ -370,7 +370,7 @@ class CloudActions(object):
             with meth.operation(retry, obj='%s %s' % (fheaders, rpath)):
                 return self._header_getter(url=url,
                                            rpath=rpath,
-                                           fheaders=self.payload['headers'])
+                                           fheaders=fheaders)
 
     def container_create(self, url, container):
         """Create a container if it is not Found.
@@ -463,7 +463,7 @@ class CloudActions(object):
                 # Perform delete.
                 self._deleter(url=url,
                               rpath=rpath,
-                              fheaders=self.payload['headers'])
+                              fheaders=fheaders)
 
     def container_lister(self, url, last_obj=None):
         """Builds a long list of objects found in a container.
