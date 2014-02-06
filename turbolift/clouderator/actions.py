@@ -23,87 +23,60 @@ class CloudActions(object):
     def __init__(self, payload):
         self.payload = payload
 
-    def resp_exception(self, resp, rty):
+    def resp_exception(self, resp):
         """If we encounter an exception in our upload.
 
         we will look at how we can attempt to resolve the exception.
 
         :param resp:
-        :param rty:
         """
 
-        try:
-            # Check to make sure we have all the bits needed
-            if not hasattr(resp, 'status'):
-                report.reporter(
-                    msg='No Status in Response', lvl='error', prt=True
-                )
-                raise turbo.SystemProblem('No Status to check.')
-            elif resp is None:
-                report.reporter(
-                    msg='No Response from request', lvl='error', prt=True
-                )
-                raise turbo.SystemProblem('No response information.')
-            elif resp.status_code == 401:
-                report.reporter(
-                    msg='MESSAGE: Forced Re-authentication is happening.',
-                    lvl='error',
-                    log=True
-                )
-                basic.stupid_hack()
-                self.payload['headers']['X-Auth-Token'] = get_new_token()
-                raise turbo.AuthenticationProblem('Failed to Authenticate')
-            elif resp.status_code == 404:
-                report.reporter(
-                    msg=('Not found STATUS: %s, REASON: %s, MESSAGE: %s'
-                         % (resp.status_code, resp.reason, resp.request)),
-                    prt=False,
-                    lvl='debug'
-                )
-            elif resp.status_code == 413:
-                _di = resp.headers
-                basic.stupid_hack(wait=_di.get('retry_after', 10))
-                raise turbo.SystemProblem(
-                    'The System encountered an API limitation and will'
-                    ' continue in "%s" Seconds' % _di.get('retry_after')
-                )
-            elif resp.status_code == 502:
-                raise turbo.SystemProblem('Failure making Connection')
-            elif resp.status_code == 503:
-                basic.stupid_hack(wait=10)
-                raise turbo.SystemProblem('SWIFT-API FAILURE')
-            elif resp.status_code == 504:
-                basic.stupid_hack(wait=10)
-                raise turbo.SystemProblem('Gateway Time-out')
-            elif resp.status_code >= 300:
-                raise turbo.SystemProblem('SWIFT-API FAILURE -> REQUEST')
-        except turbo.AuthenticationProblem as exp:
-            rty()
-        except turbo.SystemProblem as exp:
-            if resp is not None:
-                report.reporter(
-                    msg=('FAIL-MESSAGE %s FAILURE STATUS %s FAILURE REASON %s '
-                         'TYPE %s MESSAGE %s' % (exp,
-                                                 resp.status_code,
-                                                 resp.reason,
-                                                 resp.request,
-                                                 resp.request)),
-                    prt=True,
-                    lvl='warn',
-                    log=True
-                )
-            else:
-                report.reporter(
-                    msg='FAILURE IN PERFORMING OPERATION, resp == %s' % resp,
-                    prt=True,
-                    lvl='warn',
-                    log=True
-                )
-            rty()
+        # Check to make sure we have all the bits needed
+        if not hasattr(resp, 'status_code'):
+            raise turbo.SystemProblem('No Status to check.')
+        elif resp is None:
+            raise turbo.SystemProblem('No response information.')
+        elif resp.status_code == 401:
+            report.reporter(
+                msg='MESSAGE: Forced Re-authentication is happening.',
+                lvl='error',
+                log=True
+            )
+            basic.stupid_hack()
+            self.payload['headers']['X-Auth-Token'] = get_new_token()
+            raise turbo.AuthenticationProblem('Failed to Authenticate')
+        elif resp.status_code == 404:
+            report.reporter(
+                msg=('Not found STATUS: %s, REASON: %s, MESSAGE: %s'
+                     % (resp.status_code, resp.reason, resp.request)),
+                prt=False,
+                lvl='debug'
+            )
+        elif resp.status_code == 413:
+            _di = resp.headers
+            basic.stupid_hack(wait=_di.get('retry_after', 10))
+            raise turbo.SystemProblem(
+                'The System encountered an API limitation and will'
+                ' continue in "%s" Seconds' % _di.get('retry_after')
+            )
+        elif resp.status_code == 502:
+            raise turbo.SystemProblem('Failure making Connection')
+        elif resp.status_code == 503:
+            basic.stupid_hack(wait=10)
+            raise turbo.SystemProblem('SWIFT-API FAILURE')
+        elif resp.status_code == 504:
+            basic.stupid_hack(wait=10)
+            raise turbo.SystemProblem('Gateway Time-out')
+        elif resp.status_code >= 300:
+            raise turbo.SystemProblem(
+                'SWIFT-API FAILURE -> REASON %s REQUEST %s' % (resp.reason,
+                                                               resp.request)
+            )
         else:
             report.reporter(
-                msg=('MESSAGE %s %s %s'
-                     % (resp.status_code, resp.reason, resp.request)),
+                msg=('MESSAGE %s %s %s' % (resp.status_code,
+                                           resp.reason,
+                                           resp.request)),
                 prt=False,
                 lvl='debug'
             )
@@ -145,6 +118,8 @@ class CloudActions(object):
         :param skip:
         """
 
+        resp = None
+
         if source is None:
             local_f = lfile
         else:
@@ -161,6 +136,7 @@ class CloudActions(object):
             resp = http.get_request(
                 url=url, rpath=rpath, headers=fheaders, stream=True
             )
+            self.resp_exception(resp=resp)
             local_f = basic.collision_rename(file_name=local_f)
 
             # Open our source file and write it
@@ -173,7 +149,13 @@ class CloudActions(object):
 
         if ARGS.get('restore_perms') is not None:
             # Make a connection
-            all_headers = dict(resp.headers)
+            if resp is None:
+                resp = self._header_getter(
+                    url=url, rpath=rpath, fheaders=fheaders
+                )
+
+            all_headers = resp.headers
+
             if all(['x-object-meta-group' in all_headers,
                     'x-object-meta-owner' in all_headers,
                     'x-object-meta-perms' in all_headers]):
@@ -196,8 +178,7 @@ class CloudActions(object):
 
         # perform Object Delete
         resp = http.delete_request(url=url, headers=fheaders, rpath=rpath)
-
-        # self.resp_exception(resp=resp, rty=retry)
+        self.resp_exception(resp=resp)
 
         report.reporter(
             msg=('OBJECT %s MESSAGE %s %s %s'
@@ -229,7 +210,7 @@ class CloudActions(object):
                     resp = http.put_request(
                         url=url, rpath=rpath, body=f_open, headers=fheaders
                     )
-                # self.resp_exception(resp=resp, rty=retry)
+                    self.resp_exception(resp=resp)
 
                 report.reporter(
                     msg=('MESSAGE %s %s %s'
@@ -278,7 +259,7 @@ class CloudActions(object):
                 resp = http.get_request(
                     url=url, rpath=m_path, headers=fheaders
                 )
-                # self.resp_exception(resp=resp, rty=retry)
+                self.resp_exception(resp=resp)
                 return_list = resp.json()
 
                 for obj in return_list:
@@ -291,10 +272,10 @@ class CloudActions(object):
                         f_list.append(obj)
 
                 last_obj_in_list = f_list[-1].get('name')
-                if ARGS.get('max_download') is not None:
-                    max_download = ARGS.get('max_download')
-                    if max_download <= len(f_list):
-                        return f_list[:max_download]
+                if ARGS.get('max_jobs') is not None:
+                    max_jobs = ARGS.get('max_jobs')
+                    if max_jobs <= len(f_list):
+                        return f_list[:max_jobs]
                     else:
                         l_obj = last_obj_in_list
                         m_path = _marker_type(
@@ -345,8 +326,9 @@ class CloudActions(object):
         """
 
         # perform Object HEAD request
-        return http.head_request(url=url, headers=fheaders, rpath=rpath)
-        # self.resp_exception(resp=resp, rty=retry)
+        resp = http.head_request(url=url, headers=fheaders, rpath=rpath)
+        self.resp_exception(resp=resp)
+        return resp
 
     def _header_poster(self, url, rpath, fheaders):
         """POST Headers on a specified object in the container.
@@ -358,7 +340,7 @@ class CloudActions(object):
 
         # perform Object POST request for header update.
         resp = http.post_request(url=url, rpath=rpath, headers=fheaders)
-        # self.resp_exception(resp=resp, rty=retry)
+        self.resp_exception(resp=resp)
 
         report.reporter(
             msg='STATUS: %s MESSAGE: %s REASON: %s' % (resp.status_code,
@@ -418,7 +400,7 @@ class CloudActions(object):
                     http.put_request(
                         url=url, rpath=rpath, headers=self.payload['headers']
                     )
-                    # self.resp_exception(resp=resp, rty=retry)
+                    self.resp_exception(resp=resp)
 
                     report.reporter(msg='Container "%s" Created' % container)
                     return True
@@ -444,7 +426,7 @@ class CloudActions(object):
                     resp = http.delete_request(
                         url=url, rpath=rpath, headers=cheaders
                     )
-                    # self.resp_exception(resp=resp, rty=retry)
+                    self.resp_exception(resp=resp)
                 else:
                     rpath = http.quoter(url=url.path,
                                         cont=container)
@@ -454,7 +436,7 @@ class CloudActions(object):
                     resp = http.put_request(
                         url=url, rpath=rpath, headers=cheaders
                     )
-                    # self.resp_exception(resp=resp, rty=retry)
+                    self.resp_exception(resp=resp)
 
                 report.reporter(
                     msg='OBJECT %s MESSAGE %s %s %s' % (rpath,
@@ -770,8 +752,7 @@ class CloudActions(object):
                         resp = self._header_getter(url=turl,
                                                    rpath=tpath,
                                                    fheaders=fheaders)
-
-                        # self.resp_exception(resp=resp, rty=nretry)
+                        self.resp_exception(resp=resp)
                         # PUT remote object
                         self._putter(url=turl,
                                      fpath=tfile,
