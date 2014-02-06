@@ -38,13 +38,13 @@ class CloudActions(object):
                 report.reporter(
                     msg='No Status in Response', lvl='error', prt=True
                 )
-                rty()
+                raise turbo.SystemProblem('No Status to check.')
             elif resp is None:
                 report.reporter(
                     msg='No Response from request', lvl='error', prt=True
                 )
-                rty()
-            elif resp.status == 401:
+                raise turbo.SystemProblem('No response information.')
+            elif resp.status_code == 401:
                 report.reporter(
                     msg='MESSAGE: Forced Re-authentication is happening.',
                     lvl='error',
@@ -52,53 +52,66 @@ class CloudActions(object):
                 )
                 basic.stupid_hack()
                 self.payload['headers']['X-Auth-Token'] = get_new_token()
-                rty()
-            elif resp.status == 404:
+                raise turbo.AuthenticationProblem('Failed to Authenticate')
+            elif resp.status_code == 404:
                 report.reporter(
                     msg=('Not found STATUS: %s, REASON: %s, MESSAGE: %s'
-                         % (resp.status, resp.reason, resp.msg)),
+                         % (resp.status_code, resp.reason, resp.request)),
                     prt=False,
                     lvl='debug'
                 )
-            elif resp.status == 413:
-                _di = dict(resp.getheaders())
+            elif resp.status_code == 413:
+                _di = resp.headers
                 basic.stupid_hack(wait=_di.get('retry_after', 10))
                 raise turbo.SystemProblem(
                     'The System encountered an API limitation and will'
                     ' continue in "%s" Seconds' % _di.get('retry_after')
                 )
-            elif resp.status == 502:
+            elif resp.status_code == 502:
                 raise turbo.SystemProblem('Failure making Connection')
-            elif resp.status == 503:
+            elif resp.status_code == 503:
                 basic.stupid_hack(wait=10)
                 raise turbo.SystemProblem('SWIFT-API FAILURE')
-            elif resp.status == 504:
+            elif resp.status_code == 504:
                 basic.stupid_hack(wait=10)
                 raise turbo.SystemProblem('Gateway Time-out')
-            elif resp.status >= 300:
+            elif resp.status_code >= 300:
                 raise turbo.SystemProblem('SWIFT-API FAILURE -> REQUEST')
+        except turbo.AuthenticationProblem as exp:
+            rty()
         except turbo.SystemProblem as exp:
-            report.reporter(
-                msg=('FAIL-MESSAGE %s FAILURE STATUS %s FAILURE REASON %s '
-                     'TYPE %s MESSAGE %s' % (exp, resp.status, resp.reason,
-                                             resp._method, resp.msg)),
-                prt=True,
-                lvl='warn',
-                log=True
-            )
+            if resp is not None:
+                report.reporter(
+                    msg=('FAIL-MESSAGE %s FAILURE STATUS %s FAILURE REASON %s '
+                         'TYPE %s MESSAGE %s' % (exp,
+                                                 resp.status_code,
+                                                 resp.reason,
+                                                 resp.request,
+                                                 resp.request)),
+                    prt=True,
+                    lvl='warn',
+                    log=True
+                )
+            else:
+                report.reporter(
+                    msg='FAILURE IN PERFORMING OPERATION, resp == %s' % resp,
+                    prt=True,
+                    lvl='warn',
+                    log=True
+                )
             rty()
         else:
             report.reporter(
                 msg=('MESSAGE %s %s %s'
-                     % (resp.status, resp.reason, resp.msg)),
+                     % (resp.status_code, resp.reason, resp.request)),
                 prt=False,
                 lvl='debug'
             )
 
-    def _checker(self, conn, rpath, lpath, fheaders, retry, skip):
+    def _checker(self, url, rpath, lpath, fheaders, skip):
         """Check to see if a local file and a target file are different.
 
-        :param conn:
+        :param url:
         :param rpath:
         :param lpath:
         :param retry:
@@ -109,11 +122,10 @@ class CloudActions(object):
         if skip is True:
             return True
         elif ARGS.get('sync'):
-            resp = self._header_getter(conn=conn,
+            resp = self._header_getter(url=url,
                                        rpath=rpath,
-                                       fheaders=fheaders,
-                                       retry=retry)
-            if resp.status == 404:
+                                       fheaders=fheaders)
+            if resp.status_code == 404:
                 return True
             elif cloud.md5_checker(resp=resp, local_f=lpath) is True:
                 return True
@@ -122,15 +134,14 @@ class CloudActions(object):
         else:
             return True
 
-    def _downloader(self, conn, rpath, fheaders, lfile, source, retry,
+    def _downloader(self, url, rpath, fheaders, lfile, source,
                     skip=False):
         """Download a specified object in the container.
 
-        :param conn:
+        :param url:
         :param rpath:
         :param fheaders:
         :param lfile:
-        :param retry:
         :param skip:
         """
 
@@ -139,7 +150,7 @@ class CloudActions(object):
         else:
             local_f = basic.jpath(root=source, inode=lfile)
 
-        if self._checker(conn, rpath, local_f, fheaders, retry, skip) is True:
+        if self._checker(url, rpath, local_f, fheaders, skip) is True:
             report.reporter(
                 msg='Downloading remote %s to local file %s' % (rpath, lfile),
                 prt=False,
@@ -147,45 +158,22 @@ class CloudActions(object):
             )
 
             # Perform Object GET
-            conn.request('GET', rpath, headers=fheaders)
+            resp = http.get_request(
+                url=url, rpath=rpath, headers=fheaders, stream=True
+            )
             local_f = basic.collision_rename(file_name=local_f)
 
             # Open our source file and write it
             with open(local_f, 'ab') as f_name:
-                resp = http.response_get(
-                    conn=conn, retry=retry, resp_only=True
-                )
-                self.resp_exception(resp=resp, rty=retry)
-                if resp is None:
-                    report.reporter(
-                        msg='API Response Was NONE. resp was: %s' % resp.msg,
-                        prt=True,
-                        lvl='error',
-                        log=True
-                    )
-                    retry()
-                else:
-                    while True:
-                        chunk = resp.read(2048)
-                        if not chunk:
-                            break
-                        else:
-                            f_name.write(chunk)
-
-            report.reporter(
-                msg=('OBJECT %s MESSAGE %s %s %s'
-                     % (rpath, resp.status, resp.reason, resp.msg)),
-                prt=False,
-                lvl='debug'
-            )
+                for chunk in resp.iter_content(chunk_size=2048):
+                    if chunk:
+                        f_name.write(chunk)
+                        f_name.flush()
+            resp.close()
 
         if ARGS.get('restore_perms') is not None:
             # Make a connection
-            resp = self._header_getter(conn=conn,
-                                       rpath=rpath,
-                                       fheaders=fheaders,
-                                       retry=retry)
-            all_headers = dict(resp.getheaders())
+            all_headers = dict(resp.headers)
             if all(['x-object-meta-group' in all_headers,
                     'x-object-meta-owner' in all_headers,
                     'x-object-meta-perms' in all_headers]):
@@ -198,39 +186,36 @@ class CloudActions(object):
                     log=True
                 )
 
-    def _deleter(self, conn, rpath, fheaders, retry):
+    def _deleter(self, url, rpath, fheaders):
         """Delete a specified object in the container.
 
-        :param conn:
+        :param url:
         :param rpath:
         :param fheaders:
-        :param retry:
         """
 
         # perform Object Delete
-        conn.request('DELETE', rpath, headers=fheaders)
+        resp = http.delete_request(url=url, headers=fheaders, rpath=rpath)
 
-        resp, read = http.response_get(conn=conn, retry=retry)
-        self.resp_exception(resp=resp, rty=retry)
+        # self.resp_exception(resp=resp, rty=retry)
 
         report.reporter(
             msg=('OBJECT %s MESSAGE %s %s %s'
-                 % (rpath, resp.status, resp.reason, resp.msg)),
+                 % (rpath, resp.status_code, resp.reason, resp.request)),
             prt=False,
             lvl='debug'
         )
 
-    def _putter(self, conn, fpath, rpath, fheaders, retry, skip=False):
+    def _putter(self, url, fpath, rpath, fheaders, skip=False):
         """Place  object into the container.
 
-        :param conn:
+        :param url:
         :param fpath:
         :param rpath:
         :param fheaders:
-        :param retry:
         """
 
-        if self._checker(conn, rpath, fpath, fheaders, retry, skip) is True:
+        if self._checker(url, rpath, fpath, fheaders, skip) is True:
             report.reporter(
                 msg='OBJECT ORIGIN %s RPATH %s' % (fpath, rpath),
                 prt=False,
@@ -241,22 +226,22 @@ class CloudActions(object):
                 return None
             else:
                 with open(fpath, 'rb') as f_open:
-                    conn.request('PUT', rpath, body=f_open, headers=fheaders)
-                resp, read = http.response_get(conn=conn, retry=retry)
-                self.resp_exception(resp=resp, rty=retry)
+                    resp = http.put_request(
+                        url=url, rpath=rpath, body=f_open, headers=fheaders
+                    )
+                # self.resp_exception(resp=resp, rty=retry)
 
                 report.reporter(
                     msg=('MESSAGE %s %s %s'
-                         % (resp.status, resp.reason, resp.msg)),
+                         % (resp.status_code, resp.reason, resp.request)),
                     prt=False,
                     lvl='debug'
                 )
 
-    def _list_getter(self, conn, count, filepath, fheaders, last_obj=None):
+    def _list_getter(self, url, filepath, fheaders, last_obj=None):
         """Get a list of all objects in a container.
 
-        :param conn:
-        :param count:
+        :param url:
         :param filepath:
         :param fheaders:
         :return list:
@@ -285,29 +270,44 @@ class CloudActions(object):
 
             return '%s&marker=%s' % (f_path, http.quoter(url=l_obj))
 
-        def _obj_index(b_path, m_path, l_obj, f_list):
-            conn.request('GET', m_path, headers=fheaders)
-            resp, read = http.response_get(conn=conn, retry=retry)
-            self.resp_exception(resp=resp, rty=retry)
-            return_list = basic.json_encode(read)
+        def _obj_index(b_path, m_path):
+            f_list = []
+            l_obj = None
 
-            for obj in return_list:
-                time_offset = ARGS.get('time_offset')
-                if time_offset is not None:
-                    # Get the last_modified data from the Object.
-                    if cloud.time_delta(lmobj=time_offset) is True:
-                        f_list.append(obj)
-                else:
-                    f_list.append(obj)
-
-            last_obj_in_list = f_list[-1].get('name')
-            if l_obj is last_obj_in_list:
-                return f_list
-            else:
-                marker = _marker_type(base=b_path, last=last_obj_in_list)
-                _obj_index(
-                    b_path, marker, last_obj_in_list, f_list
+            while True:
+                resp = http.get_request(
+                    url=url, rpath=m_path, headers=fheaders
                 )
+                # self.resp_exception(resp=resp, rty=retry)
+                return_list = resp.json()
+
+                for obj in return_list:
+                    time_offset = ARGS.get('time_offset')
+                    if time_offset is not None:
+                        # Get the last_modified data from the Object.
+                        if cloud.time_delta(lmobj=time_offset) is True:
+                            f_list.append(obj)
+                    else:
+                        f_list.append(obj)
+
+                last_obj_in_list = f_list[-1].get('name')
+                if ARGS.get('max_download') is not None:
+                    max_download = ARGS.get('max_download')
+                    if max_download <= len(f_list):
+                        return f_list[:max_download]
+                    else:
+                        l_obj = last_obj_in_list
+                        m_path = _marker_type(
+                            base=b_path, last=last_obj_in_list
+                        )
+                else:
+                    if l_obj is last_obj_in_list:
+                        return f_list
+                    else:
+                        l_obj = last_obj_in_list
+                        m_path = _marker_type(
+                            base=b_path, last=last_obj_in_list
+                        )
 
         # Quote the file path.
         base_path = marked_path = (
@@ -322,10 +322,7 @@ class CloudActions(object):
         for retry in basic.retryloop(attempts=ARGS.get('error_retry'),
                                      obj='Object List Creation'):
             with meth.operation(retry):
-                file_list = []
-                _obj_index(
-                    base_path, marked_path, last_obj, file_list
-                )
+                file_list = _obj_index(base_path, marked_path)
                 final_list = basic.unique_list_dicts(
                     dlist=file_list, key='name'
                 )
@@ -334,51 +331,44 @@ class CloudActions(object):
                     msg='INFO: %d object(s) found' % len(final_list),
                     log=True
                 )
-                return final_list, list_count, last_obj
+                if 'name' in file_list[-1]:
+                    return final_list, list_count, file_list[-1]['name']
+                else:
+                    return final_list, list_count, file_list[-1]
 
-    def _header_getter(self, conn, rpath, fheaders, retry):
+    def _header_getter(self, url, rpath, fheaders):
         """perfrom HEAD request on a specified object in the container.
 
-        :param conn:
+        :param url:
         :param rpath:
         :param fheaders:
-        :param retry:
         """
 
         # perform Object HEAD request
-        conn.request('HEAD', rpath, headers=fheaders)
-        resp, read = http.response_get(conn=conn, retry=retry)
-        self.resp_exception(resp=resp, rty=retry)
+        return http.head_request(url=url, headers=fheaders, rpath=rpath)
+        # self.resp_exception(resp=resp, rty=retry)
 
-        report.reporter(
-            msg='INFO: %s %s %s' % (resp.status, resp.reason, resp.msg),
-            prt=False
-        )
-
-        return resp
-
-    def _header_poster(self, conn, rpath, fheaders, retry):
+    def _header_poster(self, url, rpath, fheaders):
         """POST Headers on a specified object in the container.
 
-        :param conn:
+        :param url:
         :param rpath:
         :param fheaders:
-        :param retry:
         """
 
         # perform Object POST request for header update.
-        conn.request('POST', rpath, headers=fheaders)
-        resp, read = http.response_get(conn=conn, retry=retry)
-        self.resp_exception(resp=resp, rty=retry)
+        resp = http.post_request(url=url, rpath=rpath, headers=fheaders)
+        # self.resp_exception(resp=resp, rty=retry)
 
         report.reporter(
-            msg=('STATUS: %s MESSAGE: %s REASON: %s'
-                 % (resp.status, resp.msg, resp.reason)),
+            msg='STATUS: %s MESSAGE: %s REASON: %s' % (resp.status_code,
+                                                       resp.request,
+                                                       resp.reason),
             prt=False,
             lvl='debug'
         )
 
-        return dict(resp.getheaders())
+        return resp.headers
 
     def detail_show(self, url):
         """Return Details on an object or container."""
@@ -387,23 +377,17 @@ class CloudActions(object):
         for retry in basic.retryloop(attempts=rty_count,
                                      delay=5,
                                      obj=ARGS.get('container')):
-            conn = http.open_connection(url=url)
-            if ARGS.get('object') is not None:
-                rpath = http.quoter(url=url.path,
-                                    cont=ARGS.get('container'),
-                                    ufile=ARGS.get('object'))
-            else:
-                rpath = http.quoter(url=url.path,
-                                    cont=ARGS.get('container'))
-
-            resp = self._header_getter(conn=conn,
-                                       rpath=rpath,
-                                       fheaders=self.payload['headers'],
-                                       retry=retry)
-            if resp.status == 404:
-                return 'Nothing found.'
-            else:
-                return resp.getheaders()
+            with meth.operation(retry):
+                if ARGS.get('object') is not None:
+                    rpath = http.quoter(url=url.path,
+                                        cont=ARGS.get('container'),
+                                        ufile=ARGS.get('object'))
+                else:
+                    rpath = http.quoter(url=url.path,
+                                        cont=ARGS.get('container'))
+                return self._header_getter(url=url,
+                                           rpath=rpath,
+                                           fheaders=self.payload['headers'])
 
     def container_create(self, url, container):
         """Create a container if it is not Found.
@@ -416,28 +400,25 @@ class CloudActions(object):
         for retry in basic.retryloop(attempts=rty_count,
                                      delay=5,
                                      obj=container):
-            conn = http.open_connection(url=url)
 
             rpath = http.quoter(url=url.path,
                                 cont=container)
 
             # Open connection and perform operation
-            with meth.operation(retry, conn):
-
-                resp = self._header_getter(conn=conn,
+            with meth.operation(retry):
+                resp = self._header_getter(url=url,
                                            rpath=rpath,
-                                           fheaders=self.payload['headers'],
-                                           retry=retry)
+                                           fheaders=self.payload['headers'])
 
                 # Check that the status was a good one
-                if resp.status == 404:
+                if resp.status_code == 404:
                     report.reporter(
                         msg='Creating Container ==> %s' % container
                     )
-
-                    conn.request('PUT', rpath, headers=self.payload['headers'])
-                    resp, read = http.response_get(conn=conn, retry=retry)
-                    self.resp_exception(resp=resp, rty=retry)
+                    http.put_request(
+                        url=url, rpath=rpath, headers=self.payload['headers']
+                    )
+                    # self.resp_exception(resp=resp, rty=retry)
 
                     report.reporter(msg='Container "%s" Created' % container)
                     return True
@@ -453,30 +434,33 @@ class CloudActions(object):
         """
         rty_count = ARGS.get('error_retry')
         for retry in basic.retryloop(attempts=rty_count, delay=2, obj=sfile):
-            # Open Connection
-            conn = http.open_connection(url=url)
-            with meth.operation(retry, conn):
+            with meth.operation(retry):
                 cheaders = self.payload['headers']
                 if sfile is not None:
                     rpath = http.quoter(url=url.path,
                                         cont=container,
                                         ufile=sfile)
                     # perform CDN Object DELETE
-                    conn.request('DELETE', rpath, headers=cheaders)
-                    resp, read = http.response_get(conn=conn, retry=retry)
-                    self.resp_exception(resp=resp, rty=retry)
+                    resp = http.delete_request(
+                        url=url, rpath=rpath, headers=cheaders
+                    )
+                    # self.resp_exception(resp=resp, rty=retry)
                 else:
                     rpath = http.quoter(url=url.path,
                                         cont=container)
                     http.cdn_toggle(headers=cheaders)
-                    # perform CDN Enable POST
-                    conn.request('PUT', rpath, headers=cheaders)
-                    resp, read = http.response_get(conn=conn, retry=retry)
-                    self.resp_exception(resp=resp, rty=retry)
+
+                    # perform CDN Enable PUT
+                    resp = http.put_request(
+                        url=url, rpath=rpath, headers=cheaders
+                    )
+                    # self.resp_exception(resp=resp, rty=retry)
 
                 report.reporter(
-                    msg=('OBJECT %s MESSAGE %s %s %s'
-                         % (rpath, resp.status, resp.reason, resp.msg)),
+                    msg='OBJECT %s MESSAGE %s %s %s' % (rpath,
+                                                        resp.status_code,
+                                                        resp.reason,
+                                                        resp.request),
                     prt=False,
                     lvl='debug'
                 )
@@ -491,18 +475,15 @@ class CloudActions(object):
         for retry in basic.retryloop(attempts=ARGS.get('error_retry'),
                                      delay=2,
                                      obj=container):
-            # Open Connection
-            conn = http.open_connection(url=url)
 
             # Open connection and perform operation
-            with meth.operation(retry, conn):
+            with meth.operation(retry):
                 rpath = http.quoter(url=url.path,
                                     cont=container)
                 # Perform delete.
-                self._deleter(conn=conn,
+                self._deleter(url=url,
                               rpath=rpath,
-                              fheaders=self.payload['headers'],
-                              retry=retry)
+                              fheaders=self.payload['headers'])
 
     def container_lister(self, url, last_obj=None):
         """Builds a long list of objects found in a container.
@@ -515,21 +496,18 @@ class CloudActions(object):
 
         for retry in basic.retryloop(attempts=ARGS.get('error_retry'),
                                      obj='Container List'):
-            # Open Connection
-            conn = http.open_connection(url=url)
 
             # Open connection and perform operation
-            with meth.operation(retry, conn):
+            with meth.operation(retry):
                 # Determine how many files are in the container
                 fpath = http.quoter(url=url.path)
 
                 # Make a connection
-                resp = self._header_getter(conn=conn,
+                resp = self._header_getter(url=url,
                                            rpath=fpath,
-                                           fheaders=self.payload['headers'],
-                                           retry=retry)
+                                           fheaders=self.payload['headers'])
 
-                head_check = dict(resp.getheaders())
+                head_check = resp.headers
                 container_count = head_check.get('x-account-container-count')
                 if container_count:
                     container_count = int(container_count)
@@ -539,8 +517,7 @@ class CloudActions(object):
                     return None
 
                 # Set the number of loops that we are going to do
-                return self._list_getter(conn=conn,
-                                         count=container_count,
+                return self._list_getter(url=url,
                                          filepath=fpath,
                                          fheaders=self.payload['headers'],
                                          last_obj=last_obj)
@@ -563,11 +540,9 @@ class CloudActions(object):
         for retry in basic.retryloop(attempts=ARGS.get('error_retry'),
                                      delay=2,
                                      obj=u_file):
-            # Open Connection
-            conn = http.open_connection(url=url)
 
             # Open connection and perform operation
-            with meth.operation(retry, conn, obj=u_file):
+            with meth.operation(retry, obj=u_file):
                 # Get the path ready for action
                 sfile = basic.get_sfile(ufile=u_file, source=source)
                 rpath = http.quoter(url=url.path,
@@ -577,11 +552,10 @@ class CloudActions(object):
                 fheaders = self.payload['headers']
 
                 # Perform Upload.
-                self._putter(conn=conn,
+                self._putter(url=url,
                              fpath=u_file,
                              rpath=rpath,
-                             fheaders=fheaders,
-                             retry=retry)
+                             fheaders=fheaders)
 
                 # Put headers on the object if custom headers, or save perms.
                 if any([ARGS.get('object_headers') is not None,
@@ -592,10 +566,9 @@ class CloudActions(object):
                     if ARGS.get('save_perms') is not None:
                         fheaders.update(basic.stat_file(local_file=u_file))
 
-                    self._header_poster(conn=conn,
+                    self._header_poster(url=url,
                                         rpath=rpath,
-                                        fheaders=fheaders,
-                                        retry=retry)
+                                        fheaders=fheaders)
 
     def object_deleter(self, url, container, u_file):
         """Deletes an objects in a container.
@@ -606,26 +579,22 @@ class CloudActions(object):
         """
         rty_count = ARGS.get('error_retry')
         for retry in basic.retryloop(attempts=rty_count, delay=2, obj=u_file):
-            # Open Connection
-            conn = http.open_connection(url=url)
 
             # Open connection and perform operation
-            with meth.operation(retry, conn):
+            with meth.operation(retry):
                 rpath = http.quoter(url=url.path,
                                     cont=container,
                                     ufile=u_file)
 
                 # Make a connection
-                resp = self._header_getter(conn=conn,
+                resp = self._header_getter(url=url,
                                            rpath=rpath,
-                                           fheaders=self.payload['headers'],
-                                           retry=retry)
-                if not resp.status == 404:
+                                           fheaders=self.payload['headers'])
+                if not resp.status_code == 404:
                     # Perform delete.
-                    self._deleter(conn=conn,
+                    self._deleter(url=url,
                                   rpath=rpath,
-                                  fheaders=self.payload['headers'],
-                                  retry=retry)
+                                  fheaders=self.payload['headers'])
 
     def object_downloader(self, url, container, source, u_file):
         """Download an Object from a Container.
@@ -637,23 +606,18 @@ class CloudActions(object):
 
         rty_count = ARGS.get('error_retry')
         for retry in basic.retryloop(attempts=rty_count, delay=2, obj=u_file):
-            # Open Connection
-            conn = http.open_connection(url=url)
-
-            # Perform operation
-            with meth.operation(retry, conn):
+            with meth.operation(retry):
                 fheaders = self.payload['headers']
 
                 rpath = http.quoter(url=url.path,
                                     cont=container,
                                     ufile=u_file)
                 # Perform Download.
-                self._downloader(conn=conn,
+                self._downloader(url=url,
                                  rpath=rpath,
                                  fheaders=fheaders,
                                  lfile=u_file,
-                                 source=source,
-                                 retry=retry)
+                                 source=source)
 
     def object_lister(self, url, container, object_count=None, last_obj=None):
         """Builds a long list of objects found in a container.
@@ -669,28 +633,23 @@ class CloudActions(object):
 
         for retry in basic.retryloop(attempts=ARGS.get('error_retry'),
                                      obj='Object List'):
-            # Open Connection
-            conn = http.open_connection(url=url)
-
-            # Open connection and perform operation
-            with meth.operation(retry, conn):
+            with meth.operation(retry):
                 # Determine how many files are in the container
                 fpath = http.quoter(url=url.path,
                                     cont=container)
                 # Make a connection
-                resp = self._header_getter(conn=conn,
+                resp = self._header_getter(url=url,
                                            rpath=fpath,
-                                           fheaders=self.payload['headers'],
-                                           retry=retry)
-                if resp.status == 404:
+                                           fheaders=self.payload['headers'])
+                if resp.status_code == 404:
                     report.reporter(
-                        msg='Not found. %s | %s' % (resp.status, resp.msg)
+                        msg='Not found. %s | %s' % (resp.status_code,
+                                                    resp.request)
                     )
                     return None, None, None
                 else:
                     if object_count is None:
-                        head_check = dict(resp.getheaders())
-                        object_count = head_check.get(
+                        object_count = resp.headers.get(
                             'x-container-object-count'
                         )
                         if object_count:
@@ -701,8 +660,7 @@ class CloudActions(object):
                             return None, None, None
 
                     # Set the number of loops that we are going to do
-                    return self._list_getter(conn=conn,
-                                             count=object_count,
+                    return self._list_getter(url=url,
                                              filepath=fpath,
                                              fheaders=self.payload['headers'],
                                              last_obj=last_obj)
@@ -725,7 +683,7 @@ class CloudActions(object):
         def _time_difference(obj_resp, obj):
             if ARGS.get('save_newer') is True:
                 # Get the source object last modified time.
-                compare_time = obj_resp.getheader('last_modified')
+                compare_time = obj_resp.header.get('last_modified')
                 if compare_time is None:
                     return True
                 elif cloud.time_delta(compare_time=compare_time,
@@ -737,7 +695,7 @@ class CloudActions(object):
                 return True
 
         def _compare(obj_resp, obj):
-            if obj_resp.status == 404:
+            if obj_resp.status_code == 404:
                 report.reporter(
                     msg='Target Object %s not found' % obj['name'],
                     prt=False
@@ -749,7 +707,7 @@ class CloudActions(object):
                     prt=True
                 )
                 return False
-            elif obj_resp.getheader('etag') != obj['hash']:
+            elif obj_resp.headers.get('etag') != obj['hash']:
                 report.reporter(
                     msg=('Checksum Mismatch on Target Object %s'
                          % u_file['name']),
@@ -772,43 +730,35 @@ class CloudActions(object):
                                 cont=tcontainer,
                                 ufile=u_file['name'])
 
-            conn = http.open_connection(url=turl)
-            with meth.operation(retry, conn=conn, obj=u_file):
-                resp = self._header_getter(conn=conn,
+            with meth.operation(retry, obj=u_file):
+                resp = self._header_getter(url=turl,
                                            rpath=tpath,
-                                           fheaders=fheaders,
-                                           retry=retry)
+                                           fheaders=fheaders)
 
                 # If object comparison is True GET then PUT object
                 if _compare(resp, u_file) is not True:
                     return None
             try:
                 # Open Connection for source Download
-                conn = http.open_connection(url=surl)
-                with meth.operation(retry,
-                                    conn=conn,
-                                    obj=u_file):
-
+                with meth.operation(retry, obj=u_file):
                     # make a temp file.
                     tfile = basic.create_tmp()
 
                     # Make a connection
-                    resp = self._header_getter(conn=conn,
+                    resp = self._header_getter(url=surl,
                                                rpath=spath,
-                                               fheaders=fheaders,
-                                               retry=retry)
-                    sheaders = dict(resp.getheaders())
+                                               fheaders=fheaders)
+                    sheaders = resp.headers
 
                     # TODO(kevin) add the ability to short upload if timestamp
                     # TODO(kevin) ... is newer on the target.
                     # GET remote Object
                     self._downloader(
-                        conn=conn,
+                        url=surl,
                         rpath=spath,
                         fheaders=fheaders,
                         lfile=tfile,
                         source=None,
-                        retry=retry,
                         skip=True
                     )
 
@@ -816,35 +766,25 @@ class CloudActions(object):
                                               delay=5,
                                               obj=u_file):
                     # open connection for target upload.
-                    conn = http.open_connection(url=turl)
-                    with meth.operation(retry,
-                                        conn=conn,
-                                        obj=u_file,
-                                        cleanup=_cleanup):
-                        resp = self._header_getter(conn=conn,
+                    with meth.operation(retry, obj=u_file, cleanup=_cleanup):
+                        resp = self._header_getter(url=turl,
                                                    rpath=tpath,
-                                                   fheaders=fheaders,
-                                                   retry=nretry)
+                                                   fheaders=fheaders)
 
-                        self.resp_exception(resp=resp, rty=nretry)
+                        # self.resp_exception(resp=resp, rty=nretry)
                         # PUT remote object
-                        self._putter(conn=conn,
+                        self._putter(url=turl,
                                      fpath=tfile,
                                      rpath=tpath,
                                      fheaders=fheaders,
-                                     retry=nretry,
                                      skip=True)
 
-                        # let the system rest for 3 seconds.
-                        basic.stupid_hack(wait=3)
+                        # let the system rest for 1 seconds.
+                        basic.stupid_hack(wait=1)
 
                         # With the source headers POST new headers on target
                         if ARGS.get('clone_headers') is True:
-                            resp = self._header_getter(conn=conn,
-                                                       rpath=tpath,
-                                                       fheaders=fheaders,
-                                                       retry=nretry)
-                            theaders = dict(resp.getheaders())
+                            theaders = resp.headers
                             for key in sheaders.keys():
                                 if key not in theaders:
                                     fheaders.update({key: sheaders[key]})
@@ -853,10 +793,9 @@ class CloudActions(object):
                                 {'content-type': sheaders.get('content-type')}
                             )
                             self._header_poster(
-                                conn=conn,
+                                url=turl,
                                 rpath=tpath,
-                                fheaders=fheaders,
-                                retry=nretry
+                                fheaders=fheaders
                             )
             finally:
                 _cleanup()

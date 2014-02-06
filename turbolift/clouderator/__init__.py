@@ -35,7 +35,7 @@ def md5_checker(resp, local_f):
         return data_hash.read(128 * md5.block_size)
 
     if os.path.isfile(local_f) is True:
-        rmd5sum = resp.getheader('etag')
+        rmd5sum = resp.headers.get('etag')
         md5 = hashlib.md5()
 
         with open(local_f, 'rb') as data_hash:
@@ -50,7 +50,7 @@ def md5_checker(resp, local_f):
                     msg=('MESSAGE: CheckSumm Mis-Match %s != %s STATUS'
                          ' : %s %s - Local File %s' % (lmd5sum,
                                                        rmd5sum,
-                                                       resp.status,
+                                                       resp.status_code,
                                                        resp.reason,
                                                        local_f))
                 )

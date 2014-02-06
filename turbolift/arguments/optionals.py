@@ -68,5 +68,5 @@ def optional_args(parser):
                            metavar='[INT]',
                            type=int,
                            help=('The number of files to process per job.'
-                                 ' Default is 30K'),
+                                 ' Default is %(default)sK'),
                            default=30000)

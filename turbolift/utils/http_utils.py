@@ -8,16 +8,22 @@
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
 import httplib
-import socket
 import traceback
 import urllib
 import urlparse
 
-import turbolift as turbo
+import requests
+
 import turbolift.utils.basic_utils as basic
 import turbolift.utils.report_utils as report
 
 from turbolift import ARGS
+from turbolift import LOG
+
+
+# Enable Debug Mode if its set
+if ARGS.get('debug'):
+    httplib.HTTPConnection.debuglevel = 1
 
 
 def set_headers(headers):
@@ -37,77 +43,6 @@ def container_headers(headers):
     """Return updated Container Headers."""
 
     return headers.update(ARGS.get('container_headers'))
-
-
-def response_get(conn, retry, resp_only=False):
-    """Get the response information and return it.
-
-    :param conn:
-    :param retry:
-    :param ret_read:
-    :param mcr:
-    """
-
-    try:
-        # Get response
-        if resp_only is True:
-            return conn.getresponse()
-        else:
-            resp = conn.getresponse()
-            if resp is None:
-                raise turbo.DirectoryFailure('Response Was NONE.')
-            else:
-                return resp, resp.read()
-    except socket.error as exp:
-        report.reporter(
-            msg='Socket Error %s' % exp,
-            lvl='error',
-            prt=True
-        )
-        retry()
-    except httplib.BadStatusLine as exp:
-        report.reporter(
-            msg='BAD STATUS-LINE ON METHOD MESSAGE %s' % exp,
-            lvl='error',
-            prt=True
-        )
-        retry()
-    except httplib.ResponseNotReady as exp:
-        report.reporter(
-            msg='RESPONSE NOT READY MESSAGE %s' % exp,
-            lvl='error',
-            prt=True
-        )
-        retry()
-    except Exception as exp:
-        report.reporter(
-            msg=('Failure, System will retry. DATA: %s %s %s\nTB:%s'
-                 % (exp, conn, retry, traceback.format_exc())),
-            lvl='error',
-            prt=True
-        )
-        retry()
-
-
-def open_connection(url):
-    """Open an Http Connection and return the connection object.
-
-    :param url:
-    :return conn:
-    """
-
-    try:
-        if url.scheme == 'https':
-            conn = httplib.HTTPSConnection(url.netloc)
-        else:
-            conn = httplib.HTTPConnection(url.netloc)
-    except httplib.InvalidURL as exc:
-        msg = 'ERROR: Making connection to %s\nREASON:\t %s' % (url, exc)
-        raise httplib.CannotSendRequest(msg)
-    else:
-        if ARGS.get('debug'):
-            conn.set_debuglevel(1)
-        return conn
 
 
 def parse_url(url, auth=False):
@@ -197,3 +132,167 @@ def cdn_toggle(headers):
     return headers.update({'X-CDN-Enabled': enable_or_disable,
                            'X-TTL': ARGS.get('cdn_ttl'),
                            'X-Log-Retention': ARGS.get('cdn_logs')})
+
+
+def post_request(url, headers, body=None, rpath=None):
+    """Perform HTTP(s) POST request based on Provided Params.
+
+    :param url:
+    :param rpath:
+    :param headers:
+    :param body:
+    :return resp:
+    """
+
+    try:
+        if rpath is not None:
+            _url = urlparse.urljoin(urlparse.urlunparse(url), rpath)
+        else:
+            _url = urlparse.urlunparse(url)
+
+        resp = requests.post(_url, data=body, headers=headers)
+    except Exception as exp:
+        LOG.error('Not able to perform Request ERROR: %s', exp)
+        raise AttributeError("Failure to perform Authentication %s ERROR:\n%s"
+                             % (exp, traceback.format_exc()))
+    else:
+        if resp.status_code >= 300:
+            report.reporter(
+                msg=('HTTP connection exception: Response %s'
+                     ' - Response Code %s\n%s' % (resp.raw,
+                                                  resp.status_code,
+                                                  traceback.format_exc())),
+                lvl='error',
+                log=True
+
+            )
+            raise requests.ConnectionError(
+                'Failed to communicate "%s"' % resp.status_code
+            )
+        else:
+            return resp
+
+
+def head_request(url, headers, rpath):
+    try:
+        _url = urlparse.urljoin(urlparse.urlunparse(url), rpath)
+        resp = requests.head(_url, headers=headers)
+        report.reporter(
+            msg='INFO: %s %s %s' % (resp.status_code,
+                                    resp.reason,
+                                    resp.request),
+            prt=False
+        )
+    except Exception as exp:
+        report.reporter(
+            'Not able to perform Request ERROR: %s' % exp,
+            lvl='error',
+            log=True
+        )
+    else:
+        if resp.status_code != 404 and resp.status_code >= 300:
+            report.reporter(
+                msg=('HTTP connection exception: Response %s'
+                     ' - Response Code %s\n%s' % (resp.raw,
+                                                  resp.status_code,
+                                                  traceback.format_exc())),
+                lvl='error',
+                log=True
+
+            )
+            raise requests.ConnectionError(
+                'Failed to communicate "%s"' % resp.status_code
+            )
+        else:
+            return resp
+
+
+def put_request(url, headers, rpath, body=None):
+    try:
+        _url = urlparse.urljoin(urlparse.urlunparse(url), rpath)
+        resp = requests.put(_url, data=body, headers=headers)
+        report.reporter(
+            msg='INFO: %s %s %s' % (resp.status_code,
+                                    resp.reason,
+                                    resp.request),
+            prt=False
+        )
+    except Exception as exp:
+        LOG.error('Not able to perform Request ERROR: %s', exp)
+    else:
+        if resp.status_code >= 300:
+            report.reporter(
+                msg=('HTTP connection exception: Response %s'
+                     ' - Response Code %s\n%s' % (resp.raw,
+                                                  resp.status_code,
+                                                  traceback.format_exc())),
+                lvl='error',
+                log=True
+
+            )
+            raise requests.ConnectionError(
+                'Failed to communicate "%s"' % resp.status_code
+            )
+        else:
+            return resp
+
+
+def delete_request(url, headers, rpath):
+    try:
+        _url = urlparse.urljoin(urlparse.urlunparse(url), rpath)
+        resp = requests.delete(_url, headers=headers)
+        report.reporter(
+            msg='INFO: %s %s %s' % (resp.status_code,
+                                    resp.reason,
+                                    resp.request),
+            prt=False
+        )
+    except Exception as exp:
+        LOG.error('Not able to perform Request ERROR: %s', exp)
+    else:
+        if resp.status_code != 404 and resp.status_code >= 300:
+            report.reporter(
+                msg=('HTTP connection exception: Response %s'
+                     ' - Response Code %s\n%s' % (resp.raw,
+                                                  resp.status_code,
+                                                  traceback.format_exc())),
+                lvl='error',
+                log=True
+
+            )
+            raise requests.ConnectionError(
+                'Failed to communicate "%s"' % resp.status_code
+            )
+        else:
+            return resp
+
+
+def get_request(url, headers, rpath, stream=False):
+    try:
+        _url = urlparse.urljoin(urlparse.urlunparse(url), rpath)
+        resp = requests.get(_url, headers=headers, stream=stream)
+        report.reporter(
+            msg='INFO: %s %s %s' % (resp.status_code,
+                                    resp.reason,
+                                    resp.request),
+            prt=False
+        )
+    except Exception as exp:
+        LOG.error('Not able to perform Request ERROR: %s', exp)
+    else:
+        if resp.status_code >= 300:
+            report.reporter(
+                msg=('HTTP connection exception: Response %s'
+                     ' - Response Code %s\n%s' % (resp.raw,
+                                                  resp.status_code,
+                                                  traceback.format_exc())),
+                lvl='error',
+                log=True
+
+            )
+            raise requests.ConnectionError(
+                'Failed to communicate "%s" reason "%s"' % (resp.status_code,
+                                                            resp.reason)
+            )
+        else:
+            return resp

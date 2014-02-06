@@ -49,11 +49,18 @@ class Show(object):
                 url = payload['cnet']
             else:
                 url = payload['url']
-
             message = self.go.detail_show(url=url)
 
-        if isinstance(message, list):
-            report.reporter(msg='Item Found...')
-            report.reporter(msg=report.print_virt_table(dict(message)))
-        else:
-            report.reporter(msg=message)
+        try:
+            if message.status_code != 404:
+                report.reporter(msg='Object Found...')
+                report.reporter(
+                    msg=report.print_virt_table(dict(message.headers))
+                )
+            else:
+                report.reporter(msg='Nothing Found...')
+        except ValueError as exp:
+            report.reporter(
+                msg=('Non-hashable Type, Likley Item is not found.'
+                     ' Additional Data: %s' % exp)
+            )

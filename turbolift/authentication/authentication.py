@@ -32,18 +32,16 @@ def authenticate():
     headers = {'Content-Type': 'application/json'}
 
     # Send Request
-    request = ('POST', a_url.path, auth_json_req, headers)
-    resp_read = auth.request_process(aurl=a_url, req=request)
-    LOG.debug('POST Authentication Response %s', resp_read)
     try:
-        auth_resp = json.loads(resp_read)
+        auth_resp = http.post_request(
+            url=a_url, headers=headers, body=auth_json_req
+        )
     except ValueError as exp:
-        LOG.error('Authentication Failure %s\n%s', exp,
-                  traceback.format_exc())
-        raise turbo.SystemProblem('JSON Decode Failure. ERROR: %s - RESP %s'
-                                  % (exp, resp_read))
+        LOG.error('Authentication Failure %s\n%s', exp, traceback.format_exc())
+        raise turbo.SystemProblem('JSON Decode Failure. ERROR: %s' % exp)
     else:
-        auth_info = auth.parse_auth_response(auth_resp)
+        LOG.debug('POST Authentication Response %s', auth_resp.json())
+        auth_info = auth.parse_auth_response(auth_resp.json())
         token, tenant, user, inet, enet, cnet, acfep = auth_info
         report.reporter(
             msg=('API Access Granted. TenantID: %s Username: %s'

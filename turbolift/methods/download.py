@@ -57,7 +57,8 @@ class Download(object):
             # Get all objects in a Container
             objects, list_count, last_obj = self.action(
                 url=payload['url'],
-                container=payload['c_name']
+                container=payload['c_name'],
+                last_obj=ARGS.get('index_from')
             )
 
             if ARGS.get('pattern_match'):
@@ -116,3 +117,9 @@ class Download(object):
             concur=concurrency,
             kwargs=kwargs
         )
+        if ARGS.get('max_download') is not None:
+            report.reporter(
+                msg=('This is the last object downloaded. [ %s ]'
+                     % last_obj),
+                log=True
+            )

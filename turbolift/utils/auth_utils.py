@@ -7,7 +7,6 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
-import httplib
 import traceback
 
 import turbolift as turbo
@@ -163,42 +162,3 @@ def parse_region():
         raise turbo.SystemProblem(
             'You Are required to specify an Auth URL, Region or Plugin'
         )
-
-
-def request_process(aurl, req):
-    """Perform HTTP(s) request based on Provided Params.
-
-    :param aurl:
-    :param req:
-    :return read_resp:
-    """
-
-    conn = http.open_connection(url=aurl)
-
-    # Make the request for authentication
-    try:
-        _method, _url, _body, _headers = req
-        conn.request(method=_method, url=_url, body=_body, headers=_headers)
-        resp = conn.getresponse()
-    except Exception as exc:
-        LOG.error('Not able to perform Request ERROR: %s', exc)
-        raise AttributeError("Failure to perform Authentication %s ERROR:\n%s"
-                             % (exc, traceback.format_exc()))
-    else:
-        resp_read = resp.read()
-        status_code = resp.status
-        if status_code >= 300:
-            LOG.error('HTTP connection exception: '
-                      'Response %s - Response Code %s\n%s',
-                      resp_read, status_code, traceback.format_exc())
-            raise httplib.HTTPException('Failed to authenticate %s'
-                                        % status_code)
-
-        LOG.debug(
-            'Connection successful MSG: %s - STATUS: %s',
-            resp.reason,
-            resp.status
-        )
-        return resp_read
-    finally:
-        conn.close()

@@ -95,14 +95,13 @@ def get_local_files():
 
 
 @contextlib.contextmanager
-def operation(retry, conn=None, obj=None, cleanup=None):
+def operation(retry, obj=None, cleanup=None):
     """This is an operation wrapper, which wraps an operation in try except.
 
     If clean up is used, a clean up operation will be run should an exception
     happen.
 
     :param retry:
-    :param conn:
     :param obj:
     :param cleanup:
     :return:
@@ -146,8 +145,6 @@ def operation(retry, conn=None, obj=None, cleanup=None):
     finally:
         if cleanup is not None:
             cleanup()
-        if conn is not None:
-            conn.close()
 
 
 def compress_files(file_list):

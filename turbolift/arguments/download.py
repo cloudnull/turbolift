@@ -27,6 +27,16 @@ def download_actions(subparser, source_args, container_args, time_args, regex):
                                           ' target Directory if it does'
                                           ' not exist'))
     download.set_defaults(download=True)
+    download.add_argument('--index-from',
+                          metavar='[NAME]',
+                          default=None,
+                          type=str,
+                          help='file Path to begin the download from')
+    download.add_argument('--max-download',
+                          metavar='[INT]',
+                          default=None,
+                          type=int,
+                          help='Max number of objects to be downloaded')
     download.add_argument('--sync',
                           action='store_true',
                           help=('Looks at local file vs Remote File and if a'
