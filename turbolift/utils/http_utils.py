@@ -156,21 +156,7 @@ def post_request(url, headers, body=None, rpath=None):
         raise AttributeError("Failure to perform Authentication %s ERROR:\n%s"
                              % (exp, traceback.format_exc()))
     else:
-        if resp.status_code >= 300:
-            report.reporter(
-                msg=('HTTP connection exception: Response %s'
-                     ' - Response Code %s\n%s' % (resp.raw,
-                                                  resp.status_code,
-                                                  traceback.format_exc())),
-                lvl='error',
-                log=True
-
-            )
-            raise requests.ConnectionError(
-                'Failed to communicate "%s"' % resp.status_code
-            )
-        else:
-            return resp
+        return resp
 
 
 def head_request(url, headers, rpath):
@@ -190,21 +176,7 @@ def head_request(url, headers, rpath):
             log=True
         )
     else:
-        if resp.status_code != 404 and resp.status_code >= 300:
-            report.reporter(
-                msg=('HTTP connection exception: Response %s'
-                     ' - Response Code %s\n%s' % (resp.raw,
-                                                  resp.status_code,
-                                                  traceback.format_exc())),
-                lvl='error',
-                log=True
-
-            )
-            raise requests.ConnectionError(
-                'Failed to communicate "%s"' % resp.status_code
-            )
-        else:
-            return resp
+        return resp
 
 
 def put_request(url, headers, rpath, body=None):
@@ -220,21 +192,7 @@ def put_request(url, headers, rpath, body=None):
     except Exception as exp:
         LOG.error('Not able to perform Request ERROR: %s', exp)
     else:
-        if resp.status_code >= 300:
-            report.reporter(
-                msg=('HTTP connection exception: Response %s'
-                     ' - Response Code %s\n%s' % (resp.raw,
-                                                  resp.status_code,
-                                                  traceback.format_exc())),
-                lvl='error',
-                log=True
-
-            )
-            raise requests.ConnectionError(
-                'Failed to communicate "%s"' % resp.status_code
-            )
-        else:
-            return resp
+        return resp
 
 
 def delete_request(url, headers, rpath):
@@ -250,21 +208,7 @@ def delete_request(url, headers, rpath):
     except Exception as exp:
         LOG.error('Not able to perform Request ERROR: %s', exp)
     else:
-        if resp.status_code != 404 and resp.status_code >= 300:
-            report.reporter(
-                msg=('HTTP connection exception: Response %s'
-                     ' - Response Code %s\n%s' % (resp.raw,
-                                                  resp.status_code,
-                                                  traceback.format_exc())),
-                lvl='error',
-                log=True
-
-            )
-            raise requests.ConnectionError(
-                'Failed to communicate "%s"' % resp.status_code
-            )
-        else:
-            return resp
+        return resp
 
 
 def get_request(url, headers, rpath, stream=False):
@@ -280,19 +224,4 @@ def get_request(url, headers, rpath, stream=False):
     except Exception as exp:
         LOG.error('Not able to perform Request ERROR: %s', exp)
     else:
-        if resp.status_code >= 300:
-            report.reporter(
-                msg=('HTTP connection exception: Response %s'
-                     ' - Response Code %s\n%s' % (resp.raw,
-                                                  resp.status_code,
-                                                  traceback.format_exc())),
-                lvl='error',
-                log=True
-
-            )
-            raise requests.ConnectionError(
-                'Failed to communicate "%s" reason "%s"' % (resp.status_code,
-                                                            resp.reason)
-            )
-        else:
-            return resp
+        return resp
