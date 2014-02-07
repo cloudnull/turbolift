@@ -96,6 +96,8 @@ class List(object):
         # Count the number of objects returned.
         if objects is False:
             report.reporter(msg='Nothing found.')
+        elif ARGS.get('object_index'):
+            report.reporter(msg=report.print_horiz_table([{'name': last_obj}]))
         elif objects is not None:
             num_files = len(objects)
             if num_files < 1:
@@ -107,9 +109,7 @@ class List(object):
                         if item in obj:
                             obj.pop(item)
                     return_objects.append(obj)
-                report.reporter(
-                    msg=report.print_horiz_table(return_objects)
-                )
+                report.reporter(msg=report.print_horiz_table(return_objects))
                 report.reporter(msg='I found "%d" Item(s).' % num_files)
         else:
             report.reporter(msg='Nothing found.')

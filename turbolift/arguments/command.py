@@ -60,6 +60,11 @@ def command_actions(subparser, source_args, container_args, cdn_args,
                         default=None,
                         type=int,
                         help='Max number of processed on a single pass')
+    lister.add_argument('--object-index',
+                        metavar='[INT]',
+                        help='Return the object from the index.',
+                        type=int,
+                        default=None)
     lister.add_argument('--filter',
                         metavar='[NAME]',
                         help='Filter returned list by name.',

@@ -117,7 +117,7 @@ class Download(object):
             concur=concurrency,
             kwargs=kwargs
         )
-        if ARGS.get('max_download') is not None:
+        if ARGS.get('max_jobs') is not None:
             report.reporter(
                 msg=('This is the last object downloaded. [ %s ]'
                      % last_obj),

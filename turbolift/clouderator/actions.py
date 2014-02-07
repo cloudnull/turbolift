@@ -272,10 +272,12 @@ class CloudActions(object):
                         f_list.append(obj)
 
                 last_obj_in_list = f_list[-1].get('name')
-                if ARGS.get('max_jobs') is not None:
-                    max_jobs = ARGS.get('max_jobs')
+                if ARGS.get('max_jobs', ARGS.get('object_index')) is not None:
+                    max_jobs = ARGS.get('max_jobs', ARGS.get('object_index'))
                     if max_jobs <= len(f_list):
                         return f_list[:max_jobs]
+                    elif l_obj is last_obj_in_list:
+                        return f_list
                     else:
                         l_obj = last_obj_in_list
                         m_path = _marker_type(
