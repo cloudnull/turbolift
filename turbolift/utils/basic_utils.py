@@ -231,9 +231,14 @@ def get_sfile(ufile, source):
     elif source is '.':
         return os.getcwd()
     else:
-        base, sfile = ufile.split(source)
-        return os.sep.join(sfile.split(os.sep)[1:])
-
+        try:
+            base, sfile = ufile.split(source)
+            return os.sep.join(sfile.split(os.sep)[1:])
+        except ValueError:
+            report.reporter(
+                msg='ValueError Error when unpacking - %s %s' % (ufile, source)
+            )
+            return None
 
 def real_full_path(object):
     """Return a string with the real full path of an object.

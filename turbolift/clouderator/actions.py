@@ -44,7 +44,9 @@ class CloudActions(object):
             )
             basic.stupid_hack()
             self.payload['headers']['X-Auth-Token'] = get_new_token()
-            raise turbo.AuthenticationProblem('Failed to Authenticate')
+            raise turbo.AuthenticationProblem(
+                'Failed to Authenticate in thread'
+            )
         elif resp.status_code == 404:
             report.reporter(
                 msg=('Not found STATUS: %s, REASON: %s, MESSAGE: %s'

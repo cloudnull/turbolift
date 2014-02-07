@@ -110,23 +110,26 @@ class Upload(object):
         if objects:
             # Set Basic Data for file delete.
             num_files = len(objects)
-            LOG.info('MESSAGE\t: "%s" Files have been found to be removed from'
-                     ' the REMOTE CONTAINER.', num_files)
+            report.reporter(
+                msg=('MESSAGE: "%d" Files have been found to be removed'
+                     ' from the REMOTE CONTAINER.' % num_files)
+            )
             concurrency = multi.set_concurrency(
                 args=ARGS, file_count=num_files
             )
             # Delete the difference in Files.
-            report.reporter(msg='Performing Remote Delete')
+            report.reporter(msg='Performing REMOTE DELETE')
 
-            objects = [basic.get_sfile(
-                ufile=obj, source=payload['source']
-            ) for obj in objects]
+            del_objects = [
+                basic.get_sfile(ufile=obj, source=payload['source'])
+                for obj in objects if not None
+            ]
             kwargs = {'url': payload['url'],
                       'container': payload['c_name'],
                       'cf_job': getattr(self.go, 'object_deleter')}
             multi.job_processer(
                 num_jobs=num_files,
-                objects=objects,
+                objects=del_objects,
                 job_action=multi.doerator,
                 concur=concurrency,
                 kwargs=kwargs
