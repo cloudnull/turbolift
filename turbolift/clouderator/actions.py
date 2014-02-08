@@ -38,14 +38,19 @@ class CloudActions(object):
             raise turbo.SystemProblem('No response information.')
         elif resp.status_code == 401:
             report.reporter(
-                msg='MESSAGE: Forced Re-authentication is happening.',
-                lvl='error',
+                msg='Turbolift experienced an Authentication issue.',
+                lvl='warn',
                 log=True
             )
-            basic.stupid_hack()
-            self.payload['headers']['X-Auth-Token'] = get_new_token()
+
+            # This was done in this manor due to how manager dicts are proxied
+            # related : http://bugs.python.org/issue6766
+            headers = self.payload['headers']
+            headers['X-Auth-Token'] = get_new_token()
+            self.payload['headers'] = headers
+
             raise turbo.AuthenticationProblem(
-                'Failed to Authenticate in thread'
+                'Attempting to resolve the Authentication issue.'
             )
         elif resp.status_code == 404:
             report.reporter(

@@ -114,6 +114,7 @@ def parse_auth_response(auth_response):
         raise turbo.SystemProblem('No Region Set')
 
     scat = access.pop('serviceCatalog')
+
     cfl = _service_ep(scat, info.__srv_types__)
     cdn = _service_ep(scat, info.__cdn_types__)
 
@@ -121,10 +122,11 @@ def parse_auth_response(auth_response):
         inet = get_surl(region=region, cf_list=cfl, lookup='internalURL')
         enet = get_surl(region=region, cf_list=cfl, lookup='publicURL')
     else:
-        need_tenant = 'Maybe you need to specify "os-tenant"?'
+        need_tenant = ' Maybe you need to specify "os-tenant"?'
         gen_message = ('No Service Endpoints were found for use with Swift.'
                        ' If you have Swift available to you,'
-                       ' Check Your Credentials. ')
+                       ' Check Your Credentials and/or Swift\'s availability'
+                       ' using Token Auth.')
         if ARGS.get('os_tenant') is None:
             gen_message += need_tenant
         raise turbo.SystemProblem(gen_message)

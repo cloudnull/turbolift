@@ -36,6 +36,11 @@ def authenticate():
         auth_resp = http.post_request(
             url=a_url, headers=headers, body=auth_json_req
         )
+        if auth_resp.status_code >= 300:
+            raise SystemExit(
+                'Authentication Failure, %s %s' % (auth_resp.status_code,
+                                                   auth_resp.reason)
+            )
     except ValueError as exp:
         LOG.error('Authentication Failure %s\n%s', exp, traceback.format_exc())
         raise turbo.SystemProblem('JSON Decode Failure. ERROR: %s' % exp)

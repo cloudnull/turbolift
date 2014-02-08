@@ -287,9 +287,15 @@ def understand_args(set_args):
     if set_args.get('os_user') is None:
         raise SystemExit('\nNo Username was provided, use [--os-user]\n')
 
-    if not any([set_args.get('os_apikey'), set_args.get('os_password')]):
+    if not any([set_args.get('os_apikey'),
+                set_args.get('os_password'),
+                set_args.get('os_token')]):
         raise SystemExit('No APIKey or Password was provided,'
                          ' use [--os-apikey] or [--os-password]')
+    else:
+        if set_args.get('os_token') and not set_args.get('os_tenant'):
+            raise SystemExit('Token auth requires setting the tenant.'
+                             ' use [--os-tenant]')
 
     if set_args.get('archive') is True:
         set_args['cc'] = 1

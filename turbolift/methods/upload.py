@@ -56,9 +56,8 @@ class Upload(object):
                 args=ARGS
             )
         )
-
-        LOG.info('MESSAGE\t: "%s" Files have been found.', num_files)
-        LOG.debug('PAYLOAD\t: "%s"', payload)
+        report.reporter(msg='MESSAGE : "%s" Files found.' % num_files)
+        report.reporter(msg='PAYLOAD : "%s"' % payload, prt=False, lvl='debug')
 
         # Set the actions class up
         self.go = actions.CloudActions(payload=payload)
