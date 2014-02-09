@@ -68,7 +68,6 @@ class Upload(object):
         self.go.container_create(**kwargs)
         kwargs['source'] = payload['source']
         kwargs['cf_job'] = getattr(self.go, 'object_putter')
-
         multi.job_processer(
             num_jobs=num_files,
             objects=f_indexed,
@@ -104,8 +103,8 @@ class Upload(object):
                      for obj in objects[0]]
 
         # From the remote system see if we have differences in the local system
-        objects = multi.return_diff().difference(target=f_indexed,
-                                                 source=obj_names)
+        objects = multi.ReturnDiff().difference(target=f_indexed,
+                                                source=obj_names)
         if objects:
             # Set Basic Data for file delete.
             num_files = len(objects)
