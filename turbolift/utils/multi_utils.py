@@ -137,16 +137,16 @@ def worker_proc(job_action, concurrency, queue, kwargs, opt):
     )
     join_jobs = []
     for _job in jobs:
-        basic.stupid_hack(wait=.01)
         join_jobs.append(_job)
-        _job.Daemon = True
+        basic.stupid_hack(wait=.01)
+        _job.daemon = True
         _job.start()
 
     for job in join_jobs:
         job.join()
 
 
-class return_diff(object):
+class ReturnDiff(object):
     def __init__(self):
         """Compare the target list to the source list and return the diff."""
 
@@ -295,7 +295,7 @@ def spinner(work_q=None):
     :param work_q:
     :return:
     """
-
+    itd = None
     if any([ARGS.get('verbose') is True, ARGS.get('quiet') is True]):
         yield
     else:
@@ -304,4 +304,5 @@ def spinner(work_q=None):
             itd = set_itd.indicator_thread()
             yield
         finally:
-            itd.terminate()
+            if itd is not None:
+                itd.terminate()
