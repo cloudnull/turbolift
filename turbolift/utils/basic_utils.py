@@ -240,6 +240,7 @@ def get_sfile(ufile, source):
             )
             return None
 
+
 def real_full_path(object):
     """Return a string with the real full path of an object.
 
