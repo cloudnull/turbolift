@@ -22,7 +22,7 @@ from turbolift import LOG
 
 
 # Enable Debug Mode if its set
-if ARGS.get('debug'):
+if ARGS is not None and ARGS.get('debug'):
     httplib.HTTPConnection.debuglevel = 1
 
 
