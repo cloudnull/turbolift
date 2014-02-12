@@ -25,7 +25,7 @@ class Logging(object):
     def logger_setup(self):
         """Setup logging for your application."""
 
-        logger = logging.getLogger("%s" % (info.__appname__.upper()))
+        logger = logging.getLogger(str(info.__appname__.upper()))
 
         avail_level = {'DEBUG': logging.DEBUG,
                        'INFO': logging.INFO,
@@ -71,20 +71,19 @@ def return_logfile(filename, log_location):
     if os.path.isfile(filename):
         return filename
     else:
-        logname = ('%s' % filename)
+        logname = str(filename)
         logfile = os.path.join(log_location, logname)
         return logfile
 
 
-def load_in(log_location, log_level='info'):
+def load_in(log_location, log_file, log_level='info',):
     """Load in the log handler.
 
     If output is not None, systen will use the default
     Log facility.
     """
 
-    _file = '%s.log' % info.__appname__
-    _log_file = return_logfile(filename=_file, log_location=log_location)
+    _log_file = return_logfile(filename=log_file, log_location=log_location)
     log = Logging(log_level=log_level, log_file=_log_file)
     output = log.logger_setup()
     return output

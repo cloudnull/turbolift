@@ -38,9 +38,13 @@ class CloudActions(object):
             raise turbo.SystemProblem('No response information.')
         elif resp.status_code == 401:
             report.reporter(
-                msg='Turbolift experienced an Authentication issue.',
+                msg=('Turbolift experienced an Authentication issue.'
+                     ' STATUS %s REASON %s REQUEST %s' % (resp.status_code,
+                                                          resp.reason,
+                                                          resp.request)),
                 lvl='warn',
-                log=True
+                log=True,
+                prt=False
             )
 
             # This was done in this manor due to how manager dicts are proxied

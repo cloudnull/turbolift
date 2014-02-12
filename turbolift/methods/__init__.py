@@ -123,7 +123,7 @@ def operation(retry, obj=None, cleanup=None):
         )
         retry()
     except turbo.AuthenticationProblem as exp:
-        report.reporter(exp, lvl='warn')
+        report.reporter(exp, lvl='warn', prt=False)
         retry()
     except KeyboardInterrupt:
         if cleanup is not None:
