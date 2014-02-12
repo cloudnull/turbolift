@@ -147,7 +147,7 @@ class CloudActions(object):
             local_f = basic.collision_rename(file_name=local_f)
 
             # Open our source file and write it
-            with open(local_f, 'ab') as f_name:
+            with open(local_f, 'wb') as f_name:
                 for chunk in resp.iter_content(chunk_size=2048):
                     if chunk:
                         f_name.write(chunk)
