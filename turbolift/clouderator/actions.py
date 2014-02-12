@@ -39,9 +39,8 @@ class CloudActions(object):
         elif resp.status_code == 401:
             report.reporter(
                 msg=('Turbolift experienced an Authentication issue.'
-                     ' STATUS %s REASON %s REQUEST %s' % (resp.status_code,
-                                                          resp.reason,
-                                                          resp.request)),
+                     ' STATUS %s REASON %s REQUEST %s. Turbolift will retry'
+                     % (resp.status_code, resp.reason, resp.request)),
                 lvl='warn',
                 log=True,
                 prt=False
