@@ -100,7 +100,6 @@ The application has been tested on :
 
 
 Known Limitations:
-
   1. Turbolift does not use SLO / DLO on files larger than 5GB in size. If you have a file that you would like uploaded that is larger than 5GB in size you will need to chunk the file prior to uploading at this time.  Please refer to the `SLO / DLO docs`_ for more information on Large Object storage.
 
 
