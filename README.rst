@@ -99,6 +99,11 @@ The application has been tested on :
   * CentOS[RHEL] 6
 
 
+Known Limitations:
+
+  1. Turbolift does not use SLO / DLO on files larger than 5GB in size. If you have a file that you would like uploaded that is larger than 5GB in size you will need to chunk the file prior to uploading at this time.  Please refer to the `SLO / DLO docs`_ for more information on Large Object storage.
+
+
 For information on Benchmarks from my own testing, please have a look here at the `benchmarks`_ file.
 
 
@@ -112,3 +117,4 @@ Turbolift is free software: you can redistribute it and/or modify it under the t
 .. _turboliftrc_example: https://github.com/cloudnull/turbolift/wiki/Turbolift.rc-Example
 .. _turbolift_example_script: https://github.com/cloudnull/turbolift/wiki/Example-Script
 .. _Turbolift Wiki: https://github.com/cloudnull/turbolift/wiki
+.. _SLO / DLO docs: http://docs.openstack.org/developer/swift/overview_large_objects.html
