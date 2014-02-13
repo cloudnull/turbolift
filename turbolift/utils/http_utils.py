@@ -73,6 +73,14 @@ def prep_payload(auth, container, source, args):
     :return (dict, dict): payload and headers
     """
 
+    if container is not None and '/' in container:
+        raise SystemExit(
+            report.reporter(
+                msg='Containers may not have a "/" in them.',
+                lvl='error'
+            )
+        )
+
     # Unpack the values from Authentication
     token, tenant, user, inet, enet, cnet, aurl, acfep = auth
 
