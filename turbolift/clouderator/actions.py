@@ -534,9 +534,14 @@ class CloudActions(object):
 
             # Get the path ready for action
             sfile = basic.get_sfile(ufile=u_file, source=source)
+
+            if ARGS.get('dir'):
+                container = '%s/%s' % (container, ARGS['dir'].strip('/'))
+
             rpath = http.quoter(url=url.path,
                                 cont=container,
                                 ufile=sfile)
+
             fheaders = self.payload['headers']
             with meth.operation(retry, obj='%s %s' % (fheaders, u_file)):
                 self._putter(url=url,

@@ -45,3 +45,10 @@ def upload_actions(subparser, source_args, container_args, time_args, regex):
                         help=('Save the UID, GID, and MODE, of a file as meta'
                               ' data on the object.'),
                         default=False)
+    upload.add_argument('-d',
+                        '--dir',
+                        metavar='[NAME]',
+                        default=None,
+                        type=str,
+                        help=('Name of a directory path that you want'
+                              ' to Upload to.'))
