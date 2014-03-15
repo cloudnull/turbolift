@@ -13,7 +13,7 @@ __contact__ = "Kevin Carter"
 __email__ = "kevin@cloudnull.com"
 __copyright__ = "2014 All Rights Reserved"
 __license__ = "GPLv3+"
-__date__ = "2013-09-14"
+__date__ = "2014-03-15"
 __version__ = "2.0.5"
 __status__ = "Production"
 __appname__ = "turbolift"
@@ -30,7 +30,7 @@ __cdn_types__ = ['cloudFilesCDN', 'CDN']
 __VN__ = '%s' % __version__
 
 # The Version and Information for the application
-VINFO = ('GNU Turbolift %(version)s, '
+VINFO = ('Turbolift %(version)s, '
          'developed by %(author)s, '
          'Licenced Under %(license)s, '
          'FYI : %(copyright)s' % {'version': __version__,
