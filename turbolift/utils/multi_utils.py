@@ -227,7 +227,6 @@ def job_processer(num_jobs, objects, job_action, concur, kwargs=None,
         work = [
             objects.pop(objects.index(obj)) for obj in objects[0:batch_size]
         ]
-        print objects
         work_q = basic_queue(work)
         with spinner(work_q=work_q):
             worker_proc(
