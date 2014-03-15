@@ -104,7 +104,10 @@ def get_from_q(queue):
     except Queue.Empty:
         return None
     else:
-        return wfile.strip()
+        if isinstance(wfile, str):
+            return wfile.strip()
+        else:
+            return wfile
 
 
 def worker_proc(job_action, concurrency, queue, kwargs, opt):
