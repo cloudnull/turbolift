@@ -151,14 +151,13 @@ def batcher(num_files):
         log=True,
         prt=False
     )
-    if num_files > batch_size:
-        ops = num_files / batch_size + 1
-        report.reporter(
-            msg='This will take "%s" operations to complete.' % ops,
-            lvl='warn',
-            log=True,
-            prt=True
-        )
+    ops = num_files / batch_size + 1
+    report.reporter(
+        msg='This will take "%s" operations to complete.' % ops,
+        lvl='warn',
+        log=True,
+        prt=True
+    )
     return batch_size
 
 
