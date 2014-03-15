@@ -221,16 +221,22 @@ def job_processer(num_jobs, objects, job_action, concur, kwargs=None,
 
     count = 0
     batch_size = basic.batcher(num_files=num_jobs)
-    for work in range(0, num_jobs, batch_size):
+    while objects:
         count += 1
         report.reporter(msg='Job Count %s' % count)
-        work_q = basic_queue(objects[work:work + batch_size])
+        work = [
+            objects.pop(objects.index(obj)) for obj in objects[0:batch_size]
+        ]
+        print objects
+        work_q = basic_queue(work)
         with spinner(work_q=work_q):
-            worker_proc(job_action=job_action,
-                        concurrency=concur,
-                        queue=work_q,
-                        opt=opt,
-                        kwargs=kwargs)
+            worker_proc(
+                job_action=job_action,
+                concurrency=concur,
+                queue=work_q,
+                opt=opt,
+                kwargs=kwargs
+            )
             basic.stupid_hack(wait=.2)
         work_q.close()
 
