@@ -221,7 +221,7 @@ def job_processer(num_jobs, objects, job_action, concur, kwargs=None,
 
     count = 0
     batch_size = basic.batcher(num_files=num_jobs)
-    while objects :
+    while objects:
         count += 1
         report.reporter(msg='Job Count %s' % count)
         work = [
