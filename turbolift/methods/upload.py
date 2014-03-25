@@ -25,6 +25,20 @@ class Upload(object):
         self.go = None
         self.action = None
 
+    @staticmethod
+    def _index_local_files():
+        """Index Local Files for Upload."""
+        with multi.spinner():
+            file_index = methods.get_local_files()
+
+        if ARGS.get('pattern_match'):
+            return basic.match_filter(
+                idx_list=file_index,
+                pattern=ARGS['pattern_match']
+            )
+        else:
+            return file_index
+
     def start(self):
         """This is the upload method.
 
@@ -32,15 +46,7 @@ class Upload(object):
         specified container.
         """
 
-        # Index Local Files for Upload
-        with multi.spinner():
-            f_indexed = methods.get_local_files()
-
-        if ARGS.get('pattern_match'):
-            f_indexed = basic.match_filter(
-                idx_list=f_indexed, pattern=ARGS['pattern_match']
-            )
-
+        f_indexed = self._index_local_files()
         num_files = len(f_indexed)
 
         # Get The rate of concurrency
@@ -67,6 +73,7 @@ class Upload(object):
         self.go.container_create(**kwargs)
         kwargs['source'] = payload['source']
         kwargs['cf_job'] = getattr(self.go, 'object_putter')
+
         multi.job_processer(
             num_jobs=num_files,
             objects=f_indexed,
@@ -76,10 +83,9 @@ class Upload(object):
         )
 
         if ARGS.get('delete_remote') is True:
-            self.remote_delete(payload=payload,
-                               f_indexed=f_indexed)
+            self.remote_delete(payload=payload)
 
-    def remote_delete(self, payload, f_indexed):
+    def remote_delete(self, payload):
         """If Remote Delete was True run.
 
         NOTE: Remote delete will delete ALL Objects in a remote container
@@ -90,20 +96,25 @@ class Upload(object):
         on the index information found in LOCAL FILE SYSTEM on the LAST
         command run.
 
-        :return:
+        :param payload: ``dict``
         """
 
         report.reporter(msg='Getting file list for REMOTE DELETE')
         objects = self.go.object_lister(
             url=payload['url'], container=payload['c_name']
         )
+
         source = payload['source']
-        obj_names = [basic.jpath(root=source, inode=obj.get('name'))
-                     for obj in objects[0]]
+        obj_names = [
+            basic.jpath(root=source, inode=obj.get('name'))
+            for obj in objects[0]
+        ]
 
         # From the remote system see if we have differences in the local system
-        objects = multi.ReturnDiff().difference(target=f_indexed,
-                                                source=obj_names)
+        f_indexed = self._index_local_files()
+        diff_check = multi.ReturnDiff()
+        objects = diff_check.difference(target=f_indexed, source=obj_names)
+
         if objects:
             # Set Basic Data for file delete.
             num_files = len(objects)
@@ -119,11 +130,15 @@ class Upload(object):
 
             del_objects = [
                 basic.get_sfile(ufile=obj, source=payload['source'])
-                for obj in objects if not None
+                for obj in objects if obj is not None
             ]
-            kwargs = {'url': payload['url'],
-                      'container': payload['c_name'],
-                      'cf_job': getattr(self.go, 'object_deleter')}
+
+            kwargs = {
+                'url': payload['url'],
+                'container': payload['c_name'],
+                'cf_job': getattr(self.go, 'object_deleter')
+            }
+
             multi.job_processer(
                 num_jobs=num_files,
                 objects=del_objects,
