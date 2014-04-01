@@ -8,6 +8,11 @@
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
 
+BASE_HEADERS = [
+    "Connection=Keep-alive",
+    "User-Agent=turbolift"
+]
+
 
 def header_args(parser):
     """Add in Optional Header Arguments."""
@@ -21,7 +26,7 @@ def header_args(parser):
                                         ' Here are the default headers')
     headers.add_argument('-BH', '--base-headers',
                          metavar='[K=V]',
-                         default=["Connection=Keep-alive"],
+                         default=BASE_HEADERS,
                          action='append',
                          help=('These are the basic headers used for'
                                ' all Turbolift operations. Anything'
