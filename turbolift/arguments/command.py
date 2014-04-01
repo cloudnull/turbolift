@@ -73,7 +73,9 @@ def command_actions(subparser, source_args, container_args, cdn_args,
     updater = subparser.add_parser(
         'update',
         parents=[time_args, regex],
-        help='Update Objects in a container.'
+        help='Update Object headers from within a container.  This will'
+             ' overwrite existing object headers with new ones as specified'
+             ' on the command line.  See optional argment, "-OH"'
     )
     updater.set_defaults(update=True)
     update_group = updater.add_mutually_exclusive_group(required=True)
