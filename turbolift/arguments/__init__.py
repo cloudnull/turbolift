@@ -128,6 +128,12 @@ def shared_args():
 
     # Time Arguments
     time_args = argparse.ArgumentParser(add_help=False)
+    time_args.add_argument('--timeout',
+                           metavar='',
+                           type=float,
+                           default=None,
+                           help='Timeout for any operation,'
+                                ' default: %(default)s')
     time_args.add_argument('--time-offset',
                            choices=['weeks', 'days', 'hours'],
                            metavar='{weeks,days,hours}',
