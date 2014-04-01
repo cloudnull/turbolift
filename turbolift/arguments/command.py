@@ -44,7 +44,6 @@ def command_actions(subparser, source_args, container_args, cdn_args,
         help='List Objects in a container.'
     )
     lister.set_defaults(list=True)
-
     list_group = lister.add_mutually_exclusive_group(required=True)
     list_group.add_argument('-c',
                             '--container',
@@ -69,6 +68,34 @@ def command_actions(subparser, source_args, container_args, cdn_args,
                         metavar='[NAME]',
                         help='Filter returned list by name.',
                         default=None)
+
+    # Provides for the list Function.
+    updater = subparser.add_parser(
+        'update',
+        parents=[time_args, regex],
+        help='Update Objects in a container.'
+    )
+    updater.set_defaults(update=True)
+    update_group = updater.add_mutually_exclusive_group(required=True)
+    update_group.add_argument('-c',
+                              '--container',
+                              metavar='[CONTAINER]',
+                              help='Target Container.',
+                              default=None)
+    updater.add_argument('--max-jobs',
+                         metavar='[INT]',
+                         default=None,
+                         type=int,
+                         help='Max number of processed on a single pass')
+    updater.add_argument('-o',
+                         '--object',
+                         metavar='[NAME]',
+                         help='Target Object.',
+                         default=None)
+    updater.add_argument('--filter',
+                         metavar='[NAME]',
+                         help='Filter returned list by name.',
+                         default=None)
 
     # Provides for the CDN Toggle Function.
     cdn_command = subparser.add_parser(
