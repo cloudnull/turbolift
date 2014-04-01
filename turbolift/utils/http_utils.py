@@ -158,7 +158,8 @@ def post_request(url, headers, body=None, rpath=None):
         else:
             _url = urlparse.urlunparse(url)
 
-        resp = requests.post(_url, data=body, headers=headers)
+        kwargs = {'timeout': ARGS.get('timeout', 60)}
+        resp = requests.post(_url, data=body, headers=headers, **kwargs)
     except Exception as exp:
         LOG.error('Not able to perform Request ERROR: %s', exp)
         raise AttributeError("Failure to perform Authentication %s ERROR:\n%s"
@@ -170,7 +171,9 @@ def post_request(url, headers, body=None, rpath=None):
 def head_request(url, headers, rpath):
     try:
         _url = urlparse.urljoin(urlparse.urlunparse(url), rpath)
-        resp = requests.head(_url, headers=headers)
+
+        kwargs = {'timeout': ARGS.get('timeout')}
+        resp = requests.head(_url, headers=headers, **kwargs)
         report.reporter(
             msg='INFO: %s %s %s' % (resp.status_code,
                                     resp.reason,
@@ -190,7 +193,9 @@ def head_request(url, headers, rpath):
 def put_request(url, headers, rpath, body=None):
     try:
         _url = urlparse.urljoin(urlparse.urlunparse(url), rpath)
-        resp = requests.put(_url, data=body, headers=headers)
+
+        kwargs = {'timeout': ARGS.get('timeout')}
+        resp = requests.put(_url, data=body, headers=headers, **kwargs)
         report.reporter(
             msg='INFO: %s %s %s' % (resp.status_code,
                                     resp.reason,
@@ -206,7 +211,9 @@ def put_request(url, headers, rpath, body=None):
 def delete_request(url, headers, rpath):
     try:
         _url = urlparse.urljoin(urlparse.urlunparse(url), rpath)
-        resp = requests.delete(_url, headers=headers)
+
+        kwargs = {'timeout': ARGS.get('timeout')}
+        resp = requests.delete(_url, headers=headers, **kwargs)
         report.reporter(
             msg='INFO: %s %s %s' % (resp.status_code,
                                     resp.reason,
@@ -222,7 +229,9 @@ def delete_request(url, headers, rpath):
 def get_request(url, headers, rpath, stream=False):
     try:
         _url = urlparse.urljoin(urlparse.urlunparse(url), rpath)
-        resp = requests.get(_url, headers=headers, stream=stream)
+
+        kwargs = {'timeout': ARGS.get('timeout')}
+        resp = requests.get(_url, headers=headers, stream=stream, **kwargs)
         report.reporter(
             msg='INFO: %s %s %s' % (resp.status_code,
                                     resp.reason,
