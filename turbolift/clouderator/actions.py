@@ -222,13 +222,6 @@ class CloudActions(object):
                     )
                     self.resp_exception(resp=resp)
 
-                report.reporter(
-                    msg=('MESSAGE %s %s %s'
-                         % (resp.status_code, resp.reason, resp.request)),
-                    prt=False,
-                    lvl='debug'
-                )
-
     def _list_getter(self, url, filepath, fheaders, last_obj=None):
         """Get a list of all objects in a container.
 
@@ -511,6 +504,36 @@ class CloudActions(object):
                                          fheaders=fheaders,
                                          last_obj=last_obj)
 
+    def object_updater(self, url, container, u_file):
+        """Update an existing object in a swift container.
+
+        This method will place new headers on an existing object.
+
+        :param url:
+        :param container:
+        :param u_file:
+        """
+
+        for retry in basic.retryloop(attempts=ARGS.get('error_retry'),
+                                     delay=2,
+                                     obj=u_file):
+
+            # HTML Encode the path for the file
+            rpath = http.quoter(url=url.path,
+                                cont=container,
+                                ufile=u_file)
+
+            fheaders = self.payload['headers']
+            if ARGS.get('object_headers') is not None:
+                fheaders.update(ARGS.get('object_headers'))
+            if ARGS.get('save_perms') is not None:
+                fheaders.update(basic.stat_file(local_file=u_file))
+
+            with meth.operation(retry, obj='%s %s' % (fheaders, u_file)):
+                self._header_poster(url=url,
+                                    rpath=rpath,
+                                    fheaders=fheaders)
+
     def object_putter(self, url, container, source, u_file):
         """This is the Sync method which uploads files to the swift repository
 
@@ -543,24 +566,17 @@ class CloudActions(object):
                                 ufile=sfile)
 
             fheaders = self.payload['headers']
+
+            if ARGS.get('object_headers') is not None:
+                fheaders.update(ARGS.get('object_headers'))
+            if ARGS.get('save_perms') is not None:
+                fheaders.update(basic.stat_file(local_file=u_file))
+
             with meth.operation(retry, obj='%s %s' % (fheaders, u_file)):
                 self._putter(url=url,
                              fpath=u_file,
                              rpath=rpath,
                              fheaders=fheaders)
-
-                # Put headers on the object if custom headers, or save perms.
-                if any([ARGS.get('object_headers') is not None,
-                        ARGS.get('save_perms') is not None]):
-
-                    if ARGS.get('object_headers') is not None:
-                        fheaders.update(ARGS.get('object_headers'))
-                    if ARGS.get('save_perms') is not None:
-                        fheaders.update(basic.stat_file(local_file=u_file))
-
-                    self._header_poster(url=url,
-                                        rpath=rpath,
-                                        fheaders=fheaders)
 
     def object_deleter(self, url, container, u_file):
         """Deletes an objects in a container.
