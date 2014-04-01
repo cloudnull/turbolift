@@ -67,8 +67,7 @@ class Upload(object):
         # Set the actions class up
         self.go = actions.CloudActions(payload=payload)
 
-        kwargs = {'url': payload['url'],
-                  'container': payload['c_name']}
+        kwargs = {'url': payload['url'], 'container': payload['c_name']}
         # get that the container exists if not create it.
         self.go.container_create(**kwargs)
         kwargs['source'] = payload['source']
