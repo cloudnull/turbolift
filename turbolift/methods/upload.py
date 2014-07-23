@@ -7,6 +7,8 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
+import json
+
 import turbolift.utils.basic_utils as basic
 import turbolift.utils.http_utils as http
 import turbolift.utils.multi_utils as multi
@@ -62,7 +64,11 @@ class Upload(object):
             )
         )
         report.reporter(msg='MESSAGE : "%s" Files found.' % num_files)
-        report.reporter(msg='PAYLOAD : "%s"' % payload, prt=False, lvl='debug')
+        report.reporter(
+            msg='PAYLOAD : "%s"' % json.dumps(payload, indent=2),
+            prt=False,
+            lvl='debug'
+        )
 
         # Set the actions class up
         self.go = actions.CloudActions(payload=payload)

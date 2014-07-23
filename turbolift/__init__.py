@@ -10,7 +10,6 @@
 import os
 import signal
 
-LOG = None
 ARGS = None
 
 
@@ -84,13 +83,11 @@ def emergency_exit(msg):
     raise SystemExit(msg)
 
 
-def load_constants(log_method, args):
+def load_constants(args):
     """Setup In Memory Persistent Logging.
 
-    :param log_method: Set method for logging
     :param args: Arguments that have been parsed for in application use.
     """
 
-    global LOG, ARGS
-    LOG = log_method
+    global ARGS
     ARGS = args

@@ -14,7 +14,10 @@ import turbolift.utils.http_utils as http
 
 from turbolift import ARGS
 from turbolift import info
-from turbolift import LOG
+from turbolift.logger import logger
+
+
+LOG = logger.getLogger('turbolift')
 
 
 def parse_reqtype():
@@ -158,8 +161,11 @@ def parse_region():
             return ARGS.get('os_auth_url', auth_url % region)
         else:
             raise turbo.SystemProblem('No Known HP Region Was Specified')
-    elif ARGS.get('os_auth_url'):
-        return ARGS.get('os_auth_url')
+    elif 'os_auth_url' in ARGS:
+        auth_url = ARGS.get('os_auth_url')
+        if not auth_url.endswith('/tokens'):
+            auth_url = '%s/tokens' % auth_url
+        return auth_url
     else:
         raise turbo.SystemProblem(
             'You Are required to specify an Auth URL, Region or Plugin'

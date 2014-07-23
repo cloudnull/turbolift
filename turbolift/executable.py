@@ -8,6 +8,7 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
+import json
 import sys
 
 import turbolift as turbo
@@ -24,11 +25,18 @@ def run_turbolift():
         raise SystemExit('Give me something to do and I will do it')
     else:
         args = arguments.get_args()
-        log = logger.load_in(log_level=args.get('log_level', 'info'),
-                             log_file=args.get('log_file'),
-                             log_location=args.get('log_location', '/var/log'))
-        log.debug('set arguments %s', args)
-        load_constants(log_method=log, args=args)
+        log = logger.LogSetup(
+            debug_logging=args.get('debug', False),
+            log_dir=args.get('log_location', '/var/log'),
+            log_name=args.get('log_file')
+        ).default_logger(enable_stream=args.get('log_streaming'))
+
+        log.debug('set arguments [ %s ]', json.dumps(args, indent=2))
+
+        import turbolift.utils.basic_utils as basic
+        args = basic.dict_pop_none(dictionary=args)
+        load_constants(args=args)
+
         try:
             from turbolift import worker
             worker.start_work()

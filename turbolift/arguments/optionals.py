@@ -57,6 +57,10 @@ def optional_args(parser):
                            default=os.getenv('TURBO_LOGFILE', 'turbolift.log'),
                            help=('Change the log file'
                                  ' Log File is %(default)s.'))
+    optionals.add_argument('--log-streaming',
+                           action='store_true',
+                           help='Enable log streaming to stdout',
+                           default=os.getenv('TURBO_STREAM', None))
     optionals.add_argument('--quiet',
                            action='store_true',
                            help='Make %(prog)s Shut the hell up',

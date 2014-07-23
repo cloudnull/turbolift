@@ -18,7 +18,10 @@ import turbolift.utils.basic_utils as basic
 import turbolift.utils.report_utils as report
 
 from turbolift import ARGS
-from turbolift import LOG
+from turbolift.logger import logger
+
+
+LOG = logger.getLogger('turbolift')
 
 
 # Enable Debug Mode if its set

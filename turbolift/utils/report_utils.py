@@ -11,6 +11,11 @@ import prettytable
 
 import turbolift as turbo
 
+from turbolift.logger import logger
+
+
+LOG = logger.getLogger('turbolift')
+
 
 def print_horiz_table(data):
     """Print a horizontal pretty table from data."""
@@ -35,7 +40,7 @@ def print_virt_table(data):
     return table
 
 
-def reporter(msg, prt=True, lvl='info', log=False, color=False):
+def reporter(msg, prt=True, lvl='info', log=True, color=False):
     """Print Messages and Log it.
 
     :param msg:
@@ -56,10 +61,12 @@ def reporter(msg, prt=True, lvl='info', log=False, color=False):
                 print(msg)
 
     # Log message
-    if any([turbo.ARGS.get('verbose') is True,
-            lvl in ['debug', 'warn', 'error'],
-            log is True]):
-        logger = getattr(turbo.LOG, lvl)
+    log_checks = [
+        turbo.ARGS.get('verbose') is True,
+        lvl in ['debug', 'warn', 'error']
+    ]
+    if any(log_checks) and log is True:
+        logger = getattr(LOG, lvl)
         if turbo.ARGS.get('colorized'):
             logger(bcolors(msg, lvl))
         else:

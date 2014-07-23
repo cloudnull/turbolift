@@ -11,8 +11,6 @@ import argparse
 import ConfigParser
 import os
 
-import turbolift.utils.basic_utils as basic
-
 from turbolift.arguments import archive
 from turbolift.arguments import authgroup
 from turbolift.arguments import clone
@@ -270,9 +268,7 @@ def understand_args(set_args):
         """return base Headers."""
 
         for htp in ['object_headers', 'container_headers', 'base_headers']:
-            set_args[htp] = basic.keys2dict(
-                chl=set_args.get(htp)
-            )
+            set_args[htp] = dict([_kv.split('=') for _kv in set_args.get(htp)])
 
     sysconfig = set_args.get('system_config')
 
@@ -322,4 +318,4 @@ def understand_args(set_args):
         print('DEFAULT ARGUMENTS : %s\n' % set_args)
 
     # Parse and return the arguments
-    return basic.dict_pop_none(dictionary=set_args)
+    return set_args

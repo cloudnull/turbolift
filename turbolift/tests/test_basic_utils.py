@@ -60,16 +60,6 @@ class TestAuthenticate(unittest.TestCase):
                 'None Value not removed from dictionary'
             )
 
-    def test_keys2dict(self):
-        list_of_strings = ['test=value']
-        return_dict = basic_utils.keys2dict(chl=list_of_strings)
-        self.assertIsInstance(return_dict, dict)
-
-    def test_keys2dict_with_none_value(self):
-        list_of_strings = None
-        return_dict = basic_utils.keys2dict(chl=list_of_strings)
-        self.assertEqual(return_dict, None)
-
     def test_jpath(self):
         return_path = basic_utils.jpath(root='/test', inode='path/of/test')
         self.assertEqual(return_path, '/test/path/of/test')

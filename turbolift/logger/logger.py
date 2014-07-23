@@ -8,82 +8,142 @@
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
 import logging
-import logging.handlers as lhs
+from logging import handlers
 import os
 
-import turbolift as tbl
-from turbolift import info
+
+"""Example Usage:
+>>> from cloudlib import logger
+>>> log = logger.LogSetup()
+>>> log.default_logger(name='test_logger')
+
+>>> # The following can then be placed in any module that you like
+>>> # Just use the name of the logger you created
+>>> from cloudlib import logger
+>>> LOG = logger.getLogger(name='test_logger')
+>>> LOG.info('This is a test message')
+"""
 
 
-class Logging(object):
-    """Setup Application Logging."""
+def getLogger(name):
+    """Return a logger from a given name.
 
-    def __init__(self, log_level, log_file=None):
-        self.log_level = log_level
-        self.log_file = log_file
+    If the name does not have a log handler, this will create one for it based
+    on the module name which will log everything to a log file in a location
+    the executing user will have access to.
 
-    def logger_setup(self):
-        """Setup logging for your application."""
-
-        logger = logging.getLogger(str(info.__appname__.upper()))
-
-        avail_level = {'DEBUG': logging.DEBUG,
-                       'INFO': logging.INFO,
-                       'CRITICAL': logging.CRITICAL,
-                       'WARN': logging.WARN,
-                       'ERROR': logging.ERROR}
-
-        _log_level = self.log_level.upper()
-        if _log_level in avail_level:
-            lvl = avail_level[_log_level]
-            logger.setLevel(lvl)
-            formatter = logging.Formatter(
-                "%(asctime)s - %(name)s:%(levelname)s ==> %(message)s"
-            )
-        else:
-            raise tbl.NoLogLevelSet(
-                'I died because you did not set a known log level'
-            )
-
-        if self.log_file:
-            handler = lhs.RotatingFileHandler(self.log_file,
-                                              maxBytes=150000000,
-                                              backupCount=5)
-        else:
-            handler = logging.StreamHandler()
-
-        handler.setLevel(lvl)
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
-        return logger
-
-
-def return_logfile(filename, log_location):
-    """Return a path for logging file.
-
-    :param filename: name of the file for log storage.
-
-    IF "/var/log/" does not exist, or you dont have write permissions to
-    "/var/log/" the log file will be in your working directory
-    Check for ROOT user if not log to working directory
+    :param name: ``str``
+    :return: ``object``
     """
-
-    if os.path.isfile(filename):
-        return filename
+    log = logging.getLogger(name=name)
+    for handler in log.handlers:
+        if name == handler.name:
+            return log
     else:
-        logname = str(filename)
-        logfile = os.path.join(log_location, logname)
-        return logfile
+        return LogSetup().default_logger(name.split('.')[0])
 
 
-def load_in(log_location, log_file, log_level='info',):
-    """Load in the log handler.
+class LogSetup(object):
 
-    If output is not None, systen will use the default
-    Log facility.
-    """
+    def __init__(self, max_size=500, max_backup=5, debug_logging=False,
+                 log_dir='/var/log', log_name=__name__):
+        """Setup Logging.
 
-    _log_file = return_logfile(filename=log_file, log_location=log_location)
-    log = Logging(log_level=log_level, log_file=_log_file)
-    output = log.logger_setup()
-    return output
+        :param max_size: ``int``
+        :param max_backup: ``int``
+        :param debug_logging: ``bol``
+        :param log_dir: ``str``
+        :param log_name: ``str``
+        """
+        self.max_size = (max_size * 1024 * 1024)
+        self.max_backup = max_backup
+        self.debug_logging = debug_logging
+        self.format = None
+        self.name = log_name
+        self.log_dir = log_dir
+
+    def default_logger(self, enable_stream=False, enable_file=True):
+        """Default Logger.
+
+        This is set to use a rotating File handler and a stream handler.
+        If you use this logger all logged output that is INFO and above will
+        be logged, unless debug_logging is set then everything is logged.
+        The logger will send the same data to a stdout as it does to the
+        specified log file.
+
+        You can disable the default handlers by setting either `enable_file` or
+        `enable_stream` to `False`
+
+        :param enable_stream: ``bol``
+        :param enable_file: ``bol``
+        :return: ``object``
+        """
+        if self.format is None:
+            self.format = logging.Formatter(
+                '%(asctime)s - %(module)s:%(levelname)s => %(message)s'
+            )
+
+        log = logging.getLogger('turbolift')
+
+        if enable_file is True:
+            log_file_name = self.name
+            if not log_file_name.endswith('log'):
+                log_file_name = '%s.log' % log_file_name
+
+            log_file = self.return_logfile(
+                filename=log_file_name, log_dir=self.log_dir
+            )
+            file_handler = handlers.RotatingFileHandler(
+                filename=log_file,
+                maxBytes=self.max_size,
+                backupCount=self.max_backup
+            )
+            self.set_handler(log, handler=file_handler)
+
+        if enable_stream is True or self.debug_logging is True:
+            stream_handler = logging.StreamHandler()
+            self.set_handler(log, handler=stream_handler)
+
+        log.debug('Logger [ %s ] loaded', self.name)
+        return getLogger('turbolift')
+
+    def set_handler(self, log, handler):
+        """Set the logging level as well as the handlers.
+
+        :param log: ``object``
+        :param handler: ``object``
+        """
+
+        if self.debug_logging is True:
+            log.setLevel(logging.DEBUG)
+            handler.setLevel(logging.DEBUG)
+        else:
+            log.setLevel(logging.INFO)
+            handler.setLevel(logging.INFO)
+
+        handler.name = 'turbolift'
+        handler.setFormatter(self.format)
+        log.addHandler(handler)
+
+    @staticmethod
+    def return_logfile(filename, log_dir):
+        """Return a path for logging file.
+
+        If ``log_dir`` exists and the userID is 0 the log file will be written
+        to the provided log directory. If the UserID is not 0 or log_dir does
+        not exist the log file will be written to the users home folder.
+
+        :param filename: ``str``
+        :param log_dir: ``str``
+        :return: ``str``
+        """
+        user = os.getuid()
+        home = os.getenv('HOME')
+        default_log_location = os.path.join(home, filename)
+        if not user == 0:
+            return default_log_location
+        else:
+            if os.path.isdir(log_dir):
+                return os.path.join(log_dir, filename)
+            else:
+                return default_log_location

@@ -7,6 +7,8 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
+import json
+
 import turbolift as turbo
 import turbolift.utils.auth_utils as auth
 import turbolift.utils.basic_utils as basic
@@ -47,6 +49,12 @@ class Clone(object):
             container=ARGS.get('source_container'),
             source=None,
             args=ARGS
+        )
+
+        report.reporter(
+            msg='PAYLOAD : "%s"' % json.dumps(payload, indent=2),
+            prt=False,
+            lvl='debug',
         )
 
         # Prep action class

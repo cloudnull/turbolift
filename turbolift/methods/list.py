@@ -7,6 +7,8 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
+import json
+
 import turbolift.utils.basic_utils as basic
 import turbolift.utils.http_utils as http
 import turbolift.utils.multi_utils as multi
@@ -71,10 +73,9 @@ class List(object):
             log=True
         )
         report.reporter(
-            msg='PAYLOAD\t: "%s"' % payload,
-            log=True,
+            msg='PAYLOAD : "%s"' % json.dumps(payload, indent=2),
+            prt=False,
             lvl='debug',
-            prt=False
         )
 
         last_obj = None
@@ -97,7 +98,10 @@ class List(object):
         if objects is False:
             report.reporter(msg='Nothing found.')
         elif ARGS.get('object_index'):
-            report.reporter(msg=report.print_horiz_table([{'name': last_obj}]))
+            report.reporter(
+                msg=report.print_horiz_table([{'name': last_obj}]),
+                log=False
+            )
         elif objects is not None:
             num_files = len(objects)
             if num_files < 1:
@@ -109,7 +113,10 @@ class List(object):
                         if item in obj:
                             obj.pop(item)
                     return_objects.append(obj)
-                report.reporter(msg=report.print_horiz_table(return_objects))
+                report.reporter(
+                    msg=report.print_horiz_table(return_objects),
+                    log=False
+                )
                 report.reporter(msg='I found "%d" Item(s).' % num_files)
         else:
             report.reporter(msg='Nothing found.')

@@ -38,8 +38,8 @@ def auth_group(parser):
                            default=os.environ.get('OS_USERNAME', None))
     authgroup.add_argument('--os-tenant',
                            metavar='[TENANT]',
-                           help='Defaults to env[OS_TENANT]',
-                           default=os.environ.get('OS_TENANT', None))
+                           help='Defaults to env[OS_TENANT_NAME]',
+                           default=os.environ.get('OS_TENANT_NAME', None))
     authgroup.add_argument('--os-token',
                            metavar='[TOKEN]',
                            help='Defaults to env[OS_TOKEN]',

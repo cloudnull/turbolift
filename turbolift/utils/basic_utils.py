@@ -70,19 +70,6 @@ def dict_pop_none(dictionary):
                  if value is not None if value is not False])
 
 
-def keys2dict(chl):
-    """Take a list of strings and turn it into dictionary.
-
-    :param chl:
-    :return {}|None:
-    """
-
-    if chl:
-        return dict([_kv.split('=') for _kv in chl])
-    else:
-        return None
-
-
 def jpath(root, inode):
     """Return joined directory / path
 

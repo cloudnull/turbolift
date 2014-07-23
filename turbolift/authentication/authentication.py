@@ -8,7 +8,10 @@ import turbolift.utils.auth_utils as auth
 import turbolift.utils.http_utils as http
 import turbolift.utils.report_utils as report
 
-from turbolift import LOG
+from turbolift.logger import logger
+
+
+LOG = logger.getLogger('turbolift')
 
 
 def authenticate():
@@ -23,12 +26,14 @@ def authenticate():
 
     # Setup the request variables
     url = auth.parse_region()
+    LOG.debug('Raw Auth URL: [ %s ]', url)
     a_url = http.parse_url(url=url, auth=True)
+    LOG.debug('Parsed Auth URL: [ %s ]', a_url)
     auth_json = auth.parse_reqtype()
 
     # remove the prefix for the Authentication URL if Found
-    LOG.debug('POST == REQUEST DICT > JSON DUMP %s', auth_json)
     auth_json_req = json.dumps(auth_json)
+    LOG.debug('Request JSON: [ %s ]', auth_json_req)
     headers = {'Content-Type': 'application/json'}
 
     # Send Request

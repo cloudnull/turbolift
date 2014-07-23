@@ -7,6 +7,8 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
+import json
+
 import turbolift.utils.http_utils as http
 import turbolift.utils.multi_utils as multi
 import turbolift.utils.report_utils as report
@@ -38,10 +40,9 @@ class Show(object):
         self.go = actions.CloudActions(payload=payload)
 
         report.reporter(
-            msg='PAYLOAD\t: "%s"' % payload,
-            log=True,
+            msg='PAYLOAD : "%s"' % json.dumps(payload, indent=2),
+            prt=False,
             lvl='debug',
-            prt=False
         )
 
         with multi.spinner():
@@ -55,7 +56,8 @@ class Show(object):
             if message.status_code != 404:
                 report.reporter(msg='Object Found...')
                 report.reporter(
-                    msg=report.print_virt_table(dict(message.headers))
+                    msg=report.print_virt_table(dict(message.headers)),
+                    log=False
                 )
             else:
                 report.reporter(msg='Nothing Found...')

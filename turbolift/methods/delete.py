@@ -7,6 +7,8 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
+import json
+
 import turbolift.utils.basic_utils as basic
 import turbolift.utils.http_utils as http
 import turbolift.utils.multi_utils as multi
@@ -94,10 +96,9 @@ class Delete(object):
             args=ARGS
         )
         report.reporter(
-            msg='PAYLOAD\t: "%s"' % payload,
-            log=True,
+            msg='PAYLOAD : "%s"' % json.dumps(payload, indent=2),
+            prt=False,
             lvl='debug',
-            prt=False
         )
 
         self.go = actions.CloudActions(payload=payload)

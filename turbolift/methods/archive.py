@@ -7,6 +7,7 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
+import json
 import os
 
 import turbolift.utils.basic_utils as basic
@@ -54,10 +55,9 @@ class Archive(object):
         )
 
         report.reporter(
-            msg='PAYLOAD\t: "%s"' % payload,
-            log=True,
+            msg='PAYLOAD : "%s"' % json.dumps(payload, indent=2),
+            prt=False,
             lvl='debug',
-            prt=False
         )
 
         # Set the actions class up
