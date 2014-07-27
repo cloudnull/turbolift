@@ -65,7 +65,7 @@ class Upload(object):
         )
         report.reporter(msg='MESSAGE : "%s" Files found.' % num_files)
         report.reporter(
-            msg='PAYLOAD : "%s"' % json.dumps(payload, indent=2),
+            msg='PAYLOAD : [ %s ]' % payload,
             prt=False,
             lvl='debug'
         )

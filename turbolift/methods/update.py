@@ -65,7 +65,7 @@ class Update(object):
             log=True
         )
         report.reporter(
-            msg='PAYLOAD : "%s"' % json.dumps(payload, indent=2),
+            msg='PAYLOAD : [ %s ]' % payload,
             prt=False,
             lvl='debug',
         )

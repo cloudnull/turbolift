@@ -52,7 +52,7 @@ class Download(object):
             )
 
         report.reporter(
-            msg='PAYLOAD : "%s"' % json.dumps(payload, indent=2),
+            msg='PAYLOAD : [ %s ]' % payload,
             prt=False,
             lvl='debug',
         )
