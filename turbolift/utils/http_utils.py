@@ -55,8 +55,12 @@ def parse_url(url, auth=False):
     :return aurl:
     """
 
-    if all([auth is True, 'tokens' not in url]):
+    if ARGS.get('auth_version') != 'v1.0':
+        if all([auth is True, 'tokens' not in url]):
             url = urlparse.urljoin(url, 'tokens')
+    else:
+        if all([auth is True, 'v1.0' not in url]):
+            url = urlparse.urljoin(url, 'v1.0')
 
     if url.startswith(('http', 'https', '//')):
         if url.startswith('//'):

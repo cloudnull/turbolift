@@ -28,19 +28,23 @@ def authenticate():
     url = auth.parse_region()
     LOG.debug('Raw Auth URL: [ %s ]', url)
     a_url = http.parse_url(url=url, auth=True)
+    headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+    }
+    headers.update(auth.get_headers() or {})
+    auth_json = auth.parse_reqtype() or {}
     LOG.debug('Parsed Auth URL: [ %s ]', a_url)
-    auth_json = auth.parse_reqtype()
 
     # remove the prefix for the Authentication URL if Found
     auth_json_req = json.dumps(auth_json)
     LOG.debug('Request JSON: [ %s ]', auth_json_req)
-    headers = {'Content-Type': 'application/json'}
+    LOG.debug('Request Headers: [ %s ]', headers)
 
     # Send Request
     try:
-        auth_resp = http.post_request(
-            url=a_url, headers=headers, body=auth_json_req
-        )
+        auth_resp = auth.auth_request(a_url, headers=headers,
+                                      body=auth_json_req)
         if auth_resp.status_code >= 300:
             raise SystemExit(
                 'Authentication Failure, %s %s' % (auth_resp.status_code,
@@ -50,8 +54,7 @@ def authenticate():
         LOG.error('Authentication Failure %s\n%s', exp, traceback.format_exc())
         raise turbo.SystemProblem('JSON Decode Failure. ERROR: %s' % exp)
     else:
-        LOG.debug('POST Authentication Response %s', auth_resp.json())
-        auth_info = auth.parse_auth_response(auth_resp.json())
+        auth_info = auth.parse_auth_response(auth_resp)
         token, tenant, user, inet, enet, cnet, acfep = auth_info
         report.reporter(
             msg=('API Access Granted. TenantID: %s Username: %s'
