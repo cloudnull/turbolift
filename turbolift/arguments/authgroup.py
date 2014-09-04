@@ -31,11 +31,12 @@ def auth_group(parser):
                            help='Defaults to env[OS_PASSWORD]',
                            default=os.environ.get('OS_PASSWORD', None))
 
-    authgroup.add_argument('-u',
-                           '--os-user',
-                           metavar='[USERNAME]',
-                           help='Defaults to env[OS_USERNAME]',
-                           default=os.environ.get('OS_USERNAME', None))
+    a_usertype = authgroup.add_mutually_exclusive_group()
+    a_usertype.add_argument('-u',
+                            '--os-user',
+                            metavar='[USERNAME]',
+                            help='Defaults to env[OS_USERNAME]',
+                            default=os.environ.get('OS_USERNAME', None))
     authgroup.add_argument('--os-tenant',
                            metavar='[TENANT]',
                            help='Defaults to env[OS_TENANT_NAME]',
@@ -62,7 +63,8 @@ def auth_group(parser):
                                     ' env[OS_HP_AUTH]'),
                               default=os.getenv('OS_HP_AUTH', None))
 
-    authgroup.add_argument('--os-auth-url',
+    a_authurl = authgroup.add_mutually_exclusive_group()
+    a_authurl.add_argument('--os-auth-url',
                            metavar='[AUTH_URL]',
                            help='Defaults to env[OS_AUTH_URL]',
                            default=os.environ.get('OS_AUTH_URL', None))
@@ -70,3 +72,17 @@ def auth_group(parser):
                            metavar='[VERSION_NUM]',
                            default=os.getenv('OS_VERSION', 'v2.0'),
                            help='env[OS_VERSION]')
+
+    # v1 auth
+    a_keytype.add_argument('--st-key',
+                           metavar='[API_KEY]',
+                           help='v1 Auth API Key. Defaults to env[ST_KEY]',
+                           default=os.environ.get('ST_KEY', None))
+    a_usertype.add_argument('--st-user',
+                            metavar='[USERNAME]',
+                            help='v1 Auth Username. Defaults to env[ST_USER]',
+                            default=os.environ.get('ST_USER', None))
+    a_authurl.add_argument('--st-auth',
+                           metavar='[AUTH_URL]',
+                           help='v1 Auth URL. Defaults to env[ST_AUTH]',
+                           default=os.environ.get('ST_AUTH', None))
