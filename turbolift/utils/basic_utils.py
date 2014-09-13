@@ -194,11 +194,10 @@ def set_unique_dirs(object_list, root_dir):
 
     unique_dirs = []
     for obj in object_list:
-        full_path = jpath(root=root_dir, inode=obj.lstrip(os.sep))
-        dir_path = full_path.split(
-            os.path.basename(full_path)
-        )[0].rstrip(os.sep)
-        unique_dirs.append(dir_path)
+        if obj:
+            full_path = jpath(root=root_dir, inode=obj.lstrip(os.sep))
+            dir_path = os.path.dirname(full_path)
+            unique_dirs.append(dir_path)
     return set(unique_dirs)
 
 
