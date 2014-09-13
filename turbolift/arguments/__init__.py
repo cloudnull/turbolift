@@ -286,18 +286,27 @@ def understand_args(set_args):
     if set_args.get('os_rax_auth') is not None:
         set_args['os_rax_auth'] = set_args['os_rax_auth'].upper()
 
-    if set_args.get('os_user') is None:
-        raise SystemExit('\nNo Username was provided, use [--os-user]\n')
+    if not any([set_args.get('os_user'),
+                set_args.get('st_user')]):
+        raise SystemExit('\nNo Username was provided, use [--os-user] '
+                         'or [--st_user]\n')
 
     if not any([set_args.get('os_apikey'),
                 set_args.get('os_password'),
-                set_args.get('os_token')]):
+                set_args.get('os_token'),
+                set_args.get('st_key')]):
         raise SystemExit('No APIKey or Password was provided,'
-                         ' use [--os-apikey] or [--os-password]')
+                         ' use [--os-apikey] or [--os-password]'
+                         ' or [--st_key]')
     else:
         if set_args.get('os_token') and not set_args.get('os_tenant'):
             raise SystemExit('Token auth requires setting the tenant.'
                              ' use [--os-tenant]')
+
+    if (any(set_args.get(k) for k in ('st_user', 'st_key'))
+            and not set_args.get('st_auth')):
+        raise SystemExit('V1 Auth requires an auth endpoint to be set. '
+                         'use [--st-auth]')
 
     if set_args.get('archive') is True:
         set_args['cc'] = 1
