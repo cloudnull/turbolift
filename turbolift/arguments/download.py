@@ -39,9 +39,9 @@ def download_actions(subparser, source_args, container_args, time_args, regex):
                           help='Max number of processed on a single pass')
     download.add_argument('--sync',
                           action='store_true',
-                          help=('Looks at local file vs Remote File and if a'
+                          help=('Looks at Remote File vs Local File and if a'
                                 ' difference is detected the file is'
-                                ' uploaded.'),
+                                ' downloaded.'),
                           default=None)
     download.add_argument('--restore-perms',
                           action='store_true',
