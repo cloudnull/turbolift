@@ -33,12 +33,10 @@ def get_local_files():
         :param item:
         :return True|False:
         """
-        if all([not os.path.islink(item),
-                not os.path.ismount(item)]):
+        if not os.path.ismount(item):
             if not os.path.getsize(item) > 4831838208:
                 return True
-        else:
-            return False
+        return False
 
     def indexer(location):
         """Return a list of indexed files.
