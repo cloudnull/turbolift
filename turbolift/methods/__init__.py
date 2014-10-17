@@ -51,8 +51,10 @@ def get_local_files():
         if os.path.isdir(_location):
             r_walk = os.walk(_location)
             indexes = [(root, fls) for root, sfs, fls in r_walk]
-            return [basic.jpath(root=inx[0], inode=inode)
-                    for inx in indexes for inode in inx[1]]
+            return [
+                unicode(basic.jpath(root=inx[0], inode=inode))
+                for inx in indexes for inode in inx[1]
+            ]
         elif os.path.isfile(_location):
             return [_location]
         else:
