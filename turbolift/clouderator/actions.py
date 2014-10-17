@@ -8,7 +8,6 @@
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
 
-import os
 import urllib
 import urlparse
 
@@ -434,9 +433,6 @@ class CloudActions(object):
             container_headers=object_headers,
             object_headers=meta
         )
-
-        if not os.path.isfile(local_object):
-            return
 
         if self.job_args.get('sync'):
             resp = self._header_getter(

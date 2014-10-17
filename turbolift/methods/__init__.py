@@ -10,14 +10,15 @@
 
 import collections
 import datetime
+import grp
 import os
 import multiprocessing
+import pwd
 import re
-import tarfile
 import Queue
+import tarfile
 
 import prettytable
-
 
 from turbolift.clouderator import actions
 from turbolift import exceptions
@@ -36,6 +37,72 @@ class BaseMethod(object):
         if self.max_jobs is None:
             self.max_jobs = 25000
         self.job = actions.CloudActions(job_args=self.job_args)
+
+    def _encapsolate_object(self, full_path, split_path):
+        if self.job_args.get('preserve_path'):
+            container_object = full_path
+        else:
+            container_object = full_path.split(split_path)[-1]
+            container_object = container_object.lstrip(os.sep)
+
+        object_item = {'container_object': container_object}
+        meta = object_item['meta'] = {}
+
+        if os.path.islink(full_path):
+            link_path = os.path.realpath(
+                os.path.expanduser(
+                    os.readlink(full_path)
+                )
+            )
+            # When an object is a symylink the local object should be set to
+            # None. This will ensure the system does not upload the "followed"
+            # contents of the link.
+            object_item['local_object'] = None
+            link_object = link_path.split(split_path)[-1]
+            meta['X-Object-Meta-symlink'] = link_path
+            if link_path != link_object:
+                meta['X-Object-Manifest'] = '%s/%s' % (
+                    self.job_args.get('container'),
+                    link_object.lstrip(os.sep)
+                )
+        else:
+            object_item['local_object'] = full_path
+
+        if self.job_args.get('save_perms'):
+            obj = os.stat(full_path)
+            meta['X-Object-Meta-perms'] = oct(obj.st_mode)[-4:]
+            meta['X-Object-Meta-owner'] = pwd.getpwuid(obj.st_uid).pw_name
+            meta['X-Object-Meta-group'] = grp.getgrgid(obj.st_gid).gr_name
+
+        return object_item
+
+    def _walk_directories(self, path):
+        local_files = list()
+
+        if not os.path.isdir(path):
+            path = os.path.dirname(path)
+
+        for root_dir, _, file_names in os.walk(path):
+            for file_name in file_names:
+                full_path = os.path.join(root_dir, file_name)
+                if full_path not in self.job_args.get('exclude'):
+                    object_item = self._encapsolate_object(
+                        full_path=full_path,
+                        split_path=path
+                    )
+                    if object_item:
+                        local_files.append(object_item)
+        else:
+            pattern_match = self.job_args.get('pattern_match')
+            if pattern_match:
+                local_files = self.match_filter(
+                    idx_list=local_files,
+                    pattern=pattern_match,
+                    dict_type=True,
+                    dict_key='container_object'
+                )
+
+            return local_files
 
     def print_horiz_table(self, data):
         """Print a horizontal pretty table from data."""

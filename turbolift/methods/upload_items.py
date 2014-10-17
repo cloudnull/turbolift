@@ -9,8 +9,6 @@
 # =============================================================================
 
 import os
-import grp
-import pwd
 
 from cloudlib import logger
 
@@ -29,6 +27,10 @@ class UploadRunMethod(methods.BaseMethod):
         super(UploadRunMethod, self).__init__(job_args)
 
     def _upload(self, meta, container_object, local_object):
+
+        if local_object is not None and os.path.exists(local_object) is False:
+            return
+
         item = self.job.put_object(
             url=self.job_args['storage_url'],
             container=self.job_args.get('container'),
@@ -39,57 +41,6 @@ class UploadRunMethod(methods.BaseMethod):
         )
         if item:
             LOG.debug(item.__dict__)
-
-    def _encapsolate_object(self, full_path, split_path):
-        if not os.path.isfile(full_path):
-            return
-
-        if self.job_args.get('preserve_path'):
-            container_object = full_path
-        else:
-            container_object = full_path.split(split_path)[-1]
-            container_object = container_object.lstrip(os.sep)
-
-        object_item = {
-            'container_object': container_object,
-            'local_object': full_path
-        }
-        meta = object_item['meta'] = {}
-        if self.job_args.get('save_perms'):
-            obj = os.stat(full_path)
-            meta['X-Object-Meta-perms'] = oct(obj.st_mode)[-4:]
-            meta['X-Object-Meta-owner'] = pwd.getpwuid(obj.st_uid).pw_name
-            meta['X-Object-Meta-group'] = grp.getgrgid(obj.st_gid).gr_name
-
-        return object_item
-
-    def _walk_directories(self, path):
-        local_files = list()
-
-        if not os.path.isdir(path):
-            path = os.path.dirname(path)
-
-        for root_dir, _, file_names in os.walk(path):
-            for file_name in file_names:
-                full_path = os.path.join(root_dir, file_name)
-                if full_path not in self.job_args.get('exclude'):
-                    object_item = self._encapsolate_object(
-                        full_path=full_path,
-                        split_path=path
-                    )
-                    if object_item:
-                        local_files.append(object_item)
-        else:
-            pattern_match = self.job_args.get('pattern_match')
-            if pattern_match:
-                local_files = self.match_filter(
-                    idx_list=local_files,
-                    pattern=pattern_match,
-                    dict_type=True,
-                    dict_key='container_object'
-                )
-
-            return local_files
 
     def start(self):
         indicator_options = {
