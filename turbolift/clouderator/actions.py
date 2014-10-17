@@ -7,6 +7,8 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
+import os
+
 import turbolift as turbo
 import turbolift.clouderator as cloud
 import turbolift.methods as meth
@@ -216,11 +218,39 @@ class CloudActions(object):
             if basic.file_exists(fpath) is False:
                 return None
             else:
-                with open(fpath, 'rb') as f_open:
-                    resp = http.put_request(
-                        url=url, rpath=rpath, body=f_open, headers=fheaders
-                    )
-                    self.resp_exception(resp=resp)
+                if os.path.islink(fpath):
+                    link = os.readlink(fpath)
+                    lpath = os.path.abspath(os.path.join (os.path.dirname(fpath), link))
+
+                    rpath_reversed = rpath.split('/')[::-1]
+                    fpath_reversed = fpath.split('/')[::-1]
+
+                    a, b = sorted((rpath_reversed, fpath_reversed), key=len)
+                    for i, j in enumerate(a):
+                       if j != b[i]:
+                           index = i
+                           break
+
+                    container = rpath_reversed[index]
+                    container_dir = fpath.replace('/'.join(rpath_reversed[:index][::-1]), '')
+
+                    if container_dir in lpath:
+                        fheaders['X-Object-Manifest'] = container + '/' + lpath.replace(container_dir, '')
+                        resp = http.put_request(
+                            url=url, rpath=rpath, body=None, headers=fheaders
+                        )
+                        self.resp_exception(resp=resp)
+                    else:
+                        report.reporter(
+                            msg='symlink %s points to location %s which is outside uploading directory' % (fpath, lpath),
+                            lvl='warning'
+                        )
+                else:
+                    with open(fpath, 'rb') as f_open:
+                        resp = http.put_request(
+                            url=url, rpath=rpath, body=f_open, headers=fheaders
+                        )
+                        self.resp_exception(resp=resp)
 
     def _list_getter(self, url, filepath, fheaders, last_obj=None):
         """Get a list of all objects in a container.
