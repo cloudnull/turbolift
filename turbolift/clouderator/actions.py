@@ -296,7 +296,7 @@ class CloudActions(object):
                 return_list = resp.json()
 
                 for obj in return_list:
-                    time_offset = ARGS.get('time_offset')
+                    time_offset = obj.get('last_modified')
                     if time_offset is not None:
                         # Get the last_modified data from the Object.
                         if cloud.time_delta(lmobj=time_offset) is True:
