@@ -297,7 +297,7 @@ class CloudActions(object):
 
                 for obj in return_list:
                     time_offset = obj.get('last_modified')
-                    if time_offset is not None:
+                    if time_offset is not None and ARGS.get('time_offset'):
                         # Get the last_modified data from the Object.
                         if cloud.time_delta(lmobj=time_offset) is True:
                             f_list.append(obj)
