@@ -39,14 +39,14 @@ turbolift.load_constants(log_method, args)
 
 
 # Authenticate against the swift API
-from turbolift.authentication import authentication
-authentication = authentication.authenticate()
+from turbolift.authentication import auth
+authentication = auth.authenticate()
 
 
 # Package up the Payload
 import turbolift.utils.http_utils as http
 payload = http.prep_payload(
-    auth=authentication,
+    auth=auth,
     container=args.get('container'),
     source=args.get('source'),
     args=args

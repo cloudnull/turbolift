@@ -7,23 +7,222 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
-import turbolift as turbo
-import turbolift.clouderator as cloud
-import turbolift.methods as meth
-import turbolift.utils.basic_utils as basic
-import turbolift.utils.http_utils as http
-import turbolift.utils.report_utils as report
 
-from turbolift.authentication.authentication import get_new_token
+import os
+import urllib
+import urlparse
 
-from turbolift import ARGS
+import cloudlib
+from cloudlib import http
+from cloudlib import logger
+from cloudlib import shell
+from requests import exceptions as requests_exp
+
+from turbolift import exceptions
+from turbolift.authentication import auth
+from turbolift.clouderator import utils as cloud_utils
+
+
+LOG = logger.getLogger('turbolift')
+
+
+def quoter(obj):
+    """Return a Quoted URL.
+
+    :param obj: ``basestring``
+    :return: ``str``
+    """
+
+    return urllib.quote(cloud_utils.ustr(obj=obj))
 
 
 class CloudActions(object):
-    def __init__(self, payload):
-        self.payload = payload
+    def __init__(self, job_args):
+        """
 
-    def resp_exception(self, resp):
+        :param job_args:
+        """
+        self.job_args = job_args
+        self.http = http.MakeRequest()
+        self.shell = shell.ShellCommands(
+            log_name='turbolift', debug=self.job_args.get('debug')
+        )
+
+    def _return_base_data(self, url, container, container_object=None,
+                          container_headers=None, object_headers=None):
+        """Return headers and a parsed url.
+
+        :param url:
+        :param container:
+        :param container_object:
+        :param container_headers:
+        :return: ``tuple``
+        """
+        headers = self.job_args['base_headers']
+        headers.update({'X-Auth-Token': self.job_args['os_token']})
+
+        _container_uri = url.geturl().rstrip('/')
+
+        if container:
+            _container_uri = '%s/%s' % (
+                _container_uri, quoter(container)
+            )
+
+        if container_object:
+            _container_uri = '%s/%s' % (
+                _container_uri, quoter(container_object)
+            )
+
+        if object_headers:
+            headers.update(object_headers)
+
+        if container_headers:
+            headers.update(container_headers)
+
+        return headers, urlparse.urlparse(_container_uri)
+
+    @cloud_utils.retry(requests_exp.ReadTimeout)
+    def _putter(self, uri, headers, local_object=None):
+        """Place  object into the container.
+
+        :param uri:
+        :param headers:
+        :param local_object:
+        """
+
+        if local_object:
+            with open(local_object, 'rb') as f_open:
+                resp = self.http.put(url=uri, body=f_open, headers=headers)
+        else:
+            resp = self.http.put(url=uri, headers=headers)
+
+        return self._resp_exception(resp=resp)
+
+    @cloud_utils.retry(requests_exp.ReadTimeout)
+    def _deleter(self, uri, headers):
+        """Perform HEAD request on a specified object in the container.
+
+        :param uri: ``str``
+        :param headers: ``dict``
+        """
+
+        # perform Object HEAD request
+        resp = self.http.delete(url=uri, headers=headers)
+        self._resp_exception(resp=resp)
+        return resp
+
+    @cloud_utils.retry(requests_exp.ReadTimeout)
+    def _header_getter(self, uri, headers):
+        """Perform HEAD request on a specified object in the container.
+
+        :param uri: ``str``
+        :param headers: ``dict``
+        """
+
+        # perform Object HEAD request
+        resp = self.http.head(url=uri, headers=headers)
+        self._resp_exception(resp=resp)
+        return resp
+
+    @cloud_utils.retry(requests_exp.ReadTimeout)
+    def _header_poster(self, uri, headers):
+        """POST Headers on a specified object in the container.
+
+        :param uri: ``str``
+        :param headers: ``dict``
+        """
+
+        resp = self.http.post(url=uri, body=None, headers=headers)
+        self._resp_exception(resp=resp)
+        return resp
+
+    @staticmethod
+    def _last_marker(base_path, last_object):
+        """Set Marker.
+
+        :param base_path:
+        :param last_object:
+        :return str:
+        """
+
+        return '%s&marker=%s' % (base_path, last_object)
+
+    def _obj_index(self, uri, base_path, marked_path, headers):
+        """
+
+        :param uri:
+        :param base_path:
+        :param marked_path:
+        :param headers:
+        :return:
+        """
+        object_list = list()
+        l_obj = None
+        container_uri = uri.geturl()
+
+        while True:
+            marked_uri = urlparse.urljoin(container_uri, marked_path)
+            resp = self.http.get(url=marked_uri, headers=headers)
+            self._resp_exception(resp=resp)
+            return_list = resp.json()
+
+            time_offset = self.job_args.get('time_offset')
+            for obj in return_list:
+                if time_offset is not None:
+                    # Get the last_modified data from the Object.
+                    time_delta = cloud_utils.TimeDelta(
+                        job_args=self.job_args,
+                        last_modified=time_offset
+                    )
+                    if time_delta is True:
+                        object_list.append(obj)
+                else:
+                    object_list.append(obj)
+
+            if object_list:
+                last_obj_in_list = object_list[-1].get('name')
+            else:
+                last_obj_in_list = None
+
+            if l_obj == last_obj_in_list:
+                return object_list
+            else:
+                l_obj = last_obj_in_list
+                marked_path = self._last_marker(
+                    base_path=base_path,
+                    last_object=l_obj
+                )
+
+    def _list_getter(self, uri, headers, last_obj=None):
+        """Get a list of all objects in a container.
+
+        :param uri:
+        :param headers:
+        :return list:
+        """
+
+        # Quote the file path.
+        base_path = marked_path = (
+            '%s/?limit=10000&format=json' % cloud_utils.ustr(uri.path)
+        )
+
+        if last_obj:
+            marked_path = self._last_marker(
+                base_path=base_path,
+                last_object=quoter(last_obj)
+            )
+
+        file_list = self._obj_index(
+            uri,
+            base_path,
+            marked_path,
+            headers
+        )
+        final_list = cloud_utils.unique_list_dicts(dlist=file_list, key='name')
+        LOG.debug('Found [ %d ] entries(s)', len(final_list))
+        return final_list
+
+    def _resp_exception(self, resp):
         """If we encounter an exception in our upload.
 
         we will look at how we can attempt to resolve the exception.
@@ -31,91 +230,267 @@ class CloudActions(object):
         :param resp:
         """
 
+        message = [
+            'Url: [ %s ] Reason: [ %s ] Request: [ %s ] Status Code: [ %s ]. ',
+            resp.url,
+            resp.reason,
+            resp.request,
+            resp.status_code
+        ]
+
         # Check to make sure we have all the bits needed
         if not hasattr(resp, 'status_code'):
-            raise turbo.SystemProblem('No Status to check.')
+            message[0] += 'No Status to check. Turbolift will retry...'
+            raise exceptions.SystemProblem(message)
         elif resp is None:
-            raise turbo.SystemProblem('No response information.')
+            message[0] += 'No response information. Turbolift will retry...'
+            raise exceptions.SystemProblem(message)
         elif resp.status_code == 401:
-            report.reporter(
-                msg=('Turbolift experienced an Authentication issue.'
-                     ' STATUS %s REASON %s REQUEST %s. Turbolift will retry'
-                     % (resp.status_code, resp.reason, resp.request)),
-                lvl='warn',
-                log=True,
-                prt=False
+            message[0] += (
+                'Turbolift experienced an Authentication issue. Turbolift'
+                ' will retry...'
             )
-
-            # This was done in this manor due to how manager dicts are proxied
-            # related : http://bugs.python.org/issue6766
-            headers = self.payload['headers']
-            headers['X-Auth-Token'] = get_new_token()
-            self.payload['headers'] = headers
-
-            raise turbo.AuthenticationProblem(
-                'Attempting to resolve the Authentication issue.'
-            )
+            self.job_args.update(auth.authenticate(self.job_args))
+            raise exceptions.SystemProblem(message)
         elif resp.status_code == 404:
-            report.reporter(
-                msg=('Not found STATUS: %s, REASON: %s, MESSAGE: %s'
-                     % (resp.status_code, resp.reason, resp.request)),
-                prt=False,
-                lvl='debug'
+            message[0] += 'Item not found.'
+            LOG.debug(*message)
+        elif resp.status_code == 409:
+            message[0] += (
+                'Request Conflict. Turbolift is abandoning this...'
             )
         elif resp.status_code == 413:
-            _di = resp.headers
-            basic.stupid_hack(wait=_di.get('retry_after', 10))
-            raise turbo.SystemProblem(
+            return_headers = resp.headers
+            retry_after = return_headers.get('retry_after', 10)
+            cloud_utils.stupid_hack(wait=retry_after)
+            message[0] += (
                 'The System encountered an API limitation and will'
-                ' continue in "%s" Seconds' % _di.get('retry_after')
+                ' continue in [ %s ] Seconds' % retry_after
             )
+            raise exceptions.SystemProblem(message)
         elif resp.status_code == 502:
-            raise turbo.SystemProblem('Failure making Connection')
+            message[0] += (
+                'Failure making Connection. Turbolift will retry...'
+            )
+            raise exceptions.SystemProblem(message)
         elif resp.status_code == 503:
-            basic.stupid_hack(wait=10)
-            raise turbo.SystemProblem('SWIFT-API FAILURE')
+            cloud_utils.stupid_hack(wait=10)
+            message[0] += 'SWIFT-API FAILURE'
+            raise exceptions.SystemProblem(message)
         elif resp.status_code == 504:
-            basic.stupid_hack(wait=10)
-            raise turbo.SystemProblem('Gateway Time-out')
+            cloud_utils.stupid_hack(wait=10)
+            message[0] += 'Gateway Failure.'
+            raise exceptions.SystemProblem(message)
         elif resp.status_code >= 300:
-            raise turbo.SystemProblem(
-                'SWIFT-API FAILURE -> REASON %s REQUEST %s' % (resp.reason,
-                                                               resp.request)
-            )
+            message[0] += 'General exception.'
+            raise exceptions.SystemProblem(message)
         else:
-            report.reporter(
-                msg=('MESSAGE %s %s %s' % (resp.status_code,
-                                           resp.reason,
-                                           resp.request)),
-                prt=False,
-                lvl='debug'
-            )
+            LOG.debug(*message)
 
-    def _checker(self, url, rpath, lpath, fheaders, skip):
-        """Check to see if a local file and a target file are different.
+    @cloud_utils.retry(exceptions.SystemProblem)
+    def list_items(self, url, container=None, last_obj=None):
+        """Builds a long list of objects found in a container.
+
+        NOTE: This could be millions of Objects.
 
         :param url:
-        :param rpath:
-        :param lpath:
-        :param retry:
-        :param fheaders:
-        :return True|False:
+        :param container:
+        :param last_obj:
+        :return None | list:
         """
 
-        if skip is True:
-            return True
-        elif ARGS.get('sync'):
-            resp = self._header_getter(url=url,
-                                       rpath=rpath,
-                                       fheaders=fheaders)
+        headers, container_uri = self._return_base_data(
+            url=url,
+            container=container
+        )
+
+        if container:
+            resp = self._header_getter(uri=container_uri, headers=headers)
             if resp.status_code == 404:
-                return True
-            elif cloud.md5_checker(resp=resp, local_f=lpath) is True:
-                return True
-            else:
-                return False
+                LOG.warn('Container [ %s ] not found.', container)
+                return [resp]
+
+        return self._list_getter(
+            uri=container_uri,
+            headers=headers,
+            last_obj=last_obj
+        )
+
+    @cloud_utils.retry(exceptions.SystemProblem)
+    def show_details(self, url, container, container_object=None):
+        """Return Details on an object or container.
+
+        :param url:
+        :param container:
+        :param container_object:
+        """
+
+        headers, container_uri = self._return_base_data(
+            url=url,
+            container=container,
+            container_object=container_object
+        )
+
+        return self._header_getter(
+            uri=container_uri,
+            headers=headers
+        )
+
+    @cloud_utils.retry(exceptions.SystemProblem)
+    def update_object(self, url, container, container_object, object_headers,
+                      container_headers):
+        """Update an existing object in a swift container.
+
+        This method will place new headers on an existing object or container.
+
+        :param url:
+        :param container:
+        :param container_object:
+        """
+
+        headers, container_uri = self._return_base_data(
+            url=url,
+            container=container,
+            container_object=container_object,
+            container_headers=container_headers,
+            object_headers=object_headers,
+        )
+
+        return self._header_poster(
+            uri=container_uri,
+            headers=headers
+        )
+
+    @cloud_utils.retry(exceptions.SystemProblem)
+    def container_cdn_command(self, url, container, container_object,
+                              cdn_headers):
+        """Command your CDN enabled Container.
+
+        :param url:
+        :param container:
+        """
+
+        headers, container_uri = self._return_base_data(
+            url=url,
+            container=container,
+            container_object=container_object,
+            object_headers=cdn_headers
+        )
+
+        if self.job_args.get('purge'):
+            return self._deleter(
+                uri=container_uri,
+                headers=headers
+            )
         else:
-            return True
+            return self._header_poster(
+                uri=container_uri,
+                headers=headers
+            )
+
+    @cloud_utils.retry(exceptions.SystemProblem)
+    def put_container(self, url, container, container_headers=None):
+        """Create a container if it is not Found.
+
+        :param url:
+        :param container:
+        """
+
+        headers, container_uri = self._return_base_data(
+            url=url,
+            container=container,
+            container_headers=container_headers
+        )
+
+        resp = self._header_getter(
+            uri=container_uri,
+            headers=headers
+        )
+        if resp.status_code == 404:
+            return self._putter(uri=container_uri, headers=headers)
+        else:
+            return resp
+
+    @cloud_utils.retry(exceptions.SystemProblem)
+    def put_object(self, url, container, container_object, local_object,
+                   object_headers, meta=None):
+        """This is the Sync method which uploads files to the swift repository
+
+        if they are not already found. If a file "name" is found locally and
+        in the swift repository an MD5 comparison is done between the two
+        files. If the MD5 is miss-matched the local file is uploaded to the
+        repository. If custom meta data is specified, and the object exists the
+        method will put the metadata onto the object.
+
+        :param url:
+        :param container:
+        :param container_object:
+        """
+
+        headers, container_uri = self._return_base_data(
+            url=url,
+            container=container,
+            container_object=container_object,
+            container_headers=object_headers,
+            object_headers=meta
+        )
+
+        if not os.path.isfile(local_object):
+            return
+
+        if self.job_args.get('sync'):
+            resp = self._header_getter(
+                uri=container_uri,
+                headers=headers
+            )
+
+            if resp.status_code == 200:
+                try:
+                    self.shell.md5_checker(
+                        md5sum=resp.headers.get('etag'),
+                        local_file=local_object
+                    )
+                except cloudlib.MD5CheckMismatch:
+                    pass
+                else:
+                    return resp
+
+        return self._putter(
+            uri=container_uri,
+            headers=headers,
+            local_object=local_object
+        )
+
+
+    @cloud_utils.retry(exceptions.SystemProblem)
+    def delete_items(self, url, container, container_object=None):
+        """Deletes an objects in a container.
+
+        :param url:
+        :param container:
+        :param u_file:
+        """
+
+        headers, container_uri = self._return_base_data(
+            url=url,
+            container=container,
+            container_object=container_object
+        )
+
+        resp = self._header_getter(
+            uri=container_uri,
+            headers=headers
+        )
+
+        if resp.status_code != 404:
+            return self._deleter(uri=container_uri, headers=headers)
+        else:
+            return resp
+
+
+class CloudActionsOld(object):
+    def __init__(self, payload):
+        self.payload = payload
 
     def _downloader(self, url, rpath, fheaders, lfile, source,
                     skip=False):
@@ -197,166 +572,6 @@ class CloudActions(object):
             lvl='debug'
         )
 
-    def _putter(self, url, fpath, rpath, fheaders, skip=False):
-        """Place  object into the container.
-
-        :param url:
-        :param fpath:
-        :param rpath:
-        :param fheaders:
-        """
-
-        if self._checker(url, rpath, fpath, fheaders, skip) is True:
-            report.reporter(
-                msg='OBJECT ORIGIN %s RPATH %s' % (fpath, rpath),
-                prt=False,
-                lvl='debug'
-            )
-
-            if basic.file_exists(fpath) is False:
-                return None
-            else:
-                with open(fpath, 'rb') as f_open:
-                    resp = http.put_request(
-                        url=url, rpath=rpath, body=f_open, headers=fheaders
-                    )
-                    self.resp_exception(resp=resp)
-
-    def _list_getter(self, url, filepath, fheaders, last_obj=None):
-        """Get a list of all objects in a container.
-
-        :param url:
-        :param filepath:
-        :param fheaders:
-        :return list:
-        """
-
-        def _marker_type(base, last):
-            """Set and return the marker.
-
-            :param base:
-            :param last:
-            :return str:
-            """
-
-            if last is None:
-                return base
-            else:
-                return _last_marker(f_path=base, l_obj=last)
-
-        def _last_marker(f_path, l_obj):
-            """Set Marker.
-
-            :param f_path:
-            :param l_obj:
-            :return str:
-            """
-
-            return '%s&marker=%s' % (f_path, http.quoter(url=l_obj))
-
-        def _obj_index(b_path, m_path):
-            f_list = []
-            l_obj = None
-
-            while True:
-                resp = http.get_request(
-                    url=url, rpath=m_path, headers=fheaders
-                )
-                self.resp_exception(resp=resp)
-                return_list = resp.json()
-
-                for obj in return_list:
-                    time_offset = ARGS.get('time_offset')
-                    if time_offset is not None:
-                        # Get the last_modified data from the Object.
-                        if cloud.time_delta(lmobj=time_offset) is True:
-                            f_list.append(obj)
-                    else:
-                        f_list.append(obj)
-
-                last_obj_in_list = f_list[-1].get('name')
-                if ARGS.get('max_jobs', ARGS.get('object_index')) is not None:
-                    max_jobs = ARGS.get('max_jobs', ARGS.get('object_index'))
-                    if max_jobs <= len(f_list):
-                        return f_list[:max_jobs]
-                    elif l_obj is last_obj_in_list:
-                        return f_list
-                    else:
-                        l_obj = last_obj_in_list
-                        m_path = _marker_type(
-                            base=b_path, last=last_obj_in_list
-                        )
-                else:
-                    if l_obj is last_obj_in_list:
-                        return f_list
-                    else:
-                        l_obj = last_obj_in_list
-                        m_path = _marker_type(
-                            base=b_path, last=last_obj_in_list
-                        )
-
-        # Quote the file path.
-        base_path = marked_path = (
-            '%s/?limit=10000&format=json' % basic.ustr(filepath)
-        )
-        if last_obj is not None:
-            marked_path = _last_marker(
-                f_path=base_path,
-                l_obj=http.quoter(url=last_obj)
-            )
-
-        for retry in basic.retryloop(attempts=ARGS.get('error_retry'),
-                                     obj='Object List Creation'):
-            with meth.operation(retry, obj='%s %s' % (fheaders, filepath)):
-                file_list = _obj_index(base_path, marked_path)
-                final_list = basic.unique_list_dicts(
-                    dlist=file_list, key='name'
-                )
-                list_count = len(final_list)
-                report.reporter(
-                    msg='INFO: %d object(s) found' % len(final_list),
-                    log=True
-                )
-                if 'name' in file_list[-1]:
-                    return final_list, list_count, file_list[-1]['name']
-                else:
-                    return final_list, list_count, file_list[-1]
-
-    def _header_getter(self, url, rpath, fheaders):
-        """perfrom HEAD request on a specified object in the container.
-
-        :param url:
-        :param rpath:
-        :param fheaders:
-        """
-
-        # perform Object HEAD request
-        resp = http.head_request(url=url, headers=fheaders, rpath=rpath)
-        self.resp_exception(resp=resp)
-        return resp
-
-    def _header_poster(self, url, rpath, fheaders):
-        """POST Headers on a specified object in the container.
-
-        :param url:
-        :param rpath:
-        :param fheaders:
-        """
-
-        # perform Object POST request for header update.
-        resp = http.post_request(url=url, rpath=rpath, headers=fheaders)
-        self.resp_exception(resp=resp)
-
-        report.reporter(
-            msg='STATUS: %s MESSAGE: %s REASON: %s' % (resp.status_code,
-                                                       resp.request,
-                                                       resp.reason),
-            prt=False,
-            lvl='debug'
-        )
-
-        return resp.headers
-
     def detail_show(self, url):
         """Return Details on an object or container."""
 
@@ -409,49 +624,6 @@ class CloudActions(object):
                     report.reporter(msg='Container "%s" Found' % container)
                     return False
 
-    def container_cdn_command(self, url, container, sfile=None):
-        """Command your CDN enabled Container.
-
-        :param url:
-        :param container:
-        """
-
-        rty_count = ARGS.get('error_retry')
-        for retry in basic.retryloop(attempts=rty_count, delay=2, obj=sfile):
-            cheaders = self.payload['headers']
-            if sfile is not None:
-                rpath = http.quoter(url=url.path,
-                                    cont=container,
-                                    ufile=sfile)
-                # perform CDN Object DELETE
-                adddata = '%s %s' % (cheaders, container)
-                with meth.operation(retry, obj=adddata):
-                    resp = http.delete_request(
-                        url=url, rpath=rpath, headers=cheaders
-                    )
-                    self.resp_exception(resp=resp)
-            else:
-                rpath = http.quoter(url=url.path,
-                                    cont=container)
-                http.cdn_toggle(headers=cheaders)
-
-                # perform CDN Enable PUT
-                adddata = '%s %s' % (cheaders, container)
-                with meth.operation(retry, obj=adddata):
-                    resp = http.put_request(
-                        url=url, rpath=rpath, headers=cheaders
-                    )
-                    self.resp_exception(resp=resp)
-
-            report.reporter(
-                msg='OBJECT %s MESSAGE %s %s %s' % (rpath,
-                                                    resp.status_code,
-                                                    resp.reason,
-                                                    resp.request),
-                prt=False,
-                lvl='debug'
-            )
-
     def container_deleter(self, url, container):
         """Delete all objects in a container.
 
@@ -469,139 +641,6 @@ class CloudActions(object):
                 self._deleter(url=url,
                               rpath=rpath,
                               fheaders=fheaders)
-
-    def container_lister(self, url, last_obj=None):
-        """Builds a long list of objects found in a container.
-
-        NOTE: This could be millions of Objects.
-
-        :param url:
-        :return None | list:
-        """
-
-        for retry in basic.retryloop(attempts=ARGS.get('error_retry'),
-                                     obj='Container List'):
-
-            fheaders = self.payload['headers']
-            fpath = http.quoter(url=url.path)
-            with meth.operation(retry, obj='%s %s' % (fheaders, fpath)):
-                resp = self._header_getter(url=url,
-                                           rpath=fpath,
-                                           fheaders=fheaders)
-
-                head_check = resp.headers
-                container_count = head_check.get('x-account-container-count')
-                if container_count:
-                    container_count = int(container_count)
-                    if not container_count > 0:
-                        return None
-                else:
-                    return None
-
-                # Set the number of loops that we are going to do
-                return self._list_getter(url=url,
-                                         filepath=fpath,
-                                         fheaders=fheaders,
-                                         last_obj=last_obj)
-
-    def object_updater(self, url, container, u_file):
-        """Update an existing object in a swift container.
-
-        This method will place new headers on an existing object.
-
-        :param url:
-        :param container:
-        :param u_file:
-        """
-
-        for retry in basic.retryloop(attempts=ARGS.get('error_retry'),
-                                     delay=2,
-                                     obj=u_file):
-
-            # HTML Encode the path for the file
-            rpath = http.quoter(url=url.path,
-                                cont=container,
-                                ufile=u_file)
-
-            fheaders = self.payload['headers']
-            if ARGS.get('object_headers') is not None:
-                fheaders.update(ARGS.get('object_headers'))
-            if ARGS.get('save_perms') is not None:
-                fheaders.update(basic.stat_file(local_file=u_file))
-
-            with meth.operation(retry, obj='%s %s' % (fheaders, u_file)):
-                self._header_poster(url=url,
-                                    rpath=rpath,
-                                    fheaders=fheaders)
-
-    def object_putter(self, url, container, source, u_file):
-        """This is the Sync method which uploads files to the swift repository
-
-        if they are not already found. If a file "name" is found locally and
-        in the swift repository an MD5 comparison is done between the two
-        files. If the MD5 is miss-matched the local file is uploaded to the
-        repository. If custom meta data is specified, and the object exists the
-        method will put the metadata onto the object.
-
-        :param url:
-        :param container:
-        :param source:
-        :param u_file:
-        """
-
-        for retry in basic.retryloop(attempts=ARGS.get('error_retry'),
-                                     delay=2,
-                                     obj=u_file):
-
-            # Open connection and perform operation
-
-            # Get the path ready for action
-            sfile = basic.get_sfile(ufile=u_file, source=source)
-
-            if ARGS.get('dir'):
-                container = '%s/%s' % (container, ARGS['dir'].strip('/'))
-
-            rpath = http.quoter(url=url.path,
-                                cont=container,
-                                ufile=sfile)
-
-            fheaders = self.payload['headers']
-
-            if ARGS.get('object_headers') is not None:
-                fheaders.update(ARGS.get('object_headers'))
-            if ARGS.get('save_perms') is not None:
-                fheaders.update(basic.stat_file(local_file=u_file))
-
-            with meth.operation(retry, obj='%s %s' % (fheaders, u_file)):
-                self._putter(url=url,
-                             fpath=u_file,
-                             rpath=rpath,
-                             fheaders=fheaders)
-
-    def object_deleter(self, url, container, u_file):
-        """Deletes an objects in a container.
-
-        :param url:
-        :param container:
-        :param u_file:
-        """
-        rty_count = ARGS.get('error_retry')
-        for retry in basic.retryloop(attempts=rty_count, delay=2, obj=u_file):
-            fheaders = self.payload['headers']
-            rpath = http.quoter(url=url.path,
-                                cont=container,
-                                ufile=u_file)
-
-                # Make a connection
-            with meth.operation(retry, obj='%s %s' % (fheaders, rpath)):
-                resp = self._header_getter(url=url,
-                                           rpath=rpath,
-                                           fheaders=fheaders)
-                if not resp.status_code == 404:
-                    # Perform delete.
-                    self._deleter(url=url,
-                                  rpath=rpath,
-                                  fheaders=fheaders)
 
     def object_downloader(self, url, container, source, u_file):
         """Download an Object from a Container.
@@ -623,51 +662,6 @@ class CloudActions(object):
                                  fheaders=fheaders,
                                  lfile=u_file,
                                  source=source)
-
-    def object_lister(self, url, container, object_count=None, last_obj=None):
-        """Builds a long list of objects found in a container.
-
-        NOTE: This could be millions of Objects.
-
-        :param url:
-        :param container:
-        :param object_count:
-        :param last_obj:
-        :return None | list:
-        """
-
-        for retry in basic.retryloop(attempts=ARGS.get('error_retry'),
-                                     obj='Object List'):
-            fheaders = self.payload['headers']
-            fpath = http.quoter(url=url.path,
-                                cont=container)
-            with meth.operation(retry, obj='%s %s' % (fheaders, fpath)):
-                resp = self._header_getter(url=url,
-                                           rpath=fpath,
-                                           fheaders=fheaders)
-                if resp.status_code == 404:
-                    report.reporter(
-                        msg='Not found. %s | %s' % (resp.status_code,
-                                                    resp.request)
-                    )
-                    return None, None, None
-                else:
-                    if object_count is None:
-                        object_count = resp.headers.get(
-                            'x-container-object-count'
-                        )
-                        if object_count:
-                            object_count = int(object_count)
-                            if not object_count > 0:
-                                return None, None, None
-                        else:
-                            return None, None, None
-
-                    # Set the number of loops that we are going to do
-                    return self._list_getter(url=url,
-                                             filepath=fpath,
-                                             fheaders=fheaders,
-                                             last_obj=last_obj)
 
     def object_syncer(self, surl, turl, scontainer, tcontainer, u_file):
         """Download an Object from one Container and the upload it to a target.

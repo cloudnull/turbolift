@@ -7,60 +7,59 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
-import json
 
-import turbolift.utils.basic_utils as basic
-import turbolift.utils.http_utils as http
-import turbolift.utils.multi_utils as multi
-import turbolift.utils.report_utils as report
+from cloudlib import logger
 
-from turbolift import ARGS
-from turbolift.clouderator import actions
+from turbolift import utils
+from turbolift import methods
 
 
-class CdnCommand(object):
-    """Setup and run the archive Method."""
+LOG = logger.getLogger('turbolift')
 
-    def __init__(self, auth):
-        self.auth = auth
-        self.go = None
-        self.action = None
 
-    def start(self):
-        """This is the archive method.
+class RunMethod(methods.BaseMethod):
+    """Setup and run the list Method."""
 
-        Uses archive (TAR) feature to compress files and then upload the
-        TAR Ball to a specified container.
+    def __init__(self, job_args):
+        super(RunMethod, self).__init__(job_args)
+
+    def _cdn(self):
+        """Retrieve a long list of all files in a container.
+
+        :return final_list, list_count, last_obj:
         """
 
-        report.reporter(
-            msg='Toggling CDN on Container %s.' % ARGS.get('container')
+        headers = dict()
+
+        cdn_enabled = self.job_args.get('cdn_enabled')
+        if cdn_enabled:
+            headers['x-cdn-enabled'] = True
+
+        cdn_disabled = self.job_args.get('cdn_disabled')
+        if cdn_disabled:
+            headers['x-cdn-enabled'] = False
+
+        cdn_logs_enabled = self.job_args.get('cdn_logs_enabled')
+        if cdn_logs_enabled:
+            headers['x-log-retention'] = True
+
+        cdn_logs_disabled = self.job_args.get('cdn_logs_disabled')
+        if cdn_logs_disabled:
+            headers['x-log-retention'] = False
+
+        headers['x-ttl'] = self.job_args.get('cdn_ttl')
+
+        return self.job.container_cdn_command(
+            url=self.job_args['cdn_storage_url'],
+            container=self.job_args['container'],
+            container_object=self.job_args['object'],
+            cdn_headers=headers
         )
 
-        # Package up the Payload
-        payload = http.prep_payload(
-            auth=self.auth,
-            container=ARGS.get('container', basic.rand_string()),
-            source=None,
-            args=ARGS
-        )
+    def start(self):
+        """Return a list of objects from the API for a container."""
 
-        report.reporter(
-            msg='PAYLOAD : [ %s ]' % payload,
-            prt=False,
-            lvl='debug',
-        )
+        with utils.IndicatorThread(debug=self.debug, quiet=self.quiet):
+            cdn_item = self._cdn()
 
-        # Set the actions class up
-        self.go = actions.CloudActions(payload=payload)
-
-        with multi.spinner():
-            if ARGS.get('purge'):
-                for obj in ARGS.get('purge'):
-                    # Perform the purge
-                    self.go.container_cdn_command(url=payload['cnet'],
-                                                  container=payload['c_name'],
-                                                  sfile=obj)
-            else:
-                self.go.container_cdn_command(url=payload['cnet'],
-                                              container=payload['c_name'])
+        self.print_virt_table(cdn_item.headers)

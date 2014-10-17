@@ -7,146 +7,156 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
-import contextlib
+
+import collections
 import datetime
 import os
+import multiprocessing
+import re
 import tarfile
-import traceback
+import Queue
 
-import turbolift as turbo
-import turbolift.utils.basic_utils as basic
-import turbolift.utils.report_utils as report
-
-from turbolift import ARGS
-from turbolift import info
+import prettytable
 
 
-def get_local_files():
-    """Find all files specified in the "source" path.
+from turbolift.clouderator import actions
+from turbolift import exceptions
 
-    This creates a list for all of files using the full path.
-    """
 
-    def not_list(item):
-        """Exclude items.
+def get_keys(obj_item):
+    return obj_item.keys()
 
-        :param item:
-        :return True|False:
+
+class BaseMethod(object):
+    def __init__(self, job_args):
+        self.job_args = job_args
+        self.debug = self.job_args.get('debug', False)
+        self.quiet = self.job_args.get('quiet', False)
+        self.max_jobs = self.job_args.get('max_jobs')
+        if self.max_jobs is None:
+            self.max_jobs = 25000
+        self.job = actions.CloudActions(job_args=self.job_args)
+
+    def print_horiz_table(self, data):
+        """Print a horizontal pretty table from data."""
+
+        # Build list of returned objects
+        return_objects = list()
+        fields = self.job_args.get('fields')
+        if not fields:
+            fields = set()
+            map(fields.update, [i.keys() for i in data])
+
+        for obj in data:
+            item_struct = dict()
+            for item in fields:
+                item_struct[item] = obj.get(item)
+            else:
+                return_objects.append(item_struct)
+
+        table = prettytable.PrettyTable(fields)
+        for obj in return_objects:
+            table.add_row([obj.get(i) for i in fields])
+
+        for tbl in table.align.keys():
+            table.align[tbl] = 'l'
+
+        sort_key = self.job_args.get('sort_by')
+        if sort_key:
+            table.sortby = sort_key
+
+        print(table)
+
+    @staticmethod
+    def _process_func(func, queue):
+        while True:
+            try:
+                func(**queue.get(timeout=.5))
+            except Queue.Empty:
+                break
+
+    def _queue_generator(self, items, queue):
+        deque_items = collections.deque(items)
+        while deque_items:
+            item_count = len(deque_items)
+            if item_count < self.max_jobs:
+                max_jobs = item_count
+            else:
+                max_jobs = self.max_jobs
+
+            for _ in xrange(max_jobs):
+                try:
+                    item = deque_items.pop()
+                except IndexError:
+                    pass
+                else:
+                    queue.put(item)
+            yield queue
+
+    def _multi_processor(self, func, items):
+        base_queue = multiprocessing.Queue(maxsize=self.max_jobs)
+        concurrency = self.job_args.get('concurrency')
+
+        # Yield a queue of objects with a max input as set by `max_jobs`
+        for queue in self._queue_generator(items, base_queue):
+            concurrent_jobs = [
+                multiprocessing.Process(
+                    target=self._process_func,
+                    args=(func, queue,)
+                ) for _ in xrange(concurrency)
+            ]
+
+            #Create an empty list to join later.
+            join_jobs = list()
+            try:
+                for job in concurrent_jobs:
+                    join_jobs.append(job)
+                    job.start()
+
+                # Join finished jobs
+                for job in join_jobs:
+                    job.join()
+            except KeyboardInterrupt:
+                for job in join_jobs:
+                    job.terminate()
+                else:
+                    exceptions.emergency_kill()
+
+    @staticmethod
+    def print_virt_table(data):
+        """Print a vertical pretty table from data."""
+
+        table = prettytable.PrettyTable()
+        table.add_column('Keys', data.keys())
+        table.add_column('Values', [str(i) for i in data.values()])
+        for tbl in table.align.keys():
+            table.align[tbl] = 'l'
+
+        print(table)
+
+    @staticmethod
+    def match_filter(idx_list, pattern, dict_type=False, dict_key='name'):
+        """Return Matched items in indexed files.
+
+        :param idx_list:
+        :return list
         """
-        if all([not os.path.islink(item),
-                not os.path.ismount(item)]):
-            if not os.path.getsize(item) > 4831838208:
-                return True
+
+        if dict_type is False:
+            return [
+                obj for obj in idx_list
+                if re.search(pattern, obj)
+            ]
+        elif dict_type is True:
+            return [
+                obj for obj in idx_list
+                if re.search(pattern, obj.get(dict_key))
+            ]
         else:
-            return False
+            return list()
 
-    def indexer(location):
-        """Return a list of indexed files.
-
-        :param location:
-        :return:
-        """
-
-        _location = basic.real_full_path(
-            location.encode('utf8')
-        )
-        if os.path.isdir(_location):
-            r_walk = os.walk(_location)
-            indexes = [(root, fls) for root, sfs, fls in r_walk]
-            return [basic.jpath(root=inx[0], inode=inode)
-                    for inx in indexes for inode in inx[1]]
-        elif os.path.isfile(_location):
-            return [_location]
-        else:
-            raise turbo.NoFileProvided('No Path was Found for %s' % _location)
-
-    try:
-        d_paths = ARGS.get('source')
-        if not isinstance(d_paths, list):
-            d_paths = [d_paths]
-
-        # Local Index Path
-        c_index = [indexer(location=d_path) for d_path in d_paths]
-
-        # make sure my files are only files, and not in the the not_list
-        f_index = [item for subl in c_index
-                   for item in subl if not_list(item=item)]
-
-        if ARGS.get('exclude'):
-            for item in f_index:
-                for exclude in ARGS['exclude']:
-                    if exclude in item:
-                        try:
-                            index = f_index.index(item)
-                        except ValueError:
-                            pass
-                        else:
-                            f_index.pop(index)
-
-    except Exception as exp:
-        raise turbo.SystemProblem('Died for some reason. MESSAGE:\t%s' % exp)
-    else:
-        report.reporter(
-            msg='FILE LIST:\t%s' % f_index,
-            lvl='debug',
-            prt=False
-        )
-        return f_index
-
-
-@contextlib.contextmanager
-def operation(retry, obj=None, cleanup=None):
-    """This is an operation wrapper, which wraps an operation in try except.
-
-    If clean up is used, a clean up operation will be run should an exception
-    happen.
-
-    :param retry:
-    :param obj:
-    :param cleanup:
-    :return:
-    """
-
-    try:
-        yield retry
-    except turbo.NoSource as exp:
-        report.reporter(
-            msg=('No Source. Message: %s\nADDITIONAL DATA: %s\nTB: %s'
-                 % (traceback.format_exc(), exp, obj)),
-            lvl='error'
-        )
-        retry()
-    except turbo.SystemProblem as exp:
-        report.reporter(
-            msg='System Problems Found %s\nADDITIONAL DATA: %s' % (exp, obj),
-            lvl='error'
-        )
-        retry()
-    except turbo.AuthenticationProblem as exp:
-        retry()
-    except KeyboardInterrupt:
-        if cleanup is not None:
-            cleanup()
-        turbo.emergency_kill(reclaim=True)
-    except IOError as exp:
-        report.reporter(
-            msg=('IO ERROR: %s. ADDITIONAL DATA: %s'
-                 '\nMESSAGE %s will retry.'
-                 '\nSTACKTRACE: %s'
-                 % (exp, obj, info.__appname__, traceback.format_exc())),
-            lvl='error'
-        )
-        retry()
-    except Exception:
-        report.reporter(
-            msg=('Failed Operation. ADDITIONAL DATA: %s\n%s will retry\nTB: %s'
-                 % (obj, info.__appname__, traceback.format_exc())),
-            lvl='error'
-        )
-        retry()
-    finally:
-        if cleanup is not None:
-            cleanup()
+    def start(self):
+        pass
 
 
 def compress_files(file_list):
