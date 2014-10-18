@@ -8,6 +8,9 @@
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
 
+import hashlib
+import io
+import os
 import urllib
 import urlparse
 
@@ -80,6 +83,81 @@ class CloudActions(object):
 
         return headers, urlparse.urlparse(_container_uri)
 
+    def _sync_check(self, uri, headers, local_object=None, file_object=None):
+        resp = self._header_getter(
+            uri=uri,
+            headers=headers
+        )
+
+        if resp.status_code != 200:
+            return True
+
+        try:
+            self.shell.md5_checker(
+                md5sum=resp.headers.get('etag'),
+                local_file=local_object,
+                file_object=file_object
+            )
+        except cloudlib.MD5CheckMismatch:
+            return True
+        else:
+            return False
+
+
+    @cloud_utils.retry(requests_exp.ReadTimeout)
+    def _chunk_putter(self, uri, open_file, headers=None):
+        """Make many PUT request for a single chunked object.
+
+        Objects that are processed by this method have a SHA256 hash appended
+        to the name as well as a count for object indexing which starts at 0.
+
+        To make a PUT request pass, ``url``
+
+        :param uri: ``str``
+        :param open_file: ``object``
+        :param headers: ``dict``
+        """
+        count = 0
+        dynamic_hash = hashlib.sha256(self.job_args.get('container'))
+        dynamic_hash = dynamic_hash.hexdigest()
+        while True:
+            # Read in a chunk of an open file
+            file_object = open_file.read(self.job_args.get('chunk_size'))
+            if not file_object:
+                break
+
+            # When a chuck is present store it as BytesIO
+            with io.BytesIO(file_object) as file_object:
+                # store the parsed URI for the chunk
+                chunk_uri = urlparse.urlparse(
+                    '%s.%s.%s' % (
+                        uri.geturl(),
+                        dynamic_hash,
+                        count
+                    )
+                )
+
+                # Increment the count as soon as it is used
+                count += 1
+
+                # Check if the read chunk already exists
+                sync = self._sync_check(
+                    uri=chunk_uri,
+                    headers=headers,
+                    file_object=file_object
+                )
+                if not sync:
+                    continue
+
+                # PUT the chunk
+                _resp = self.http.put(
+                    url=chunk_uri,
+                    body=file_object,
+                    headers=headers
+                )
+                self._resp_exception(resp=_resp)
+                LOG.debug(_resp.__dict__)
+
     @cloud_utils.retry(requests_exp.ReadTimeout)
     def _putter(self, uri, headers, local_object=None):
         """Place  object into the container.
@@ -89,13 +167,36 @@ class CloudActions(object):
         :param local_object:
         """
 
-        if local_object:
-            with open(local_object, 'rb') as f_open:
-                resp = self.http.put(url=uri, body=f_open, headers=headers)
-        else:
-            resp = self.http.put(url=uri, headers=headers)
+        if not local_object:
+            return self.http.put(url=uri, headers=headers)
 
-        return self._resp_exception(resp=resp)
+        with open(local_object, 'rb') as f_open:
+            large_object_size = self.job_args.get('large_object_size')
+            if os.path.getsize(local_object) > large_object_size:
+                # Remove the manafest entry while working with chunks
+                manifest = headers.pop('X-Object-Manifest')
+                # Feed the open file through the chunk process
+                self._chunk_putter(
+                    uri=uri,
+                    open_file=f_open,
+                    headers=headers
+                )
+                # Upload the 0 byte object with the manifest path
+                headers.update({'X-Object-Manifest': manifest})
+                return self.http.put(url=uri, headers=headers)
+            else:
+                if self.job_args.get('sync'):
+                    sync = self._sync_check(
+                        uri=uri,
+                        headers=headers,
+                        local_object=local_object
+                    )
+                    if not sync:
+                        return None
+
+                return self.http.put(
+                    url=uri, body=f_open, headers=headers
+                )
 
     @cloud_utils.retry(requests_exp.ReadTimeout)
     def _deleter(self, uri, headers):
@@ -433,23 +534,6 @@ class CloudActions(object):
             container_headers=object_headers,
             object_headers=meta
         )
-
-        if self.job_args.get('sync'):
-            resp = self._header_getter(
-                uri=container_uri,
-                headers=headers
-            )
-
-            if resp.status_code == 200:
-                try:
-                    self.shell.md5_checker(
-                        md5sum=resp.headers.get('etag'),
-                        local_file=local_object
-                    )
-                except cloudlib.MD5CheckMismatch:
-                    pass
-                else:
-                    return resp
 
         return self._putter(
             uri=container_uri,
