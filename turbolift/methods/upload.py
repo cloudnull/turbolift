@@ -105,20 +105,21 @@ class Upload(object):
         """
 
         report.reporter(msg='Getting file list for REMOTE DELETE')
+        # From the remote system see if we have differences in the local system
+        f_indexed = self._index_local_files()
+
         objects = self.go.object_lister(
             url=payload['url'], container=payload['c_name']
         )
-
         source = payload['source']
         obj_names = [
             basic.jpath(root=source, inode=obj.get('name'))
             for obj in objects[0]
         ]
+        obj_names = set(obj_names)
 
-        # From the remote system see if we have differences in the local system
-        f_indexed = self._index_local_files()
-        diff_check = multi.ReturnDiff()
-        objects = diff_check.difference(target=f_indexed, source=obj_names)
+        # Sort the difference between remote files and local files.
+        objects = [obj for obj in obj_names if obj not in f_indexed]
 
         if objects:
             # Set Basic Data for file delete.
