@@ -522,6 +522,15 @@ ARGUMENTS = {
                         ]
                     }
                 },
+                'filter_dlo': {
+                    'commands': [
+                        '--filter-dlo'
+                    ],
+                    'action': 'store_true',
+                    'help': 'Filter all Dynamic Large Objects that were'
+                            ' created by turbolift.',
+                    'default': False
+                },
                 'all_containers': {
                     'commands': [
                         '--all-containers'
@@ -723,7 +732,36 @@ ARGUMENTS = {
                             'restore_perms',
                             'exclude'
                         ]
+                    },
+                    'dlo': {
+                        'text': 'Dynamic Large Object Options',
+                        'group': [
+                            'chunk_size',
+                            'large_object_size'
+                        ]
                     }
+                },
+                'chunk_size': {
+                    'commands': [
+                        '--chunk-size'
+                    ],
+                    'help': 'Set the default byte size a object that is larger'
+                            ' then "[--large-object-size]" will be chunked'
+                            ' this size. Default: %(default)s',
+                    'default': 524288000,
+                    'type': int,
+                    'metavar': '[INT]'
+                },
+                'large_object_size': {
+                    'commands': [
+                        '--large-object-size'
+                    ],
+                    'help': 'Set the default byte size of the large object'
+                            ' threshold that is larger then 5GB will be'
+                            ' chunked at. Default: %(default)s',
+                    'default': 5153960756,
+                    'type': int,
+                    'metavar': '[INT]'
                 },
                 'exclude': {
                     'commands': [
