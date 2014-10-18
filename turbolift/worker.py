@@ -88,15 +88,11 @@ class Worker(object):
             LOG.debug('Authenticate against the Service API')
             self.job_args.update(auth.authenticate(job_args=self.job_args))
 
-        try:
-            if job_override:
-                action = self._get_method(method=job_override)
-            else:
-                job = self.job_map[self.job_args['parsed_command']]
-                action = self._get_method(method=job)
-
-            run = action(job_args=self.job_args)
-        except KeyboardInterrupt:
-            exceptions.emergency_kill(reclaim=True)
+        if job_override:
+            action = self._get_method(method=job_override)
         else:
-            run.start()
+            job = self.job_map[self.job_args['parsed_command']]
+            action = self._get_method(method=job)
+
+        run = action(job_args=self.job_args)
+        run.start()
