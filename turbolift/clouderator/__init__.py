@@ -79,27 +79,17 @@ def time_delta(lmobj, compare_time=None):
     :return True|False:
     """
 
-    def hours(delta, factor):
-        return delta(hours=factor)
-
-    def days(delta, factor):
-        return delta(days=factor)
-
-    def weeks(delta, factor):
-        return delta(weeks=factor)
-
     fmt, date, delta, now = basic.time_stamp()
 
     # Set time objects
     odate = date.strptime(lmobj, fmt)
 
-    if compare_time is None:
+    if not compare_time:
         # Time Options
         time_factor = ARGS.get('time_factor', 1)
         offset = ARGS.get('time_offset')
-        offset_method = locals()[offset]
 
-        if (odate + offset_method(delta=delta, factor=time_factor)) > now:
+        if (odate + delta(**{offset: time_factor})) > now:
             return False
         else:
             return True
