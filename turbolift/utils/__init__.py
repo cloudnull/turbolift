@@ -46,15 +46,15 @@ class IndicatorThread(object):
         self.msg = msg
 
     def __enter__(self):
-        if self.debug is False or self.quiet is False:
+        if not self.debug and not self.quiet:
             return self.indicator_thread()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.run = False
-        if not self.debug or not self.quiet:
+        if not self.debug and not self.quiet:
             print('Done.')
 
-        if self.debug is False:
+        if not self.debug:
             self.job.terminate()
 
     def indicator(self):
