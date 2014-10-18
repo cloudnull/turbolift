@@ -48,6 +48,7 @@ class UploadRunMethod(methods.BaseMethod):
             'quiet': self.quiet,
             'msg': ' Uploading... '
         }
+
         with utils.IndicatorThread(**indicator_options):
 
             upload_objects = list()

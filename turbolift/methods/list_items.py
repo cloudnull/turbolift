@@ -8,6 +8,8 @@
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
 
+import hashlib
+
 from cloudlib import logger
 
 from turbolift import utils
@@ -61,6 +63,17 @@ class ListRunMethod(methods.BaseMethod):
 
         if objects_list:
             if isinstance(objects_list[0], dict):
+                filter_dlo = self.job_args.get('filter_dlo')
+                if filter_dlo:
+                    dynamic_hash = hashlib.sha256(
+                        self.job_args.get('container')
+                    )
+                    dynamic_hash = dynamic_hash.hexdigest()
+                    print dynamic_hash
+                    objects_list = [
+                        i for i in objects_list
+                        if dynamic_hash not in i.get('name')
+                    ]
                 self.print_horiz_table(objects_list)
             else:
                 self.print_virt_table(objects_list[0].headers)

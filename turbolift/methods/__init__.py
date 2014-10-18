@@ -11,8 +11,8 @@
 import collections
 import datetime
 import grp
-import os
 import multiprocessing
+import os
 import pwd
 import re
 import Queue
@@ -34,8 +34,12 @@ class BaseMethod(object):
         self.debug = self.job_args.get('debug', False)
         self.quiet = self.job_args.get('quiet', False)
         self.max_jobs = self.job_args.get('max_jobs')
+        # Define the size at which objects are considered large.
+        self.large_object_size = self.job_args.get('large_object_size')
+
         if self.max_jobs is None:
             self.max_jobs = 25000
+
         self.job = actions.CloudActions(job_args=self.job_args)
 
     def _encapsolate_object(self, full_path, split_path):
@@ -45,8 +49,13 @@ class BaseMethod(object):
             container_object = full_path.split(split_path)[-1]
             container_object = container_object.lstrip(os.sep)
 
-        object_item = {'container_object': container_object}
-        meta = object_item['meta'] = {}
+        object_item = {
+            'container_object': container_object,
+            'local_object': full_path
+        }
+
+        container_name = self.job_args.get('container')
+        meta = object_item['meta'] = dict()
 
         if os.path.islink(full_path):
             link_path = os.path.realpath(
@@ -62,11 +71,15 @@ class BaseMethod(object):
             meta['X-Object-Meta-symlink'] = link_path
             if link_path != link_object:
                 meta['X-Object-Manifest'] = '%s/%s' % (
-                    self.job_args.get('container'),
+                    container_name,
                     link_object.lstrip(os.sep)
                 )
-        else:
-            object_item['local_object'] = full_path
+        elif os.path.getsize(full_path) > self.large_object_size:
+            manifest_path = full_path.split(split_path)[-1]
+            meta['X-Object-Manifest'] = '%s/%s' % (
+                container_name,
+                manifest_path.lstrip(os.sep)
+            )
 
         if self.job_args.get('save_perms'):
             obj = os.stat(full_path)
