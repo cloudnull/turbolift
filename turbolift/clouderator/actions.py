@@ -220,29 +220,39 @@ class CloudActions(object):
             else:
                 if os.path.islink(fpath):
                     link = os.readlink(fpath)
-                    lpath = os.path.abspath(os.path.join (os.path.dirname(fpath), link))
+                    lpath = os.path.abspath(
+                        os.path.join(os.path.dirname(fpath), link)
+                    )
 
                     rpath_reversed = rpath.split('/')[::-1]
                     fpath_reversed = fpath.split('/')[::-1]
 
                     a, b = sorted((rpath_reversed, fpath_reversed), key=len)
                     for i, j in enumerate(a):
-                       if j != b[i]:
-                           index = i
-                           break
+                        if j != b[i]:
+                            index = i
+                            break
 
                     container = rpath_reversed[index]
-                    container_dir = fpath.replace('/'.join(rpath_reversed[:index][::-1]), '')
+                    container_dir = fpath.replace(
+                        '/'.join(rpath_reversed[:index][::-1]), ''
+                    )
 
                     if container_dir in lpath:
-                        fheaders['X-Object-Manifest'] = container + '/' + lpath.replace(container_dir, '')
+                        manafest = container + '/' + lpath.replace(
+                            container_dir, ''
+                        )
+                        fheaders['X-Object-Manifest'] = manafest
                         resp = http.put_request(
                             url=url, rpath=rpath, body=None, headers=fheaders
                         )
                         self.resp_exception(resp=resp)
                     else:
                         report.reporter(
-                            msg='symlink %s points to location %s which is outside uploading directory' % (fpath, lpath),
+                            msg='symlink %s points to location %s which is'
+                                ' outside uploading directory' % (
+                                    fpath, lpath
+                                ),
                             lvl='warning'
                         )
                 else:
@@ -299,10 +309,13 @@ class CloudActions(object):
                     time_offset = obj.get('last_modified')
                     if time_offset is not None and ARGS.get('time_offset'):
                         # Get the last_modified data from the Object.
-                        if cloud.time_delta(lmobj=time_offset) is True:
+                        if cloud.time_delta(lmobj=time_offset) is False:
                             f_list.append(obj)
                     else:
                         f_list.append(obj)
+                else:
+                    if not f_list:
+                        return list()
 
                 last_obj_in_list = f_list[-1].get('name')
                 if ARGS.get('max_jobs', ARGS.get('object_index')) is not None:
@@ -347,7 +360,10 @@ class CloudActions(object):
                     msg='INFO: %d object(s) found' % len(final_list),
                     log=True
                 )
-                if 'name' in file_list[-1]:
+
+                if not final_list:
+                    return final_list, list_count, None
+                elif 'name' in file_list[-1]:
                     return final_list, list_count, file_list[-1]['name']
                 else:
                     return final_list, list_count, file_list[-1]
