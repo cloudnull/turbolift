@@ -25,7 +25,7 @@ def clone_actions(subparser, time_args):
     clone.add_argument('-sc',
                        '--source-container',
                        metavar='[CONTAINER]',
-                       help='Target Container.',
+                       help='Source Container.',
                        required=True,
                        default=None)
     clone.add_argument('-tc',
