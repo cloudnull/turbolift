@@ -33,7 +33,12 @@ def get_local_files():
         :param item:
         :return True|False:
         """
-        if not os.path.ismount(item):
+
+	if os.path.islink(item):
+	    dest = os.readlink(item):
+	    if not os.path.exists(dest):
+		return True
+	elif not os.path.ismount(item):
             if not os.path.getsize(item) > 4831838208:
                 return True
         return False
