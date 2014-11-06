@@ -35,7 +35,7 @@ def get_local_files():
         """
 
 	if os.path.islink(item):
-	    dest = os.readlink(item):
+	    dest = os.readlink(item)
 	    if not os.path.exists(dest):
 		return True
 	elif not os.path.ismount(item):
