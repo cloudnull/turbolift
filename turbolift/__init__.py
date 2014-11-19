@@ -365,6 +365,7 @@ ARGUMENTS = {
             'help': 'Delete objects or entire containers.',
             'shared_args': [
                 'object',
+                'objects_file',
                 'container',
                 'pattern_match',
                 'max_jobs'

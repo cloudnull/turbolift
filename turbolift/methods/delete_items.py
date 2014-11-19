@@ -31,6 +31,7 @@ class DeleteRunMethod(methods.BaseMethod):
         with utils.IndicatorThread(**indicator_options):
             # Perform the delete twice
             user_defined, _objects = self._return_container_objects()
+            print _objects
             while _objects:
                 self._multi_processor(
                     self._delete,

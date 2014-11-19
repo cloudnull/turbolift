@@ -261,7 +261,10 @@ class BaseMethod(object):
             container_objects = os.path.expanduser(container_objects)
             if os.path.isfile(container_objects):
                 with open(container_objects) as f:
-                    return True, [{'container_object': i} for i in f.readlines()]
+                    return True, [
+                        {'container_object': i.rstrip('\n')}
+                        for i in f.readlines()
+                    ]
 
         container_objects = self._list_contents()
         pattern_match = self.job_args.get('pattern_match')
