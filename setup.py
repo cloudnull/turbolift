@@ -57,6 +57,6 @@ setuptools.setup(
         'Topic :: Utilities',
         'Topic :: Software Development :: Libraries :: Python Modules'],
     entry_points={
-        "console_scripts": ["turbolift = turbolift.executable:run_turbolift"]
+        "console_scripts": ["turbolift = turbolift.executable:execute"]
     }
 )
