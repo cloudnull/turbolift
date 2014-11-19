@@ -24,31 +24,6 @@ class ShowRunMethod(methods.BaseMethod):
     def __init__(self, job_args):
         super(ShowRunMethod, self).__init__(job_args)
 
-    def _show(self, container, container_objects):
-        if self.job_args.get('cdn_info'):
-            if container_objects:
-                raise exceptions.SystemProblem(
-                    'You can not get CDN information on an object in your'
-                    ' container.'
-                )
-            url = self.job_args['cdn_storage_url']
-        else:
-            url = self.job_args['storage_url']
-
-        if not container_objects:
-            container_objects = [None]
-
-        returned_objects = list()
-        for container_object in container_objects:
-            returned_objects.append(
-                self.job.show_details(
-                    url=url,
-                    container=container,
-                    container_object=container_object
-                )
-            )
-        return returned_objects
-
     def start(self):
         indicator_options = {
             'debug': self.debug,

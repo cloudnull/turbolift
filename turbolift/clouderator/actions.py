@@ -318,8 +318,17 @@ class CloudActions(object):
             marked_path,
             headers
         )
-        final_list = cloud_utils.unique_list_dicts(dlist=file_list, key='name')
-        LOG.debug('Found [ %d ] entries(s)', len(final_list))
+
+        final_list = cloud_utils.unique_list_dicts(
+            dlist=file_list, key='name'
+        )
+
+        LOG.debug(
+            'Found [ %d ] entries(s) at [ %s ]',
+            len(final_list),
+            uri.geturl()
+        )
+
         return final_list
 
     def _resp_exception(self, resp):
@@ -407,7 +416,7 @@ class CloudActions(object):
         if container:
             resp = self._header_getter(uri=container_uri, headers=headers)
             if resp.status_code == 404:
-                LOG.warn('Container [ %s ] not found.', container)
+                LOG.info('Container [ %s ] not found.', container)
                 return [resp]
 
         return self._list_getter(
@@ -548,7 +557,6 @@ class CloudActions(object):
 
         :param url:
         :param container:
-        :param u_file:
         """
 
         headers, container_uri = self._return_base_data(
@@ -557,319 +565,4 @@ class CloudActions(object):
             container_object=container_object
         )
 
-        resp = self._header_getter(
-            uri=container_uri,
-            headers=headers
-        )
-
-        if resp.status_code != 404:
-            return self._deleter(uri=container_uri, headers=headers)
-        else:
-            return resp
-
-
-class CloudActionsOld(object):
-    def __init__(self, payload):
-        self.payload = payload
-
-    def _downloader(self, url, rpath, fheaders, lfile, source,
-                    skip=False):
-        """Download a specified object in the container.
-
-        :param url:
-        :param rpath:
-        :param fheaders:
-        :param lfile:
-        :param skip:
-        """
-
-        resp = None
-
-        if source is None:
-            local_f = lfile
-        else:
-            local_f = basic.jpath(root=source, inode=lfile)
-
-        if self._checker(url, rpath, local_f, fheaders, skip) is True:
-            report.reporter(
-                msg='Downloading remote %s to local file %s' % (rpath, lfile),
-                prt=False,
-                lvl='debug',
-            )
-
-            # Perform Object GET
-            resp = http.get_request(
-                url=url, rpath=rpath, headers=fheaders, stream=True
-            )
-            self.resp_exception(resp=resp)
-            local_f = basic.collision_rename(file_name=local_f)
-
-            # Open our source file and write it
-            with open(local_f, 'wb') as f_name:
-                for chunk in resp.iter_content(chunk_size=2048):
-                    if chunk:
-                        f_name.write(chunk)
-                        f_name.flush()
-            resp.close()
-
-        if ARGS.get('restore_perms') is not None:
-            # Make a connection
-            if resp is None:
-                resp = self._header_getter(
-                    url=url, rpath=rpath, fheaders=fheaders
-                )
-
-            all_headers = resp.headers
-
-            if all(['x-object-meta-group' in all_headers,
-                    'x-object-meta-owner' in all_headers,
-                    'x-object-meta-perms' in all_headers]):
-                basic.restor_perms(local_file=local_f, headers=all_headers)
-            else:
-                report.reporter(
-                    msg=('No Permissions were restored, because none were'
-                         ' saved on the object "%s"' % rpath),
-                    lvl='warn',
-                    log=True
-                )
-
-    def _deleter(self, url, rpath, fheaders):
-        """Delete a specified object in the container.
-
-        :param url:
-        :param rpath:
-        :param fheaders:
-        """
-
-        # perform Object Delete
-        resp = http.delete_request(url=url, headers=fheaders, rpath=rpath)
-        self.resp_exception(resp=resp)
-
-        report.reporter(
-            msg=('OBJECT %s MESSAGE %s %s %s'
-                 % (rpath, resp.status_code, resp.reason, resp.request)),
-            prt=False,
-            lvl='debug'
-        )
-
-    def detail_show(self, url):
-        """Return Details on an object or container."""
-
-        rty_count = ARGS.get('error_retry')
-        for retry in basic.retryloop(attempts=rty_count,
-                                     delay=5,
-                                     obj=ARGS.get('container')):
-            if ARGS.get('object') is not None:
-                rpath = http.quoter(url=url.path,
-                                    cont=ARGS.get('container'),
-                                    ufile=ARGS.get('object'))
-            else:
-                rpath = http.quoter(url=url.path,
-                                    cont=ARGS.get('container'))
-            fheaders = self.payload['headers']
-            with meth.operation(retry, obj='%s %s' % (fheaders, rpath)):
-                return self._header_getter(url=url,
-                                           rpath=rpath,
-                                           fheaders=fheaders)
-
-    def container_create(self, url, container):
-        """Create a container if it is not Found.
-
-        :param url:
-        :param container:
-        """
-
-        rty_count = ARGS.get('error_retry')
-        for retry in basic.retryloop(attempts=rty_count,
-                                     delay=5,
-                                     obj=container):
-
-            rpath = http.quoter(url=url.path,
-                                cont=container)
-
-            fheaders = self.payload['headers']
-            with meth.operation(retry, obj='%s %s' % (fheaders, rpath)):
-                resp = self._header_getter(url=url,
-                                           rpath=rpath,
-                                           fheaders=fheaders)
-
-                # Check that the status was a good one
-                if resp.status_code == 404:
-                    report.reporter(msg='Creating Container => %s' % container)
-                    http.put_request(url=url, rpath=rpath, headers=fheaders)
-                    self.resp_exception(resp=resp)
-                    report.reporter(msg='Container "%s" Created' % container)
-                    return True
-                else:
-                    report.reporter(msg='Container "%s" Found' % container)
-                    return False
-
-    def container_deleter(self, url, container):
-        """Delete all objects in a container.
-
-        :param url:
-        :param container:
-        """
-
-        for retry in basic.retryloop(attempts=ARGS.get('error_retry'),
-                                     delay=2,
-                                     obj=container):
-            fheaders = self.payload['headers']
-            rpath = http.quoter(url=url.path, cont=container)
-            with meth.operation(retry, obj='%s %s' % (fheaders, container)):
-                # Perform delete.
-                self._deleter(url=url,
-                              rpath=rpath,
-                              fheaders=fheaders)
-
-    def object_downloader(self, url, container, source, u_file):
-        """Download an Object from a Container.
-
-        :param url:
-        :param container:
-        :param u_file:
-        """
-
-        rty_count = ARGS.get('error_retry')
-        for retry in basic.retryloop(attempts=rty_count, delay=2, obj=u_file):
-            fheaders = self.payload['headers']
-            rpath = http.quoter(url=url.path,
-                                cont=container,
-                                ufile=u_file)
-            with meth.operation(retry, obj='%s %s' % (fheaders, u_file)):
-                self._downloader(url=url,
-                                 rpath=rpath,
-                                 fheaders=fheaders,
-                                 lfile=u_file,
-                                 source=source)
-
-    def object_syncer(self, surl, turl, scontainer, tcontainer, u_file):
-        """Download an Object from one Container and the upload it to a target.
-
-        :param surl:
-        :param turl:
-        :param scontainer:
-        :param tcontainer:
-        :param u_file:
-        """
-
-        def _cleanup():
-            """Ensure that our temp file is removed."""
-            if locals().get('tfile') is not None:
-                basic.remove_file(tfile)
-
-        def _time_difference(obj_resp, obj):
-            if ARGS.get('save_newer') is True:
-                # Get the source object last modified time.
-                compare_time = obj_resp.header.get('last_modified')
-                if compare_time is None:
-                    return True
-                elif cloud.time_delta(compare_time=compare_time,
-                                      lmobj=obj['last_modified']) is True:
-                    return False
-                else:
-                    return True
-            else:
-                return True
-
-        def _compare(obj_resp, obj):
-            if obj_resp.status_code == 404:
-                report.reporter(
-                    msg='Target Object %s not found' % obj['name'],
-                    prt=False
-                )
-                return True
-            elif ARGS.get('add_only'):
-                report.reporter(
-                    msg='Target Object %s already exists' % obj['name'],
-                    prt=True
-                )
-                return False
-            elif obj_resp.headers.get('etag') != obj['hash']:
-                report.reporter(
-                    msg=('Checksum Mismatch on Target Object %s'
-                         % u_file['name']),
-                    prt=False,
-                    lvl='debug'
-                )
-                return _time_difference(obj_resp, obj)
-            else:
-                return False
-
-        fheaders = self.payload['headers']
-        for retry in basic.retryloop(attempts=ARGS.get('error_retry'),
-                                     delay=5,
-                                     obj=u_file['name']):
-            # Open connection and perform operation
-            spath = http.quoter(url=surl.path,
-                                cont=scontainer,
-                                ufile=u_file['name'])
-            tpath = http.quoter(url=turl.path,
-                                cont=tcontainer,
-                                ufile=u_file['name'])
-
-            with meth.operation(retry, obj='%s %s' % (fheaders, tpath)):
-                resp = self._header_getter(url=turl,
-                                           rpath=tpath,
-                                           fheaders=fheaders)
-
-                # If object comparison is True GET then PUT object
-                if _compare(resp, u_file) is not True:
-                    return None
-            try:
-                # Open Connection for source Download
-                with meth.operation(retry, obj='%s %s' % (fheaders, spath)):
-                    # make a temp file.
-                    tfile = basic.create_tmp()
-
-                    # Make a connection
-                    resp = self._header_getter(url=surl,
-                                               rpath=spath,
-                                               fheaders=fheaders)
-                    sheaders = resp.headers
-                    self._downloader(
-                        url=surl,
-                        rpath=spath,
-                        fheaders=fheaders,
-                        lfile=tfile,
-                        source=None,
-                        skip=True
-                    )
-
-                for _retry in basic.retryloop(attempts=ARGS.get('error_retry'),
-                                              delay=5,
-                                              obj=u_file):
-                    # open connection for target upload.
-                    adddata = '%s %s' % (fheaders, u_file)
-                    with meth.operation(_retry, obj=adddata, cleanup=_cleanup):
-                        resp = self._header_getter(url=turl,
-                                                   rpath=tpath,
-                                                   fheaders=fheaders)
-                        self.resp_exception(resp=resp)
-                        # PUT remote object
-                        self._putter(url=turl,
-                                     fpath=tfile,
-                                     rpath=tpath,
-                                     fheaders=fheaders,
-                                     skip=True)
-
-                        # let the system rest for 1 seconds.
-                        basic.stupid_hack(wait=1)
-
-                        # With the source headers POST new headers on target
-                        if ARGS.get('clone_headers') is True:
-                            theaders = resp.headers
-                            for key in sheaders.keys():
-                                if key not in theaders:
-                                    fheaders.update({key: sheaders[key]})
-                            # Force the SOURCE content Type on the Target.
-                            fheaders.update(
-                                {'content-type': sheaders.get('content-type')}
-                            )
-                            self._header_poster(
-                                url=turl,
-                                rpath=tpath,
-                                fheaders=fheaders
-                            )
-            finally:
-                _cleanup()
+        return self._deleter(uri=container_uri, headers=headers)

@@ -65,6 +65,16 @@ ARGUMENTS = {
             'metavar': 'NAME',
             'required': False
         },
+        'objects_file': {
+            'commands': [
+                '-of',
+                '--objects-file'
+            ],
+            'help': 'A file that contains the list of objects to interact'
+                    ' with.',
+            'metavar': 'NAME',
+            'required': False
+        },
         'object_headers': {
             'commands': [
                 '-OH',
@@ -530,6 +540,14 @@ ARGUMENTS = {
                     'help': 'Filter all Dynamic Large Objects that were'
                             ' created by turbolift.',
                     'default': False
+                },
+                'filter': {
+                    'commands': [
+                        '--filter'
+                    ],
+                    'help': 'String filter on all returned objects names.',
+                    'default': None,
+                    'metavar': '[STRING]'
                 },
                 'all_containers': {
                     'commands': [

@@ -25,34 +25,11 @@ class ListRunMethod(methods.BaseMethod):
     def __init__(self, job_args):
         super(ListRunMethod, self).__init__(job_args)
 
-    def list_contents(self, last_obj=None):
-        """Retrieve a long list of all files in a container.
-
-        :return final_list, list_count, last_obj:
-        """
-        if self.job_args.get('cdn_containers'):
-            if not self.job_args.get('fields'):
-                self.job_args['fields'] = [
-                    'name',
-                    'cdn_enabled',
-                    'log_retention',
-                    'ttl'
-                ]
-            url = self.job_args['cdn_storage_url']
-        else:
-            url = self.job_args['storage_url']
-
-        return self.job.list_items(
-            url=url,
-            container=self.job_args['container'],
-            last_obj=last_obj
-        )
-
     def start(self):
         """Return a list of objects from the API for a container."""
 
         with utils.IndicatorThread(debug=self.debug, quiet=self.quiet):
-            objects_list = self.list_contents()
+            objects_list = self._list_contents()
             pattern_match = self.job_args.get('pattern_match')
             if pattern_match:
                 self.match_filter(
@@ -69,10 +46,15 @@ class ListRunMethod(methods.BaseMethod):
                         self.job_args.get('container')
                     )
                     dynamic_hash = dynamic_hash.hexdigest()
-                    print dynamic_hash
                     objects_list = [
                         i for i in objects_list
                         if dynamic_hash not in i.get('name')
+                    ]
+                string_filter = self.job_args.get('filter')
+                if string_filter:
+                    objects_list = [
+                        i for i in objects_list
+                        if string_filter in i.get('name')
                     ]
                 self.print_horiz_table(objects_list)
             else:

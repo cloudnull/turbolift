@@ -10,7 +10,6 @@
 
 from cloudlib import logger
 
-from turbolift import exceptions
 from turbolift import utils
 from turbolift import methods
 
@@ -23,24 +22,6 @@ class UpdateRunMethod(methods.BaseMethod):
 
     def __init__(self, job_args):
         super(UpdateRunMethod, self).__init__(job_args)
-
-    def _update(self, container, container_objects):
-        if not container_objects:
-            container_objects = [None]
-
-        returned_objects = list()
-        for container_object in container_objects:
-            returned_objects.append(
-                self.job.update_object(
-                    url=self.job_args['storage_url'],
-                    container=container,
-                    container_object=container_object,
-                    container_headers=self.job_args.get('container_headers'),
-                    object_headers=self.job_args.get('object_headers')
-                )
-            )
-        else:
-            return returned_objects
 
     def start(self):
         indicator_options = {

@@ -23,39 +23,6 @@ class RunMethod(methods.BaseMethod):
     def __init__(self, job_args):
         super(RunMethod, self).__init__(job_args)
 
-    def _cdn(self):
-        """Retrieve a long list of all files in a container.
-
-        :return final_list, list_count, last_obj:
-        """
-
-        headers = dict()
-
-        cdn_enabled = self.job_args.get('cdn_enabled')
-        if cdn_enabled:
-            headers['x-cdn-enabled'] = True
-
-        cdn_disabled = self.job_args.get('cdn_disabled')
-        if cdn_disabled:
-            headers['x-cdn-enabled'] = False
-
-        cdn_logs_enabled = self.job_args.get('cdn_logs_enabled')
-        if cdn_logs_enabled:
-            headers['x-log-retention'] = True
-
-        cdn_logs_disabled = self.job_args.get('cdn_logs_disabled')
-        if cdn_logs_disabled:
-            headers['x-log-retention'] = False
-
-        headers['x-ttl'] = self.job_args.get('cdn_ttl')
-
-        return self.job.container_cdn_command(
-            url=self.job_args['cdn_storage_url'],
-            container=self.job_args['container'],
-            container_object=self.job_args['object'],
-            cdn_headers=headers
-        )
-
     def start(self):
         """Return a list of objects from the API for a container."""
 
