@@ -22,7 +22,9 @@ def execute():
     """This is the run section of the application Turbolift."""
 
     if len(sys.argv) <= 1:
-        raise SystemExit()
+        raise SystemExit(
+            'No Arguments provided. use [--help] for more information.'
+        )
 
     # Capture user arguments
     _args = arguments.ArgumentParserator(
