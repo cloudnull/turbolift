@@ -59,8 +59,8 @@ ARGUMENTS = {
                 '-o',
                 '--object'
             ],
-            'help': 'Object name to work with. One or more object can be set'
-                    ' at a time.',
+            'help': 'Object name(s) to work with. One or more object can be'
+                    ' set at a time.',
             'nargs': '+',
             'metavar': 'NAME',
             'required': False
@@ -71,8 +71,8 @@ ARGUMENTS = {
                 '--objects-file'
             ],
             'help': 'A file that contains the list of objects to interact'
-                    ' with.',
-            'metavar': 'NAME',
+                    ' with. The file MUST contain only one object per line.',
+            'metavar': '[FILE]',
             'required': False
         },
         'object_headers': {
@@ -371,6 +371,16 @@ ARGUMENTS = {
                 'max_jobs'
             ],
             'optional_args': {
+                'mutually_exclusive': {
+                    'list_groups': {
+                        'text': 'Optional user defined object lists',
+                        'required': True,
+                        'group': [
+                            'object',
+                            'objects_file'
+                        ]
+                    }
+                },
                 'save_container': {
                     'commands': [
                         '--save-container'
