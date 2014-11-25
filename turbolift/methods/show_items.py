@@ -9,9 +9,8 @@
 # =============================================================================
 
 from cloudlib import logger
+from cloudlib import indicator
 
-from turbolift import exceptions
-from turbolift import utils
 from turbolift import methods
 
 
@@ -25,11 +24,9 @@ class ShowRunMethod(methods.BaseMethod):
         super(ShowRunMethod, self).__init__(job_args)
 
     def start(self):
-        indicator_options = {
-            'debug': self.debug,
-            'quiet': self.quiet
-        }
-        with utils.IndicatorThread(**indicator_options):
+
+        self.indicator_options['msg'] = 'Grabbing details... '
+        with indicator.Spinner(**self.indicator_options):
             items = self._show(
                 container=self.job_args['container'],
                 container_objects=self.job_args.get('object')

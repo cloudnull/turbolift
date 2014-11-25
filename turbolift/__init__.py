@@ -263,7 +263,7 @@ ARGUMENTS = {
             'default': os.environ.get('OS_AUTH_URL', None),
             'metavar': '[AUTH_URL]'
         },
-        'auth_version': {
+        'os_auth_version': {
             'commands': [
                 '--os-auth-version'
             ],
@@ -395,6 +395,7 @@ ARGUMENTS = {
         'archive': {
             'help': 'Compress files or directories into a single archive',
             'shared_args': [
+                'object',
                 'directory',
                 'container'
             ],
@@ -403,8 +404,20 @@ ARGUMENTS = {
                     'commands': [
                         '--tar-name'
                     ],
-                    'metavar': '[NAME]',
-                    'help': 'Name of tarball archive'
+                    'metavar': '[FILE_NAME]',
+                    'help': 'Name of tarball archive. Use the full path to'
+                            ' where you would like to save the archive. If you'
+                            ' do not provide a full path the local working'
+                            ' directory will be used.'
+                },
+                'add_timestamp': {
+                    'commands': [
+                        '--add-timestamp'
+                    ],
+                    'action': 'store_true',
+                    'help': 'If set the system will append a timestamp to the'
+                            ' archive name.',
+                    'default': False
                 },
                 'no_cleanup': {
                     'commands': [
@@ -870,12 +883,24 @@ __auth_plugins__ = {
                 'ord',
                 'iad',
                 'syd',
-                'hkg'
+                'hkg',
+                'lon'
             ],
             'help': 'Authentication Plugin for Rackspace Cloud'
                     ' env[OS_RAX_AUTH]',
             'default': os.environ.get('OS_RAX_AUTH', None),
             'metavar': '[REGION]'
+        }
+    },
+    'rax_auth_v1': {
+        'os_auth_version': 'v1.0',
+        'os_auth_url': 'https://identity.api.rackspacecloud.com/v1.0',
+        'args': {
+            'commands': [
+                '--rax-auth-v1'
+            ],
+            'action': 'store_true',
+            'help': 'Authentication Plugin for Rackspace Cloud V1'
         }
     },
     'os_rax_auth_lon': {

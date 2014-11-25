@@ -9,8 +9,8 @@
 # =============================================================================
 
 from cloudlib import logger
+from cloudlib import indicator
 
-from turbolift import utils
 from turbolift import methods
 
 
@@ -26,7 +26,8 @@ class RunMethod(methods.BaseMethod):
     def start(self):
         """Return a list of objects from the API for a container."""
 
-        with utils.IndicatorThread(debug=self.debug, quiet=self.quiet):
+        self.indicator_options['msg'] = 'Interacting with the CDN... '
+        with indicator.Spinner(run=self.run_indicator):
             cdn_item = self._cdn()
 
         self.print_virt_table(cdn_item.headers)

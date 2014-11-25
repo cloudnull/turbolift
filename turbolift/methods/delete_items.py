@@ -9,8 +9,8 @@
 # =============================================================================
 
 from cloudlib import logger
+from cloudlib import indicator
 
-from turbolift import utils
 from turbolift import methods
 
 LOG = logger.getLogger('turbolift')
@@ -23,12 +23,9 @@ class DeleteRunMethod(methods.BaseMethod):
         super(DeleteRunMethod, self).__init__(job_args)
 
     def start(self):
-        indicator_options = {
-            'debug': self.debug,
-            'quiet': self.quiet,
-            'msg': ' Deleting... '
-        }
-        with utils.IndicatorThread(**indicator_options):
+
+        self.indicator_options['msg'] = 'Deleting... '
+        with indicator.Spinner(**self.indicator_options):
             # Perform the delete twice
             user_defined, _objects = self._return_container_objects()
             while _objects:

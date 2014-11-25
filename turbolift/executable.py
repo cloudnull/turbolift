@@ -36,24 +36,24 @@ def execute():
         description='Manage Swift easily and fast.'
     )
     user_args = _args.arg_parser()
+    user_args['run_indicator'] = True
     debug_log = False
     stream_logs = True
 
     # Load system logging
     if user_args.get('debug'):
         debug_log = True
+        user_args['run_indicator'] = False
 
     # Load system logging
     if user_args.get('quiet'):
         stream_logs = False
+        user_args['run_indicator'] = False
 
     _logging = logger.LogSetup(debug_logging=debug_log)
     _logging.default_logger(name='turbolift', enable_stream=stream_logs)
 
-    job = worker.Worker(
-        job_name=user_args['parsed_command'],
-        job_args=user_args
-    )
+    job = worker.Worker(job_args=user_args)
     job.run_manager()
 
 

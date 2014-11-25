@@ -20,12 +20,20 @@ def authenticate(job_args):
     Set a DC Endpoint and Authentication URL for the OpenStack environment
     """
 
+    # Load any authentication plugins as needed
+    job_args = utils.check_auth_plugin(job_args)
+
+    # Set the auth version
     auth_version = utils.get_authversion(job_args=job_args)
+
+    # Define the base headers that are used in all authentications
     auth_headers = {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
     }
+
     auth_headers.update(job_args['base_headers'])
+    # Load any auth plugin needed and set the job_args if needed.
 
     if auth_version == 'v1.0':
         auth = utils.V1Authentication(job_args=job_args)

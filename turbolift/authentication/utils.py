@@ -28,6 +28,25 @@ AUTH_VERSION_MAP = {
 }
 
 
+def check_auth_plugin(job_args):
+    for name, value in turbolift.__auth_plugins__.iteritems():
+        auth_plugin = job_args.get(name)
+        if auth_plugin:
+            value.pop('args', None)
+            job_args.update(value)
+            job_args['os_auth_url'] = value.get('os_auth_url')
+
+            if isinstance(auth_plugin, (basestring, str)):
+                job_args['os_region'] = auth_plugin % {
+                    'region': auth_plugin
+                }
+
+            LOG.debug('Auth Plugin Loaded: [ %s ]', name)
+            return job_args
+    else:
+        return job_args
+
+
 def get_authversion(job_args):
     """Get or infer the auth version.
 
@@ -42,7 +61,7 @@ def get_authversion(job_args):
     _version = job_args.get('os_auth_version')
     for version, variants in AUTH_VERSION_MAP.iteritems():
         if _version in variants:
-            authversion = job_args['auth_version'] = version
+            authversion = job_args['os_auth_version'] = version
             return authversion
     else:
         raise exceptions.AuthenticationProblem(
@@ -134,7 +153,7 @@ class OSAuthentication(object):
         username and setup are only used in APIKEY/PASSWORD Authentication
         """
 
-        if self.job_args['auth_version'] == 'v1.0':
+        if self.job_args['os_auth_version'] == 'v1.0':
             return dict()
         else:
             setup = {
@@ -258,25 +277,14 @@ class OSAuthentication(object):
     def parse_region(self):
         """Pull region/auth url information from context."""
 
-        for name, value in turbolift.__auth_plugins__.iteritems():
-            prefix = value.get('os_prefix')
-            if prefix:
-                self.job_args['os_prefix'] = prefix
-
-            region = self.job_args.get(name)
-            if region:
-                self.job_args['os_region'] = region
-                LOG.debug('Auth Plugin Loaded: [ %s ]', value)
-                return value.get('os_auth_url') % {'region': region}
-        else:
-            try:
-                auth_url = self.job_args['os_auth_url']
-                if 'tokens' not in auth_url:
-                    if not auth_url.endswith('/'):
-                        auth_url = '%s/' % auth_url
-                    auth_url = urlparse.urljoin(auth_url, 'tokens')
-                return auth_url
-            except KeyError:
-                raise exceptions.AuthenticationProblem(
-                    'You Are required to specify an Auth URL, Region or Plugin'
-                )
+        try:
+            auth_url = self.job_args['os_auth_url']
+            if 'tokens' not in auth_url:
+                if not auth_url.endswith('/'):
+                    auth_url = '%s/' % auth_url
+                auth_url = urlparse.urljoin(auth_url, 'tokens')
+            return auth_url
+        except KeyError:
+            raise exceptions.AuthenticationProblem(
+                'You Are required to specify an Auth URL, Region or Plugin'
+            )

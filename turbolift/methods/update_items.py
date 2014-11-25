@@ -9,8 +9,8 @@
 # =============================================================================
 
 from cloudlib import logger
+from cloudlib import indicator
 
-from turbolift import utils
 from turbolift import methods
 
 
@@ -24,12 +24,9 @@ class UpdateRunMethod(methods.BaseMethod):
         super(UpdateRunMethod, self).__init__(job_args)
 
     def start(self):
-        indicator_options = {
-            'debug': self.debug,
-            'quiet': self.quiet,
-            'msg': ' Updating... '
-        }
-        with utils.IndicatorThread(**indicator_options):
+
+        self.indicator_options['msg'] = 'Updating... '
+        with indicator.Spinner(**self.indicator_options):
             items = self._update(
                 container=self.job_args['container'],
                 container_objects=self.job_args.get('object')

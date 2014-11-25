@@ -11,8 +11,8 @@
 import hashlib
 
 from cloudlib import logger
+from cloudlib import indicator
 
-from turbolift import utils
 from turbolift import methods
 
 
@@ -28,7 +28,8 @@ class ListRunMethod(methods.BaseMethod):
     def start(self):
         """Return a list of objects from the API for a container."""
 
-        with utils.IndicatorThread(debug=self.debug, quiet=self.quiet):
+        self.indicator_options['msg'] = 'Listing options... '
+        with indicator.Spinner(**self.indicator_options):
             objects_list = self._list_contents()
             pattern_match = self.job_args.get('pattern_match')
             if pattern_match:

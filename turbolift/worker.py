@@ -9,45 +9,60 @@
 # =============================================================================
 
 from cloudlib import logger
+from cloudlib import indicator
 
-from turbolift import utils
 from turbolift.authentication import auth
-from turbolift import exceptions
 
 
 LOG = logger.getLogger('turbolift')
 
 
 class Worker(object):
-    def __init__(self, job_name, job_args):
-        self.job_name = job_name
+    def __init__(self, job_args):
         self.job_args = job_args
         self.job_map = {
-            'archive': '',
-            'cdn': 'turbolift.methods.cdn_command.CdnRunMethod',
+            'archive': 'turbolift.methods.archive:ArchiveRunMethod',
+            'cdn': 'turbolift.methods.cdn_command:CdnRunMethod',
             'clone': '',
-            'delete': 'turbolift.methods.delete_items.DeleteRunMethod',
+            'delete': 'turbolift.methods.delete_items:DeleteRunMethod',
             'download': '',
-            'list': 'turbolift.methods.list_items.ListRunMethod',
-            'show': 'turbolift.methods.show_items.ShowRunMethod',
-            'update': 'turbolift.methods.update_items.UpdateRunMethod',
-            'upload': 'turbolift.methods.upload_items.UploadRunMethod',
+            'list': 'turbolift.methods.list_items:ListRunMethod',
+            'show': 'turbolift.methods.show_items:ShowRunMethod',
+            'update': 'turbolift.methods.update_items:UpdateRunMethod',
+            'upload': 'turbolift.methods.upload_items:UploadRunMethod',
         }
 
     @staticmethod
     def _get_method(method):
-        """Return an imported object."""
+        """Return an imported object.
 
-        module = method.split('.')
-        module_import = __import__(
-            '.'.join(module[:-1]),
-            fromlist=module[-1:]
-        )
-        return getattr(module_import, module[-1])
+        :param method: ``str`` DOT notation for import with Colin used to
+                               separate the class used for the job.
+        :returns: ``object`` Loaded class object from imported method.
+        """
+
+        # Split the class out from the job
+        module = method.split(':')
+
+        # Set the import module
+        _module_import = module[0]
+
+        # Set the class name to use
+        class_name = module[-1]
+
+        # import the module
+        module_import = __import__(_module_import, fromlist=[class_name])
+
+        # Return the attributes for the imported module and class
+        return getattr(module_import, class_name)
 
     @staticmethod
     def _str_headers(header):
-        """Retrun a dict from a 'KEY=VALUE' string."""
+        """Return a dict from a 'KEY=VALUE' string.
+
+        :param header: ``str``
+        :returns: ``dict``
+        """
 
         return dict(header.spit('='))
 
@@ -56,12 +71,25 @@ class Worker(object):
         """Return a dict from a list of KEY=VALUE strings.
 
         :param headers: ``list``
+        :returns: ``dict``
         """
 
         return dict([_kv.split('=') for _kv in headers])
 
     def run_manager(self, job_override=None):
-        """The run manager."""
+        """The run manager.
+
+        The run manager is responsible for loading the plugin required based on
+        what the user has inputted using the parsed_command value as found in
+        the job_args dict. If the user provides a *job_override* the method
+        will attempt to import the module and class as provided by the user.
+
+        Before the method attempts to run any job the run manager will first
+        authenticate to the the cloud provider.
+
+        :param job_override: ``str`` DOT notation for import with Colin used to
+                                     separate the class used for the job.
+        """
 
         for arg_name, arg_value in self.job_args.iteritems():
             if arg_name.endswith('_headers'):
@@ -80,19 +108,19 @@ class Worker(object):
         self.job_args['base_headers']['User-Agent'] = 'turbolift'
 
         indicator_options = {
-            'debug': self.job_args.get('debug'),
-            'quiet': self.job_args.get('quiet'),
-            'msg': ' Authenticating... '
+            'run': self.job_args.get('run_indicator', True),
+            'msg': 'Authenticating... '
         }
-        with utils.IndicatorThread(**indicator_options):
+        with indicator.Spinner(**indicator_options):
             LOG.debug('Authenticate against the Service API')
             self.job_args.update(auth.authenticate(job_args=self.job_args))
 
         if job_override:
             action = self._get_method(method=job_override)
         else:
-            job = self.job_map[self.job_args['parsed_command']]
-            action = self._get_method(method=job)
+            action = self._get_method(
+                method=self.job_map[self.job_args['parsed_command']]
+            )
 
         run = action(job_args=self.job_args)
         run.start()

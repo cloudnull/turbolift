@@ -21,6 +21,7 @@ import tarfile
 import prettytable
 
 from cloudlib import logger
+from cloudlib import indicator
 
 from turbolift.clouderator import actions
 from turbolift import exceptions
@@ -32,8 +33,6 @@ LOG = logger.getLogger('turbolift')
 class BaseMethod(object):
     def __init__(self, job_args):
         self.job_args = job_args
-        self.debug = self.job_args.get('debug', False)
-        self.quiet = self.job_args.get('quiet', False)
         self.max_jobs = self.job_args.get('max_jobs')
         # Define the size at which objects are considered large.
         self.large_object_size = self.job_args.get('large_object_size')
@@ -42,6 +41,8 @@ class BaseMethod(object):
             self.max_jobs = 25000
 
         self.job = actions.CloudActions(job_args=self.job_args)
+        self.run_indicator = self.job_args.get('run_indicator', True)
+        self.indicator_options = {'run': self.run_indicator}
 
     def _cdn(self):
         """Retrieve a long list of all files in a container.
@@ -176,28 +177,31 @@ class BaseMethod(object):
 
         # Yield a queue of objects with a max input as set by `max_jobs`
         for queue in self._queue_generator(items, base_queue):
-            concurrent_jobs = [
-                multiprocessing.Process(
-                    target=self._process_func,
-                    args=(func, queue,)
-                ) for _ in xrange(concurrency)
-            ]
+            self.indicator_options['msg'] = 'Processing... '
+            self.indicator_options['work_q'] = queue
+            with indicator.Spinner(**self.indicator_options):
+                concurrent_jobs = [
+                    multiprocessing.Process(
+                        target=self._process_func,
+                        args=(func, queue,)
+                    ) for _ in xrange(concurrency)
+                ]
 
-            # Create an empty list to join later.
-            join_jobs = list()
-            try:
-                for job in concurrent_jobs:
-                    join_jobs.append(job)
-                    job.start()
+                # Create an empty list to join later.
+                join_jobs = list()
+                try:
+                    for job in concurrent_jobs:
+                        join_jobs.append(job)
+                        job.start()
 
-                # Join finished jobs
-                for job in join_jobs:
-                    job.join()
-            except KeyboardInterrupt:
-                for job in join_jobs:
-                    job.terminate()
-                else:
-                    exceptions.emergency_kill()
+                    # Join finished jobs
+                    for job in join_jobs:
+                        job.join()
+                except KeyboardInterrupt:
+                    for job in join_jobs:
+                        job.terminate()
+                    else:
+                        exceptions.emergency_kill()
 
     def _named_local_files(self, object_names):
         object_items = []
@@ -354,6 +358,14 @@ class BaseMethod(object):
         if item:
             LOG.debug(item.__dict__)
 
+    def _put_container(self):
+        item = self.job.put_container(
+            url=self.job_args['storage_url'],
+            container=self.job_args.get('container')
+        )
+        if item:
+            LOG.debug(item.__dict__)
+
     def _walk_directories(self, path):
         local_files = self._return_deque()
 
@@ -363,7 +375,7 @@ class BaseMethod(object):
         for root_dir, _, file_names in os.walk(path):
             for file_name in file_names:
                 full_path = os.path.join(root_dir, file_name)
-                if full_path not in self.job_args.get('exclude'):
+                if full_path not in self.job_args.get('exclude', list()):
                     object_item = self._encapsulate_object(
                         full_path=full_path,
                         split_path=path
@@ -382,42 +394,81 @@ class BaseMethod(object):
 
             return local_files
 
-    def compressor(self, file_list):
-        # Set date and time
-        date_format = '%a%b%d.%H.%M.%S.%Y'
-        today = datetime.datetime.today()
-        timestamp = today.strftime(date_format)
-
-        # Get Home Directory
-        home_dir = os.getenv('HOME')
-
-        # Set the name of the archive.
-        tar_name = self.job_args.get('tar_name')
-        if not tar_name:
-            tar_name = os.path.join(
-                home_dir, '%s_%s.tgz' % (
-                    self.job_args.get('container'), timestamp
+    def _index_fs(self):
+        indexed_objects = self._return_deque()
+        directory = self.job_args.get('directory')
+        if directory:
+            indexed_objects = self._return_deque(
+                deque=indexed_objects,
+                item=self._drectory_local_files(
+                    directory=directory
                 )
             )
-        else:
-            tar_dir_name = os.path.dirname(tar_name)
-            if not os.path.isdir(tar_dir_name):
-                raise exceptions.DirectoryFailure(
-                    ['The path [ %s ] does not exist.', tar_dir_name]
-                )
 
-        if tar_name.endswith('.tgz'):
+        object_names = self.job_args.get('object')
+        if object_names:
+            indexed_objects = self._return_deque(
+                deque=indexed_objects,
+                item=self._named_local_files(
+                    object_names=object_names
+                )
+            )
+
+        return indexed_objects
+
+    def _compressor(self, file_list):
+        # Set the name of the archive.
+        tar_name = self.job_args.get('tar_name')
+        tar_name = os.path.realpath(os.path.expanduser(tar_name))
+        if not os.path.isdir(os.path.dirname(tar_name)):
+            raise exceptions.DirectoryFailure(
+                ['The path to save the archive file does not exist.'
+                 ' PATH: [ %s ]', tar_name]
+            )
+
+        if not tar_name.endswith('.tgz'):
             tar_name = '%s.tgz' % tar_name
 
+        if self.job_args.get('add_timestamp'):
+            # Set date and time
+            date_format = '%a%b%d.%H.%M.%S.%Y'
+            today = datetime.datetime.today()
+            timestamp = today.strftime(date_format)
+            _tar_name = os.path.basename(tar_name)
+            tar_name = os.path.join(
+                os.path.dirname(tar_name), '%s-%s' % (timestamp, _tar_name)
+            )
+
         # Begin creating the Archive.
+        verify = self.job_args.get('verify')
+        verify_list = self._return_deque()
         with tarfile.open(tar_name, 'w:gz') as tar:
             while file_list:
                 try:
-                    tar.add(file_list.pop())
+                    local_object = file_list.pop()['local_object']
+                    if verify:
+                        verify_list.append(local_object)
+                    tar.add(local_object)
                 except IndexError:
                     break
 
-        return tar_name
+        if verify:
+            with tarfile.open(tar_name, 'r') as tar:
+                verified_items = self._return_deque()
+                for member_info in tar.getmembers():
+                    verified_items.append(member_info.name)
+
+                if len(verified_items) != len(verify_list):
+                    raise exceptions.SystemProblem(
+                        'ARCHIVE NOT VERIFIED: Archive and File List do not'
+                        ' Match.'
+                    )
+
+        return {
+            'meta': dict(),
+            'local_object': tar_name,
+            'container_object': os.path.basename(tar_name)
+        }
 
     def match_filter(self, idx_list, pattern, dict_type=False,
                      dict_key='name'):

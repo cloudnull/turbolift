@@ -81,7 +81,7 @@ class NoTenantIdFound(_BaseException):
     pass
 
 
-def emergency_kill(reclaim=None):
+def emergency_kill():
     """Exit process.
 
     :return kill pid:

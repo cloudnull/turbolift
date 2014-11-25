@@ -9,9 +9,9 @@
 # =============================================================================
 
 from cloudlib import logger
+from cloudlib import indicator
 
 from turbolift import exceptions
-from turbolift import utils
 from turbolift import methods
 
 
@@ -25,42 +25,18 @@ class UploadRunMethod(methods.BaseMethod):
         super(UploadRunMethod, self).__init__(job_args)
 
     def start(self):
-        indicator_options = {
-            'debug': self.debug,
-            'quiet': self.quiet,
-            'msg': ' Uploading... '
-        }
 
-        with utils.IndicatorThread(**indicator_options):
-            upload_objects = self._return_deque()
-            directory = self.job_args.get('directory')
-            if directory:
-                upload_objects = self._return_deque(
-                    deque=upload_objects,
-                    item=self._drectory_local_files(
-                        directory=directory
-                    )
-                )
-
-            object_names = self.job_args.get('object')
-            if object_names:
-                upload_objects = self._return_deque(
-                    deque=upload_objects,
-                    item=self._named_local_files(
-                        object_names=object_names
-                    )
-                )
+        self.indicator_options['msg'] = 'Indexing File System... '
+        with indicator.Spinner(**self.indicator_options):
+            upload_objects = self._index_fs()
 
             if not upload_objects:
                 raise exceptions.DirectoryFailure(
                     'No objects found to process. Check your command.'
                 )
 
-            item = self.job.put_container(
-                url=self.job_args['storage_url'],
-                container=self.job_args.get('container')
-            )
-            if item:
-                LOG.debug(item.__dict__)
+        self.indicator_options['msg'] = 'Ensuring Container... '
+        with indicator.Spinner(**self.indicator_options):
+            self._put_container()
 
-            self._multi_processor(self._upload, items=upload_objects)
+        self._multi_processor(self._upload, items=upload_objects)
