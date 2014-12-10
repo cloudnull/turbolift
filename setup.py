@@ -39,8 +39,7 @@ setuptools.setup(
         'turbolift',
         'turbolift.authentication',
         'turbolift.clouderator',
-        'turbolift.methods',
-        'turbolift.utils'
+        'turbolift.methods'
     ],
     url=turbolift.__url__,
     install_requires=required,
