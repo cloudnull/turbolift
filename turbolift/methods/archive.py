@@ -37,3 +37,6 @@ class ArchiveRunMethod(methods.BaseMethod):
         self.indicator_options['msg'] = 'Uploading Archive... '
         with indicator.Spinner(**self.indicator_options):
             self._upload(**archive)
+
+        if not self.job_args.get('no_cleanup'):
+            os.remove(archive['local_object'])

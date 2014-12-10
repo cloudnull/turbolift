@@ -162,11 +162,22 @@ class BaseMethod(object):
         else:
             url = self.job_args['storage_url']
 
-        return self.job.list_items(
+        objects_list = self.job.list_items(
             url=url,
             container=self.job_args['container'],
             last_obj=last_obj
         )
+
+        pattern_match = self.job_args.get('pattern_match')
+        if pattern_match:
+            self.match_filter(
+                idx_list=objects_list,
+                pattern=pattern_match,
+                dict_type=True
+            )
+
+        LOG.debug('List of objects: "%s"', objects_list)
+        return objects_list
 
     def _multi_processor(self, func, items):
         base_queue = multiprocessing.Queue(maxsize=self.max_jobs)
@@ -204,8 +215,8 @@ class BaseMethod(object):
                         exceptions.emergency_kill()
 
     def _named_local_files(self, object_names):
-        object_items = []
-        exclude = self.job_args.get('exclude')
+        object_items = self._return_deque()
+        exclude = self.job_args.get('exclude', list())
         for object_name in object_names:
             full_path = os.path.realpath(
                 os.path.expanduser(

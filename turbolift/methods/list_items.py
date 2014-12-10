@@ -31,13 +31,6 @@ class ListRunMethod(methods.BaseMethod):
         self.indicator_options['msg'] = 'Listing options... '
         with indicator.Spinner(**self.indicator_options):
             objects_list = self._list_contents()
-            pattern_match = self.job_args.get('pattern_match')
-            if pattern_match:
-                self.match_filter(
-                    idx_list=objects_list,
-                    pattern=self.job_args['pattern_match'],
-                    dict_type=True
-                )
 
         if objects_list:
             if isinstance(objects_list[0], dict):

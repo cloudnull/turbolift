@@ -810,8 +810,7 @@ ARGUMENTS = {
                         '--exclude'
                     ],
                     'nargs': '+',
-                    'help': 'Exclude a pattern when uploading',
-                    'default': list()
+                    'help': 'Exclude a pattern when uploading'
                 },
                 'delete_remote': {
                     'commands': [
