@@ -7,6 +7,53 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
+
+import os
+
+from cloudlib import logger
+from cloudlib import indicator
+
+from turbolift import methods
+
+
+LOG = logger.getLogger('turbolift')
+
+
+class DownloadRunMethod(methods.BaseMethod):
+    """Setup and run the Download Method."""
+
+    def __init__(self, job_args):
+        super(DownloadRunMethod, self).__init__(job_args)
+
+    def start(self):
+        """Return a download of objects from the API for a container."""
+
+        self.indicator_options['msg'] = 'Building object index... '
+        with indicator.Spinner(**self.indicator_options):
+            objects_list = self._list_contents()
+
+        if objects_list:
+            directories = set()
+            for item in objects_list:
+                directories.add(os.path.basename(item.get('name')))
+
+
+
+
+
+
+
+
+
+# =============================================================================
+# Copyright [2013] [Kevin Carter]
+# License Information :
+# This software has no warranty, it is provided 'as is'. It is your
+# responsibility to validate the behavior of the routines and its accuracy
+# using the code provided. Consult the GNU General Public license for further
+# details (see GNU General Public License).
+# http://www.gnu.org/licenses/gpl.html
+# =============================================================================
 import json
 
 import turbolift.utils.basic_utils as basic

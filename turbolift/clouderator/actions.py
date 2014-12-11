@@ -104,7 +104,7 @@ class CloudActions(object):
             return False
 
 
-    @cloud_utils.retry(requests_exp.ReadTimeout)
+    @cloud_utils.retry(Exception)
     def _chunk_putter(self, uri, open_file, headers=None):
         """Make many PUT request for a single chunked object.
 
@@ -158,7 +158,7 @@ class CloudActions(object):
                 self._resp_exception(resp=_resp)
                 LOG.debug(_resp.__dict__)
 
-    @cloud_utils.retry(requests_exp.ReadTimeout)
+    @cloud_utils.retry(Exception)
     def _putter(self, uri, headers, local_object=None):
         """Place  object into the container.
 
@@ -201,7 +201,7 @@ class CloudActions(object):
                     url=uri, body=f_open, headers=headers
                 )
 
-    @cloud_utils.retry(requests_exp.ReadTimeout)
+    @cloud_utils.retry(Exception)
     def _deleter(self, uri, headers):
         """Perform HEAD request on a specified object in the container.
 
@@ -214,7 +214,7 @@ class CloudActions(object):
         self._resp_exception(resp=resp)
         return resp
 
-    @cloud_utils.retry(requests_exp.ReadTimeout)
+    @cloud_utils.retry(Exception)
     def _header_getter(self, uri, headers):
         """Perform HEAD request on a specified object in the container.
 
@@ -227,7 +227,7 @@ class CloudActions(object):
         self._resp_exception(resp=resp)
         return resp
 
-    @cloud_utils.retry(requests_exp.ReadTimeout)
+    @cloud_utils.retry(Exception)
     def _header_poster(self, uri, headers):
         """POST Headers on a specified object in the container.
 

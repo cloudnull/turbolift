@@ -383,10 +383,14 @@ class BaseMethod(object):
         if not os.path.isdir(path):
             path = os.path.dirname(path)
 
+        exclude_list = self.job_args.get('exclude')
+        if not exclude_list:
+            exclude_list = list()
+
         for root_dir, _, file_names in os.walk(path):
             for file_name in file_names:
                 full_path = os.path.join(root_dir, file_name)
-                if full_path not in self.job_args.get('exclude', list()):
+                if full_path not in exclude_list:
                     object_item = self._encapsulate_object(
                         full_path=full_path,
                         split_path=path

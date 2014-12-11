@@ -374,7 +374,7 @@ ARGUMENTS = {
                 'mutually_exclusive': {
                     'list_groups': {
                         'text': 'Optional user defined object lists',
-                        'required': True,
+                        'required': False,
                         'group': [
                             'object',
                             'objects_file'
