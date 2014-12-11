@@ -44,6 +44,10 @@ class BaseMethod(object):
         self.run_indicator = self.job_args.get('run_indicator', True)
         self.indicator_options = {'run': self.run_indicator}
 
+        self.excludes = self.job_args.get('exclude')
+        if not self.excludes:
+            self.excludes = list()
+
     def _cdn(self):
         """Retrieve a long list of all files in a container.
 
@@ -216,7 +220,6 @@ class BaseMethod(object):
 
     def _named_local_files(self, object_names):
         object_items = self._return_deque()
-        exclude = self.job_args.get('exclude', list())
         for object_name in object_names:
             full_path = os.path.realpath(
                 os.path.expanduser(
@@ -224,7 +227,7 @@ class BaseMethod(object):
                 )
             )
 
-            if os.path.isfile(full_path) and full_path not in exclude:
+            if os.path.isfile(full_path) and full_path not in self.excludes:
                 object_item = self._encapsulate_object(
                     full_path=full_path,
                     split_path=os.path.dirname(full_path)
@@ -383,14 +386,10 @@ class BaseMethod(object):
         if not os.path.isdir(path):
             path = os.path.dirname(path)
 
-        exclude_list = self.job_args.get('exclude')
-        if not exclude_list:
-            exclude_list = list()
-
         for root_dir, _, file_names in os.walk(path):
             for file_name in file_names:
                 full_path = os.path.join(root_dir, file_name)
-                if full_path not in exclude_list:
+                if full_path not in self.excludes:
                     object_item = self._encapsulate_object(
                         full_path=full_path,
                         split_path=path
