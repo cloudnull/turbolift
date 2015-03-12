@@ -59,7 +59,10 @@ def get_local_files():
             for root_inx, inx in [(root, fls) for root, sfs, fls in r_walk]:
                 for inode in inx:
                     object_path = basic.jpath(root=root_inx, inode=inode)
-                    objects.append(unicode(object_path.decode('utf-8')))
+                    try:
+                        objects.append(object_path.decode('utf-8'))
+                    except UnicodeDecodeError:
+                        objects.append(object_path)
             else:
                 return objects
 
