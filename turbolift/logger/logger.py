@@ -131,19 +131,20 @@ class LogSetup(object):
 
         If ``log_dir`` exists and the userID is 0 the log file will be written
         to the provided log directory. If the UserID is not 0 or log_dir does
-        not exist the log file will be written to the users home folder.
+        not exist the log file will be written to the users home folder. If the
+        users home folder cannot be obtained, /tmp will be used.
 
         :param filename: ``str``
         :param log_dir: ``str``
         :return: ``str``
         """
         user = os.getuid()
-        home = os.getenv('HOME')
+        home = os.getenv('HOME', '/tmp')
         default_log_location = os.path.join(home, filename)
         if not user == 0:
             return default_log_location
         else:
-            if os.path.isdir(log_dir):
+            if log_dir and os.path.isdir(log_dir):
                 return os.path.join(log_dir, filename)
             else:
                 return default_log_location
