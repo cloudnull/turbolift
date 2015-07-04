@@ -8,17 +8,20 @@
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
 
+import grp
 import hashlib
 import io
 import os
-import urllib
-import urlparse
+import pwd
+try:
+    import urlparsre
+except ImportError:
+    import urllib.parse as urlparse
 
 import cloudlib
 from cloudlib import http
 from cloudlib import logger
 from cloudlib import shell
-from requests import exceptions as requests_exp
 
 from turbolift import exceptions
 from turbolift.authentication import auth
@@ -26,16 +29,6 @@ from turbolift.clouderator import utils as cloud_utils
 
 
 LOG = logger.getLogger('turbolift')
-
-
-def quoter(obj):
-    """Return a Quoted URL.
-
-    :param obj: ``basestring``
-    :return: ``str``
-    """
-
-    return urllib.quote(cloud_utils.ustr(obj=obj))
 
 
 class CloudActions(object):
@@ -47,7 +40,8 @@ class CloudActions(object):
         self.job_args = job_args
         self.http = http.MakeRequest()
         self.shell = shell.ShellCommands(
-            log_name='turbolift', debug=self.job_args.get('debug')
+            log_name='turbolift',
+            debug=self.job_args.get('debug')
         )
 
     def _return_base_data(self, url, container, container_object=None,
@@ -67,12 +61,12 @@ class CloudActions(object):
 
         if container:
             _container_uri = '%s/%s' % (
-                _container_uri, quoter(container)
+                _container_uri, cloud_utils.quoter(container)
             )
 
         if container_object:
             _container_uri = '%s/%s' % (
-                _container_uri, quoter(container_object)
+                _container_uri, cloud_utils.quoter(container_object)
             )
 
         if object_headers:
@@ -202,6 +196,55 @@ class CloudActions(object):
                 )
 
     @cloud_utils.retry(Exception)
+    def _getter(self, uri, headers, local_object):
+        """Perform HEAD request on a specified object in the container.
+
+        :param uri: ``str``
+        :param headers: ``dict``
+        """
+
+        if self.job_args.get('sync'):
+            sync = self._sync_check(
+                uri=uri,
+                headers=headers,
+                local_object=local_object
+            )
+            if not sync:
+                return None
+
+        # perform Object HEAD request
+        resp = self.http.get(url=uri, headers=headers)
+        self._resp_exception(resp=resp)
+
+        # Open our source file and write it
+        chunk_size = self.job_args['download_chunk_size']
+        with open(local_object, 'wb') as f_name:
+            for chunk in resp.iter_content(chunk_size=chunk_size):
+                if chunk:
+                    f_name.write(chunk)
+                    f_name.flush()
+
+        if self.job_args.get('restore_perms'):
+            if 'X-Object-Meta-perms' in resp.headers:
+                os.chmod(
+                    local_object,
+                    int(resp.headers['x-object-meta-perms'], 8)
+                )
+
+            chown_file = {'uid': -1, 'gid': -1}
+            if 'X-Object-Meta-owner' in resp.headers:
+                chown_file['uid'] = pwd.getpwnam(
+                    resp.headers['X-Object-Meta-owner']
+                ).pw_uid
+            if 'X-Object-Meta-group' in resp.headers:
+                chown_file['gid'] = grp.getgrnam(
+                    resp.headers['X-Object-Meta-group']
+                ).gr_gid
+            os.chown(local_object, *chown_file.values())
+
+        return resp
+
+    @cloud_utils.retry(Exception)
     def _deleter(self, uri, headers):
         """Perform HEAD request on a specified object in the container.
 
@@ -305,14 +348,12 @@ class CloudActions(object):
         """
 
         # Quote the file path.
-        base_path = marked_path = (
-            '%s/?limit=10000&format=json' % cloud_utils.ustr(uri.path)
-        )
+        base_path = marked_path = ('%s?limit=10000&format=json' % uri.path)
 
         if last_obj:
             marked_path = self._last_marker(
                 base_path=base_path,
-                last_object=quoter(last_obj)
+                last_object=cloud_utils.quoter(last_obj)
             )
 
         file_list = self._obj_index(
@@ -551,6 +592,40 @@ class CloudActions(object):
             uri=container_uri,
             headers=headers,
             local_object=local_object
+        )
+
+
+    @cloud_utils.retry(exceptions.SystemProblem)
+    def get_items(self, url, container, container_object, local_object):
+        """Get an objects from a container.
+
+        :param url:
+        :param container:
+        """
+
+        headers, container_uri = self._return_base_data(
+            url=url,
+            container=container,
+            container_object=container_object
+        )
+
+        return self._getter(
+            uri=container_uri,
+            headers=headers,
+            local_object=local_object
+        )
+
+    @cloud_utils.retry(exceptions.SystemProblem)
+    def get_headers(self, url, container, container_object=None):
+        headers, container_uri = self._return_base_data(
+            url=url,
+            container=container,
+            container_object=container_object
+        )
+
+        return self._header_getter(
+            uri=container_uri,
+            headers=headers
         )
 
 

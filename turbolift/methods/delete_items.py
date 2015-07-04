@@ -23,19 +23,17 @@ class DeleteRunMethod(methods.BaseMethod):
         super(DeleteRunMethod, self).__init__(job_args)
 
     def start(self):
+        LOG.warn('Deleting...')
+        # Perform the delete twice
+        user_defined, _objects = self._return_container_objects()
+        while _objects:
+            self._multi_processor(
+                self._delete,
+                items=_objects
+            )
+            if not user_defined:
+                user_defined, _objects = self._return_container_objects()
 
-        self.indicator_options['msg'] = 'Deleting... '
-        with indicator.Spinner(**self.indicator_options):
-            # Perform the delete twice
-            user_defined, _objects = self._return_container_objects()
-            while _objects:
-                self._multi_processor(
-                    self._delete,
-                    items=_objects
-                )
-                if not user_defined:
-                    user_defined, _objects = self._return_container_objects()
-
-            # Delete the container unless instructed to save it
-            if not self.job_args.get('save_container') or not user_defined:
-                self._delete()
+        # Delete the container unless instructed to save it
+        if not self.job_args.get('save_container') or not user_defined:
+            self._delete()

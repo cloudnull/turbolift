@@ -23,9 +23,9 @@ class Worker(object):
         self.job_map = {
             'archive': 'turbolift.methods.archive:ArchiveRunMethod',
             'cdn': 'turbolift.methods.cdn_command:CdnRunMethod',
-            'clone': '',
+            'clone': 'turbolift.methods.clone:CloneRunMethod',
             'delete': 'turbolift.methods.delete_items:DeleteRunMethod',
-            'download': '',
+            'download': 'turbolift.methods.download:DownloadRunMethod',
             'list': 'turbolift.methods.list_items:ListRunMethod',
             'show': 'turbolift.methods.show_items:ShowRunMethod',
             'update': 'turbolift.methods.update_items:UpdateRunMethod',
@@ -91,7 +91,7 @@ class Worker(object):
                                      separate the class used for the job.
         """
 
-        for arg_name, arg_value in self.job_args.iteritems():
+        for arg_name, arg_value in self.job_args.items():
             if arg_name.endswith('_headers'):
                 if isinstance(arg_value, list):
                     self.job_args[arg_name] = self._list_headers(
@@ -107,10 +107,8 @@ class Worker(object):
         # Set base header for the user-agent
         self.job_args['base_headers']['User-Agent'] = 'turbolift'
 
-        indicator_options = {
-            'run': self.job_args.get('run_indicator', True),
-            'msg': 'Authenticating... '
-        }
+        LOG.info('Authenticating')
+        indicator_options = {'run': self.job_args.get('run_indicator', True)}
         with indicator.Spinner(**indicator_options):
             LOG.debug('Authenticate against the Service API')
             self.job_args.update(auth.authenticate(job_args=self.job_args))

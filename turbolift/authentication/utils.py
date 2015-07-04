@@ -10,14 +10,17 @@
 
 import time
 import traceback
-import urlparse
+try:
+    import urlparsre
+except ImportError:
+    import urllib.parse as urlparse
 
 from cloudlib import logger
 from cloudlib import http
 
 import turbolift
 from turbolift import exceptions
-
+from turbolift import utils as baseutils
 
 
 LOG = logger.getLogger('turbolift')
@@ -29,14 +32,14 @@ AUTH_VERSION_MAP = {
 
 
 def check_auth_plugin(job_args):
-    for name, value in turbolift.__auth_plugins__.iteritems():
+    for name, value in turbolift.__auth_plugins__.items():
         auth_plugin = job_args.get(name)
         if auth_plugin:
             value.pop('args', None)
             job_args.update(value)
             job_args['os_auth_url'] = value.get('os_auth_url')
 
-            if isinstance(auth_plugin, (basestring, str)):
+            if baseutils.check_basestring(item=auth_plugin):
                 job_args['os_region'] = auth_plugin % {
                     'region': auth_plugin
                 }
@@ -59,7 +62,7 @@ def get_authversion(job_args):
     """
 
     _version = job_args.get('os_auth_version')
-    for version, variants in AUTH_VERSION_MAP.iteritems():
+    for version, variants in AUTH_VERSION_MAP.items():
         if _version in variants:
             authversion = job_args['os_auth_version'] = version
             return authversion

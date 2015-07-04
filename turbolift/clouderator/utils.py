@@ -12,6 +12,7 @@ import datetime
 import functools
 import random
 import time
+import urllib
 
 
 def retry(ExceptionToCheck, tries=3, delay=1, backoff=1):
@@ -57,18 +58,6 @@ def stupid_hack(most=10, wait=None):
         time.sleep(random.randrange(1, most))
 
 
-def ustr(obj):
-    """If an Object is unicode convert it.
-
-    :param object:
-    :return:
-    """
-    if obj is not None and isinstance(obj, unicode):
-        return str(obj.encode('utf8'))
-    else:
-        return obj
-
-
 def time_stamp():
     """Setup time functions
 
@@ -85,14 +74,14 @@ def time_stamp():
 
 
 def unique_list_dicts(dlist, key):
-    """Return a list of dictionaries which have sorted for only unique entries.
+    """Return a list of dictionaries which are sorted for only unique entries.
 
     :param dlist:
     :param key:
     :return list:
     """
 
-    return dict((val[key], val) for val in dlist).values()
+    return list(dict((val[key], val) for val in dlist).values())
 
 
 class TimeDelta(object):
@@ -142,3 +131,16 @@ class TimeDelta(object):
                 return True
             else:
                 return False
+
+
+def quoter(obj):
+    """Return a Quoted URL.
+
+    :param obj: ``basestring``
+    :return: ``str``
+    """
+
+    try:
+        return urllib.quote(obj)
+    except AttributeError:
+        return urllib.parse.quote(obj)

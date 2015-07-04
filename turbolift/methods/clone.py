@@ -7,20 +7,17 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
-import json
 
-import turbolift as turbo
-import turbolift.utils.auth_utils as auth
-import turbolift.utils.basic_utils as basic
-import turbolift.utils.http_utils as http
-import turbolift.utils.multi_utils as multi
-import turbolift.utils.report_utils as report
+from cloudlib import logger
+from cloudlib import indicator
 
-from turbolift import ARGS
-from turbolift.clouderator import actions
+from turbolift import methods
 
 
-class Clone(object):
+LOG = logger.getLogger('turbolift')
+
+
+class CloneRunMethod(methods.BaseMethod):
     """Setup and run the stream Method.
 
     The method will create a list of objects in a "Source" container, then
@@ -31,10 +28,10 @@ class Clone(object):
     target container.
     """
 
-    def __init__(self, auth):
-        self.auth = auth
-        self.go = None
-        self.action = None
+    def __init__(self, job_args):
+        super(CloneRunMethod, self).__init__(job_args)
+        self.download_items = collections.defaultdict(list)
+
 
     def start(self):
         """Clone onjects from one container to another.

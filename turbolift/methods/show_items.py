@@ -24,8 +24,7 @@ class ShowRunMethod(methods.BaseMethod):
         super(ShowRunMethod, self).__init__(job_args)
 
     def start(self):
-
-        self.indicator_options['msg'] = 'Grabbing details... '
+        LOG.info('Grabbing details...')
         with indicator.Spinner(**self.indicator_options):
             items = self._show(
                 container=self.job_args['container'],

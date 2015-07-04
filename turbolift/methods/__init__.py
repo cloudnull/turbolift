@@ -15,16 +15,21 @@ import multiprocessing
 import os
 import pwd
 import re
-import Queue
+try:
+    import Queue
+except ImportError:
+    import queue as Queue
 import tarfile
 
 import prettytable
 
-from cloudlib import logger
 from cloudlib import indicator
+from cloudlib import logger
+from cloudlib import shell
 
 from turbolift.clouderator import actions
 from turbolift import exceptions
+from turbolift import utils
 
 
 LOG = logger.getLogger('turbolift')
@@ -43,6 +48,11 @@ class BaseMethod(object):
         self.job = actions.CloudActions(job_args=self.job_args)
         self.run_indicator = self.job_args.get('run_indicator', True)
         self.indicator_options = {'run': self.run_indicator}
+
+        self.shell = shell.ShellCommands(
+            log_name='turbolift',
+            debug=self.job_args['debug']
+        )
 
         self.excludes = self.job_args.get('exclude')
         if not self.excludes:
@@ -81,6 +91,9 @@ class BaseMethod(object):
             cdn_headers=headers
         )
 
+    def mkdir(self, path):
+        self.shell.mkdir_p(path=path)
+
     def _delete(self, container_object=None):
         item = self.job.delete_items(
             url=self.job_args['storage_url'],
@@ -89,6 +102,14 @@ class BaseMethod(object):
         )
         if item:
             LOG.debug(item.__dict__)
+
+    def _get(self, container_object, local_object):
+        self.job.get_items(
+            url=self.job_args['storage_url'],
+            container=self.job_args['container'],
+            container_object=container_object,
+            local_object=local_object
+        )
 
     def _drectory_local_files(self, directory):
         directory = os.path.realpath(
@@ -130,14 +151,16 @@ class BaseMethod(object):
             link_object = link_path.split(split_path)[-1]
             meta['X-Object-Meta-symlink'] = link_path
             if link_path != link_object:
-                meta['X-Object-Manifest'] = '%s/%s' % (
+                meta['X-Object-Manifest'] = '%s%s%s' % (
                     container_name,
+                    os.sep,
                     link_object.lstrip(os.sep)
                 )
         elif os.path.getsize(full_path) > self.large_object_size:
             manifest_path = full_path.split(split_path)[-1]
-            meta['X-Object-Manifest'] = '%s/%s' % (
+            meta['X-Object-Manifest'] = '%s%s%s' % (
                 container_name,
+                os.sep,
                 manifest_path.lstrip(os.sep)
             )
 
@@ -192,14 +215,14 @@ class BaseMethod(object):
 
         # Yield a queue of objects with a max input as set by `max_jobs`
         for queue in self._queue_generator(items, base_queue):
-            self.indicator_options['msg'] = 'Processing... '
+            self.indicator_options['msg'] = 'Processing workload...'
             self.indicator_options['work_q'] = queue
             with indicator.Spinner(**self.indicator_options):
                 concurrent_jobs = [
                     multiprocessing.Process(
                         target=self._process_func,
                         args=(func, queue,)
-                    ) for _ in xrange(concurrency)
+                    ) for _ in range(concurrency)
                 ]
 
                 # Create an empty list to join later.
@@ -252,7 +275,7 @@ class BaseMethod(object):
             if not item_count <= self.max_jobs:
                 item_count = self.max_jobs
 
-            for _ in xrange(item_count):
+            for _ in range(item_count):
                 try:
                     queue.put(items.pop())
                 except IndexError:
@@ -309,7 +332,7 @@ class BaseMethod(object):
 
         if isinstance(item, list) or isinstance(item, collections.deque):
             deque.extend(item)
-        elif isinstance(item, basestring):
+        elif utils.check_basestring(item=item):
             deque.append(item)
 
         return deque
@@ -409,7 +432,12 @@ class BaseMethod(object):
             return local_files
 
     def _index_fs(self):
+        """Returns a deque object full of local file system items.
+
+        :returns: ``deque``
+        """
         indexed_objects = self._return_deque()
+
         directory = self.job_args.get('directory')
         if directory:
             indexed_objects = self._return_deque(
@@ -513,7 +541,10 @@ class BaseMethod(object):
         fields = self.job_args.get('fields')
         if not fields:
             fields = set()
-            map(fields.update, [i.keys() for i in data])
+            for item_dict in data:
+                for field_item in item_dict.keys():
+                    fields.add(field_item)
+            fields = sorted(fields)
 
         for obj in data:
             item_struct = dict()

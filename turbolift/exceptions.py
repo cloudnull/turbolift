@@ -36,7 +36,7 @@ class _BaseException(Exception):
             message = message
 
         super(_BaseException, self).__init__(message)
-        LOG.error(self.message)
+        LOG.error(message)
 
 
 class NoSource(_BaseException):

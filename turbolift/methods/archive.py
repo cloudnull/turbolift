@@ -26,15 +26,15 @@ class ArchiveRunMethod(methods.BaseMethod):
         super(ArchiveRunMethod, self).__init__(job_args)
 
     def start(self):
-        self.indicator_options['msg'] = 'Archiving... '
+        LOG.info('Archiving...')
         with indicator.Spinner(**self.indicator_options):
             archive = self._compressor(file_list=self._index_fs())
 
-        self.indicator_options['msg'] = 'Ensuring Container... '
+        LOG.info('Ensuring Container...')
         with indicator.Spinner(**self.indicator_options):
             self._put_container()
 
-        self.indicator_options['msg'] = 'Uploading Archive... '
+        LOG.info('Uploading Archive...')
         with indicator.Spinner(**self.indicator_options):
             self._upload(**archive)
 

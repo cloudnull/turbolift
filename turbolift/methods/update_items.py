@@ -24,8 +24,7 @@ class UpdateRunMethod(methods.BaseMethod):
         super(UpdateRunMethod, self).__init__(job_args)
 
     def start(self):
-
-        self.indicator_options['msg'] = 'Updating... '
+        LOG.info('Updating...')
         with indicator.Spinner(**self.indicator_options):
             items = self._update(
                 container=self.job_args['container'],

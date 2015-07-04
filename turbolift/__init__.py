@@ -108,10 +108,11 @@ ARGUMENTS = {
         },
         'directory': {
             'commands': [
+                '-s',  # This is for legacy and will be removed in the future
                 '-d',
                 '--directory'
             ],
-            'help': 'Name of a directory path that you want to Download.',
+            'help': 'Directory path to interact with.',
             'metavar': '[NAME]',
             'required': False
         },
@@ -138,7 +139,7 @@ ARGUMENTS = {
             ],
             'help': 'Filter objects where the last modified time is older'
                     ' than [OFFSET]. Default: %(default)s',
-            'default': 'hours',
+            'default': None,
             'choices': ['weeks', 'days', 'hours'],
             'metavar': '{weeks,days,hours}',
         },
@@ -148,7 +149,8 @@ ARGUMENTS = {
             ],
             'help': 'If Offset is used this will modify the offset value.'
                     ' The default: %(default)s.',
-            'default': 1.0,
+            'default': None,
+            'type': float,
             'metavar': '[FLOAT]'
         },
         'max_jobs': {
@@ -735,10 +737,10 @@ ARGUMENTS = {
                 'groups': {
                     'list_groups': {
                         'text': 'Download arguments',
-                        'required': True,
                         'group': [
                             'container',
-                            'object'
+                            'object',
+                            'directory'
                         ]
                     }
                 },
@@ -750,6 +752,16 @@ ARGUMENTS = {
                             ' restore those permissions on the local object',
                     'default': False,
                     'action': 'store_true'
+                },
+                'download_chunk_size': {
+                    'commands': [
+                        '--download-chunk-size'
+                    ],
+                    'help': 'The size of the write chunks when downloading'
+                            ' files.',
+                    'default': 2048,
+                    'type': int,
+                    'metavar': '[INT]'
                 }
             }
         },
@@ -941,7 +953,7 @@ __auth_plugins__ = {
 
 # Add all plugins to the optional arguments.
 _optionals = ARGUMENTS['optional_args']
-for name, value in __auth_plugins__.iteritems():
+for name, value in __auth_plugins__.items():
     _optionals.update({name: value['args']})
     # All Authentication plugins are appended to the auth_url exclusive group
     _optionals['mutually_exclusive']['auth_url']['group'].append(name)

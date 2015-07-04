@@ -27,29 +27,29 @@ class ListRunMethod(methods.BaseMethod):
 
     def start(self):
         """Return a list of objects from the API for a container."""
-
-        self.indicator_options['msg'] = 'Listing options... '
+        LOG.info('Listing options...')
         with indicator.Spinner(**self.indicator_options):
             objects_list = self._list_contents()
+            if not objects_list:
+                return
 
-        if objects_list:
-            if isinstance(objects_list[0], dict):
-                filter_dlo = self.job_args.get('filter_dlo')
-                if filter_dlo:
-                    dynamic_hash = hashlib.sha256(
-                        self.job_args.get('container')
-                    )
-                    dynamic_hash = dynamic_hash.hexdigest()
-                    objects_list = [
-                        i for i in objects_list
-                        if dynamic_hash not in i.get('name')
-                    ]
-                string_filter = self.job_args.get('filter')
-                if string_filter:
-                    objects_list = [
-                        i for i in objects_list
-                        if string_filter in i.get('name')
-                    ]
-                self.print_horiz_table(objects_list)
-            else:
-                self.print_virt_table(objects_list[0].headers)
+        if isinstance(objects_list[0], dict):
+            filter_dlo = self.job_args.get('filter_dlo')
+            if filter_dlo:
+                dynamic_hash = hashlib.sha256(
+                    self.job_args.get('container')
+                )
+                dynamic_hash = dynamic_hash.hexdigest()
+                objects_list = [
+                    i for i in objects_list
+                    if dynamic_hash not in i.get('name')
+                ]
+            string_filter = self.job_args.get('filter')
+            if string_filter:
+                objects_list = [
+                    i for i in objects_list
+                    if string_filter in i.get('name')
+                ]
+            self.print_horiz_table(objects_list)
+        else:
+            self.print_virt_table(objects_list[0].headers)

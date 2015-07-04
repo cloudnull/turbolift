@@ -25,8 +25,7 @@ class UploadRunMethod(methods.BaseMethod):
         super(UploadRunMethod, self).__init__(job_args)
 
     def start(self):
-
-        self.indicator_options['msg'] = 'Indexing File System... '
+        LOG.info('Indexing File System...')
         with indicator.Spinner(**self.indicator_options):
             upload_objects = self._index_fs()
 
@@ -35,7 +34,7 @@ class UploadRunMethod(methods.BaseMethod):
                     'No objects found to process. Check your command.'
                 )
 
-        self.indicator_options['msg'] = 'Ensuring Container... '
+        LOG.info('Ensuring Container...')
         with indicator.Spinner(**self.indicator_options):
             self._put_container()
 
