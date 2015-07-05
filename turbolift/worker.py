@@ -1,5 +1,5 @@
 # =============================================================================
-# Copyright [2013] [Kevin Carter]
+# Copyright [2015] [Kevin Carter]
 # License Information :
 # This software has no warranty, it is provided 'as is'. It is your
 # responsibility to validate the behavior of the routines and its accuracy
@@ -12,6 +12,7 @@ from cloudlib import logger
 from cloudlib import indicator
 
 from turbolift.authentication import auth
+from turbolift import exceptions
 
 
 LOG = logger.getLogger('turbolift')
@@ -116,9 +117,14 @@ class Worker(object):
         if job_override:
             action = self._get_method(method=job_override)
         else:
-            action = self._get_method(
-                method=self.job_map[self.job_args['parsed_command']]
-            )
+            parsed_command = self.job_args.get('parsed_command')
+            if not parsed_command:
+                raise exceptions.NoCommandProvided(
+                    'Please provide a command. Basic commands are: %s',
+                    list(self.job_map.keys())
+                )
+            else:
+                action = self._get_method(method=self.job_map[parsed_command])
 
         run = action(job_args=self.job_args)
         run.start()

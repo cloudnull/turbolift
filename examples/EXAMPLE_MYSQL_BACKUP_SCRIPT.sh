@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Copyright [2014] [Kevin Carter]
+# Copyright [2015] [Kevin Carter]
 # License Information :
 # This software has no warranty, it is provided 'as is'. It is your
 # responsibility to validate the behavior of the routines and its accuracy

@@ -67,11 +67,9 @@ def authenticate(job_args):
     auth_resp = auth.auth_request(**auth_kwargs)
     if auth_resp.status_code >= 300:
         raise exceptions.AuthenticationProblem(
-            [
-                'Authentication Failure, Status: [ %s ] Reason: [ %s ]',
-                auth_resp.status_code,
-                auth_resp.reason
-            ]
+            'Authentication Failure, Status: [ %s ] Reason: [ %s ]',
+            auth_resp.status_code,
+            auth_resp.reason
         )
     else:
         return auth.parse_auth_response(auth_resp)

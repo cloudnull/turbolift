@@ -1,5 +1,5 @@
 # =============================================================================
-# Copyright [2013] [Kevin Carter]
+# Copyright [2015] [Kevin Carter]
 # License Information :
 # This software has no warranty, it is provided 'as is'. It is your
 # responsibility to validate the behavior of the routines and its accuracy
@@ -348,19 +348,25 @@ class BaseMethod(object):
         else:
             url = self.job_args['storage_url']
 
-        if not container_objects:
-            container_objects = self._return_deque()
-
-        returned_objects = list()
-        for container_object in container_objects:
-            returned_objects.append(
+        if container_objects:
+            returned_objects = self._return_deque()
+            for container_object in container_objects:
+                returned_objects.append(
+                    self.job.show_details(
+                        url=url,
+                        container=container,
+                        container_object=container_object
+                    )
+                )
+            else:
+                return returned_objects
+        else:
+            return [
                 self.job.show_details(
                     url=url,
-                    container=container,
-                    container_object=container_object
+                    container=container
                 )
-            )
-        return returned_objects
+            ]
 
     def _update(self, container, container_objects):
         if not container_objects:
@@ -464,8 +470,9 @@ class BaseMethod(object):
         tar_name = os.path.realpath(os.path.expanduser(tar_name))
         if not os.path.isdir(os.path.dirname(tar_name)):
             raise exceptions.DirectoryFailure(
-                ['The path to save the archive file does not exist.'
-                 ' PATH: [ %s ]', tar_name]
+                'The path to save the archive file does not exist.'
+                ' PATH: [ %s ]',
+                tar_name
             )
 
         if not tar_name.endswith('.tgz'):
@@ -564,19 +571,30 @@ class BaseMethod(object):
         if sort_key:
             table.sortby = sort_key
 
-        print(table)
+        self.printer(table)
 
-    @staticmethod
-    def print_virt_table(data):
+    def print_virt_table(self, data):
         """Print a vertical pretty table from data."""
 
         table = prettytable.PrettyTable()
-        table.add_column('Keys', data.keys())
-        table.add_column('Values', [str(i) for i in data.values()])
+        keys = sorted(data.keys())
+        table.add_column('Keys', keys)
+        table.add_column('Values', [data.get(i) for i in keys])
         for tbl in table.align.keys():
             table.align[tbl] = 'l'
 
-        print(table)
+        self.printer(table)
+
+    def printer(self, message, color_level='info'):
+        """Print Messages and Log it.
+
+        :param message: item to print to screen
+        """
+
+        if self.job_args.get('colorized'):
+            print(utils.bcolors(msg=message, color=color_level))
+        else:
+            print(message)
 
     def start(self):
         """This method must be overridden."""

@@ -1,5 +1,5 @@
 # =============================================================================
-# Copyright [2013] [Kevin Carter]
+# Copyright [2015] [Kevin Carter]
 # License Information :
 # This software has no warranty, it is provided 'as is'. It is your
 # responsibility to validate the behavior of the routines and its accuracy
@@ -14,9 +14,9 @@ import os
 __author__ = "Kevin Carter"
 __contact__ = "Kevin Carter"
 __email__ = "kevin@cloudnull.com"
-__copyright__ = "2014 All Rights Reserved"
+__copyright__ = "2015 All Rights Reserved"
 __license__ = "GPLv3+"
-__date__ = "2014-03-15"
+__date__ = "2015-07-04"
 __version__ = "3.0.0"
 __status__ = "Production"
 __appname__ = "turbolift"
@@ -884,7 +884,10 @@ ARGUMENTS = {
 __auth_plugins__ = {
     'os_rax_auth': {
         'os_auth_url': 'https://identity.api.rackspacecloud.com/v2.0/tokens',
-        'os_prefix': 'RAX-KSKEY:apiKeyCredentials',
+        'os_prefix': {
+            'os_apikey': 'RAX-KSKEY:apiKeyCredentials',
+            'os_password': 'passwordCredentials'
+        },
         'args': {
             'commands': [
                 '--os-rax-auth'
@@ -917,7 +920,10 @@ __auth_plugins__ = {
     'os_rax_auth_lon': {
         'os_auth_url': 'https://lon.identity.api.rackspacecloud.com/'
                        'v2.0/tokens',
-        'os_prefix': 'RAX-KSKEY:apiKeyCredentials',
+        'os_prefix': {
+            'os_apikey': 'RAX-KSKEY:apiKeyCredentials',
+            'os_password': 'passwordCredentials'
+        },
         'args': {
             'commands': [
                 '--os-rax-auth-lon'
@@ -934,7 +940,9 @@ __auth_plugins__ = {
     'os_hp_auth': {
         'os_auth_url': 'https://%(region)s.identity.hpcloudsvc.com:35357/'
                        'v2.0/tokens',
-        'os_prefix': 'passwordCredentials',
+        'os_prefix': {
+            'os_password': 'passwordCredentials'
+        },
         'args': {
             'commands': [
                 '--os-hp-auth'

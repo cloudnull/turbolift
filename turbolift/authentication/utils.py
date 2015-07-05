@@ -1,5 +1,5 @@
 # =============================================================================
-# Copyright [2013] [Kevin Carter]
+# Copyright [2015] [Kevin Carter]
 # License Information :
 # This software has no warranty, it is provided 'as is'. It is your
 # responsibility to validate the behavior of the routines and its accuracy
@@ -68,7 +68,8 @@ def get_authversion(job_args):
             return authversion
     else:
         raise exceptions.AuthenticationProblem(
-            ["Auth Version must be one of %s.", AUTH_VERSION_MAP.keys()]
+            "Auth Version must be one of %s.",
+            list(AUTH_VERSION_MAP.keys())
         )
 
 
@@ -87,7 +88,8 @@ def get_service_url(region, endpoint_list, lookup):
             return http.parse_url(url=endpoint.get(lookup))
     else:
         raise exceptions.AuthenticationProblem(
-            ['Region "%s" was not found in your Service Catalog.', region]
+            'Region "%s" was not found in your Service Catalog.',
+            region
         )
 
 
@@ -109,7 +111,8 @@ class V1Authentication(object):
             }
         except KeyError as exp:
             raise exceptions.AuthenticationProblem(
-                ['Missing Credentials. Error: %s', exp]
+                'Missing Credentials. Error: %s',
+                exp
             )
 
     @staticmethod
@@ -129,12 +132,11 @@ class V1Authentication(object):
             )
         except KeyError as exp:
             raise exceptions.AuthenticationProblem(
-                [
-                    'No token was found in the authentication response. Please'
-                    ' check your auth URL, your credentials, and your set auth'
-                    ' version. Auth Headers: [ %s ] Error: [ %s ]',
-                    auth_response.headers, exp
-                ]
+                'No token was found in the authentication response. Please'
+                ' check your auth URL, your credentials, and your set auth'
+                ' version. Auth Headers: [ %s ] Error: [ %s ]',
+                auth_response.headers,
+                exp
             )
         else:
             return auth_dict
@@ -151,10 +153,7 @@ class OSAuthentication(object):
         return self.req.post(url, headers, body=body)
 
     def parse_reqtype(self):
-        """Setup our Authentication POST.
-
-        username and setup are only used in APIKEY/PASSWORD Authentication
-        """
+        """Return the authentication body."""
 
         if self.job_args['os_auth_version'] == 'v1.0':
             return dict()
@@ -162,7 +161,10 @@ class OSAuthentication(object):
             setup = {
                 'username': self.job_args.get('os_user')
             }
-            prefix = self.job_args.get('os_prefix')
+
+            # Check if any prefix items are set. A prefix should be a
+            #  dictionary with keys matching the os_* credential type.
+            prefixes = self.job_args.get('os_prefix')
 
             if self.job_args.get('os_token') is not None:
                 auth_body = {
@@ -179,7 +181,14 @@ class OSAuthentication(object):
                     )
             elif self.job_args.get('os_password') is not None:
                 setup['password'] = self.job_args.get('os_password')
-                if prefix is None:
+                if prefixes:
+                    prefix = prefixes.get('os_password')
+                    if not prefix:
+                        raise NotImplementedError(
+                            'the `password` method is not implemented for this'
+                            ' auth plugin'
+                        )
+                else:
                     prefix = 'passwordCredentials'
                 auth_body = {
                     'auth': {
@@ -188,7 +197,14 @@ class OSAuthentication(object):
                 }
             elif self.job_args.get('os_apikey') is not None:
                 setup['apiKey'] = self.job_args.get('os_apikey')
-                if prefix is None:
+                if prefixes:
+                    prefix = prefixes.get('os_apikey')
+                    if not prefix:
+                        raise NotImplementedError(
+                            'the `apikey` method is not implemented for this'
+                            ' auth plugin'
+                        )
+                else:
                     prefix = 'apiKeyCredentials'
                 auth_body = {
                     'auth': {
@@ -238,12 +254,11 @@ class OSAuthentication(object):
 
         if not auth_dict['os_token']:
             raise exceptions.AuthenticationProblem(
-                [
-                    'When attempting to grab the tenant or user nothing was'
-                    ' found. No Token Found to Parse. Here is the DATA: [ %s ]'
-                    ' Stack Trace [ %s ]', auth_response,
-                    traceback.format_exc()
-                ]
+                'When attempting to grab the tenant or user nothing was'
+                ' found. No Token Found to Parse. Here is the DATA: [ %s ]'
+                ' Stack Trace [ %s ]',
+                auth_response,
+                traceback.format_exc()
             )
 
         if self.job_args.get('os_region') is not None:
@@ -251,11 +266,11 @@ class OSAuthentication(object):
         else:
             raise exceptions.SystemProblem('No Region Set')
 
-        serviceCatalog = access.pop('serviceCatalog')
+        service_catalog = access.pop('serviceCatalog')
 
         # Get the storage URL
         object_endpoints = self._service_endpoints(
-            service_catalog=serviceCatalog, types_list=turbolift.__srv_types__
+            service_catalog=service_catalog, types_list=turbolift.__srv_types__
         )
         auth_dict['storage_url'] = get_service_url(
             region=region,
@@ -265,7 +280,7 @@ class OSAuthentication(object):
 
         # Get the CDN URL
         cdn_endpoints = self._service_endpoints(
-            service_catalog=serviceCatalog, types_list=turbolift.__cdn_types__
+            service_catalog=service_catalog, types_list=turbolift.__cdn_types__
         )
 
         if cdn_endpoints is not None:

@@ -1,5 +1,5 @@
 # =============================================================================
-# Copyright [2013] [Kevin Carter]
+# Copyright [2015] [Kevin Carter]
 # License Information :
 # This software has no warranty, it is provided 'as is'. It is your
 # responsibility to validate the behavior of the routines and its accuracy
@@ -11,32 +11,35 @@ import os
 import signal
 
 from cloudlib import logger
+from turbolift import utils
 
 
 LOG = logger.getLogger('turbolift')
 
 
 class _BaseException(Exception):
-    def __init__(self, message):
-        if isinstance(message, list) or isinstance(message, tuple):
-            if len(message) > 1:
-                _message = message
-                format_message = _message.pop(0)
-                try:
-                    message = format_message % tuple(_message)
-                except TypeError as exp:
-                    message = (
-                        'The exception message was not formatting correctly.'
-                        ' Error: [ %s ]. This was the original'
-                        ' message: "%s".' % (exp, message)
-                    )
-            else:
-                message = message[0]
-        elif isinstance(message, str):
-            message = message
+    def __init__(self, *args):
+        if len(args) > 1:
+            format_message = args[0]
+            try:
+                message = format_message % tuple(args[1:])
+            except TypeError as exp:
+                message = (
+                    'The exception message was not formatting correctly.'
+                    ' Error: [ %s ]. This was the data passed: "%s"'
+                    % (exp, args)
+                )
+        else:
+            message = args[0]
 
         super(_BaseException, self).__init__(message)
         LOG.error(message)
+
+
+class NoCommandProvided(_BaseException):
+    """No command was provided Exception."""
+
+    pass
 
 
 class NoSource(_BaseException):

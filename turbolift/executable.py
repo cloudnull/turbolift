@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # =============================================================================
-# Copyright [2013] [Kevin Carter]
+# Copyright [2015] [Kevin Carter]
 # License Information :
 # This software has no warranty, it is provided 'as is'. It is your
 # responsibility to validate the behavior of the routines and its accuracy
@@ -50,9 +50,11 @@ def execute():
         stream_logs = False
         user_args['run_indicator'] = False
 
-    _logging = logger.LogSetup(debug_logging=debug_log)
+    _logging = logger.LogSetup(
+        debug_logging=debug_log,
+        colorized_messages=user_args.get('colorized', False)
+    )
     _logging.default_logger(name='turbolift', enable_stream=stream_logs)
-
     job = worker.Worker(job_args=user_args)
     job.run_manager()
 
