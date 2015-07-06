@@ -293,13 +293,15 @@ class CloudActions(object):
 
         return '%s&marker=%s' % (base_path, last_object)
 
-    def _obj_index(self, uri, base_path, marked_path, headers):
-        """
+    def _obj_index(self, uri, base_path, marked_path, headers, spr=False):
+        """Return an index of objects from within the container.
 
         :param uri:
         :param base_path:
         :param marked_path:
         :param headers:
+        :param spr: "single page return" Limit the returned data to one page
+        :type spr: ``bol``
         :return:
         """
         object_list = list()
@@ -314,13 +316,13 @@ class CloudActions(object):
 
             time_offset = self.job_args.get('time_offset')
             for obj in return_list:
-                if time_offset is not None:
+                if time_offset:
                     # Get the last_modified data from the Object.
                     time_delta = cloud_utils.TimeDelta(
                         job_args=self.job_args,
                         last_modified=time_offset
                     )
-                    if time_delta is True:
+                    if time_delta:
                         object_list.append(obj)
                 else:
                     object_list.append(obj)
@@ -332,6 +334,8 @@ class CloudActions(object):
 
             if l_obj == last_obj_in_list:
                 return object_list
+            elif spr:
+                return object_list
             else:
                 l_obj = last_obj_in_list
                 marked_path = self._last_marker(
@@ -339,12 +343,14 @@ class CloudActions(object):
                     last_object=l_obj
                 )
 
-    def _list_getter(self, uri, headers, last_obj=None):
+    def _list_getter(self, uri, headers, last_obj=None, spr=False):
         """Get a list of all objects in a container.
 
         :param uri:
         :param headers:
         :return list:
+        :param spr: "single page return" Limit the returned data to one page
+        :type spr: ``bol``
         """
 
         # Quote the file path.
@@ -357,10 +363,11 @@ class CloudActions(object):
             )
 
         file_list = self._obj_index(
-            uri,
-            base_path,
-            marked_path,
-            headers
+            uri=uri,
+            base_path=base_path,
+            marked_path=marked_path,
+            headers=headers,
+            spr=spr
         )
 
         final_list = cloud_utils.unique_list_dicts(
@@ -441,7 +448,7 @@ class CloudActions(object):
             LOG.debug(*message)
 
     @cloud_utils.retry(exceptions.SystemProblem)
-    def list_items(self, url, container=None, last_obj=None):
+    def list_items(self, url, container=None, last_obj=None, spr=False):
         """Builds a long list of objects found in a container.
 
         NOTE: This could be millions of Objects.
@@ -449,6 +456,8 @@ class CloudActions(object):
         :param url:
         :param container:
         :param last_obj:
+        :param spr: "single page return" Limit the returned data to one page
+        :type spr: ``bol``
         :return None | list:
         """
 
@@ -466,7 +475,8 @@ class CloudActions(object):
         return self._list_getter(
             uri=container_uri,
             headers=headers,
-            last_obj=last_obj
+            last_obj=last_obj,
+            spr=spr
         )
 
     @cloud_utils.retry(exceptions.SystemProblem)

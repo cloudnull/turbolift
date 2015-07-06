@@ -26,6 +26,7 @@ import prettytable
 from cloudlib import indicator
 from cloudlib import logger
 from cloudlib import shell
+from cloudlib import utils as cloud_utils
 
 from turbolift.clouderator import actions
 from turbolift import exceptions
@@ -38,11 +39,11 @@ LOG = logger.getLogger('turbolift')
 class BaseMethod(object):
     def __init__(self, job_args):
         self.job_args = job_args
-        self.max_jobs = self.job_args.get('max_jobs')
         # Define the size at which objects are considered large.
         self.large_object_size = self.job_args.get('large_object_size')
 
-        if self.max_jobs is None:
+        self.max_jobs = self.job_args.get('max_jobs')
+        if not self.max_jobs:
             self.max_jobs = 25000
 
         self.job = actions.CloudActions(job_args=self.job_args)
@@ -111,6 +112,36 @@ class BaseMethod(object):
             local_object=local_object
         )
 
+    def remove_dirs(self, directory):
+        """Delete a directory recursively.
+
+        :param directory: $PATH to directory.
+        :type directory: ``str``
+        """
+
+        LOG.info('Removing directory [ %s ]', directory)
+        local_files = self._drectory_local_files(directory=directory)
+        for file_name in local_files:
+            try:
+                os.remove(file_name['local_object'])
+            except OSError as exp:
+                LOG.error(str(exp))
+
+        # Build a list of all local directories
+        directories = sorted(
+            [i for i, _, _ in os.walk(directory)],
+            reverse=True
+        )
+
+        # Remove directories
+        for directory_path in directories:
+            try:
+                os.removedirs(directory_path)
+            except OSError as exp:
+                if exp.errno != 2:
+                    LOG.error(str(exp))
+                pass
+
     def _drectory_local_files(self, directory):
         directory = os.path.realpath(
             os.path.expanduser(
@@ -172,7 +203,7 @@ class BaseMethod(object):
 
         return object_item
 
-    def _list_contents(self, last_obj=None):
+    def _list_contents(self, last_obj=None, single_page_return=False):
         """Retrieve a long list of all files in a container.
 
         :return final_list, list_count, last_obj:
@@ -192,7 +223,8 @@ class BaseMethod(object):
         objects_list = self.job.list_items(
             url=url,
             container=self.job_args['container'],
-            last_obj=last_obj
+            last_obj=last_obj,
+            spr=single_page_return
         )
 
         pattern_match = self.job_args.get('pattern_match')
@@ -293,6 +325,7 @@ class BaseMethod(object):
 
         :returns: tuple (``bol``, ``list``)
         """
+
         container_objects = self.job_args.get('object')
         if container_objects:
             return True, [{'container_object': i} for i in container_objects]
@@ -442,6 +475,7 @@ class BaseMethod(object):
 
         :returns: ``deque``
         """
+
         indexed_objects = self._return_deque()
 
         directory = self.job_args.get('directory')
@@ -592,7 +626,7 @@ class BaseMethod(object):
         """
 
         if self.job_args.get('colorized'):
-            print(utils.bcolors(msg=message, color=color_level))
+            print(cloud_utils.return_colorized(msg=message, color=color_level))
         else:
             print(message)
 

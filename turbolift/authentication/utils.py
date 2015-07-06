@@ -8,7 +8,6 @@
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
 
-import time
 import traceback
 try:
     import urlparsre
@@ -32,7 +31,8 @@ AUTH_VERSION_MAP = {
 
 
 def check_auth_plugin(job_args):
-    for name, value in turbolift.__auth_plugins__.items():
+    _plugins = job_args.get('auth_plugins')
+    for name, value in turbolift.auth_plugins(auth_plugins=_plugins).items():
         auth_plugin = job_args.get(name)
         if auth_plugin:
             value.pop('args', None)
@@ -261,17 +261,32 @@ class OSAuthentication(object):
                 traceback.format_exc()
             )
 
-        if self.job_args.get('os_region') is not None:
-            region = self.job_args.get('os_region')
-        else:
+        region = self.job_args.get('os_region')
+        print(region)
+        if not region:
             raise exceptions.SystemProblem('No Region Set')
 
         service_catalog = access.pop('serviceCatalog')
 
         # Get the storage URL
         object_endpoints = self._service_endpoints(
-            service_catalog=service_catalog, types_list=turbolift.__srv_types__
+            service_catalog=service_catalog,
+            types_list=turbolift.__srv_types__
         )
+
+        # In the legacy internal flag is set override the os_endpoint_type
+        #  TODO(cloudnull) Remove this in future releases
+        if 'internal' in self.job_args and self.job_args['internal']:
+            LOG.warn(
+                'The use of the ``--internal`` flag has been deprecated and'
+                ' will be removed in future releases. Please use the'
+                ' ``--os-endpoint-type`` flag and set the type name'
+                ' instead. In the case of using snet (service net) this is'
+                ' generally noted as "internalURL". Example setting:'
+                ' ``--os-endpoint-type internalURL``'
+            )
+            self.job_args['os_endpoint_type'] = 'internalURL'
+
         auth_dict['storage_url'] = get_service_url(
             region=region,
             endpoint_list=object_endpoints,
@@ -283,7 +298,7 @@ class OSAuthentication(object):
             service_catalog=service_catalog, types_list=turbolift.__cdn_types__
         )
 
-        if cdn_endpoints is not None:
+        if cdn_endpoints:
             auth_dict['cdn_storage_url'] = get_service_url(
                 region=region,
                 endpoint_list=cdn_endpoints,

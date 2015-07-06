@@ -161,6 +161,16 @@ ARGUMENTS = {
             'default': 25000,
             'type': int,
             'help': 'Max number of jobs to process on a single pass.'
+        },
+        'download_chunk_size': {
+            'commands': [
+                '--download-chunk-size'
+            ],
+            'help': 'The size of the write chunks when downloading'
+                    ' files.',
+            'default': 2048,
+            'type': int,
+            'metavar': '[INT]'
         }
     },
     'optional_args': {
@@ -287,7 +297,7 @@ ARGUMENTS = {
             'metavar': '[PATH]',
             'default': os.getenv('TURBO_LOGS', os.getenv('HOME')),
             'help': 'Change the log location, Default is Home. Default:'
-                    ' %(default)s.'
+                    ' %(default)s. defaults to env[TURBO_LOGS]'
         },
         'log_file': {
             'commands': [
@@ -296,12 +306,15 @@ ARGUMENTS = {
             'metavar': '[NAME]',
             'default': os.getenv('TURBO_LOGFILE', 'turbolift.log'),
             'help': 'Change the log file Log File is %(default)s.'
+                    ' defaults to env[TURBO_LOGFILE]'
         },
         'colorized': {
             'commands': [
                 '--colorized'
             ],
-            'help': 'Colored output, effects logs and STDOUT.',
+            'help': 'Colored output, effects logs and STDOUT. This will only'
+                    ' colorize the log messages and items using the `print`'
+                    ' function',
             'default': False,
             'action': 'store_true'
         },
@@ -339,7 +352,8 @@ ARGUMENTS = {
                 '-e',
                 '--os-endpoint-type'
             ],
-            'help': 'Set the service endpoint type.',
+            'help': 'Set the service endpoint type. defaults to'
+                    ' env[OS_ENDPOINT_TYPE]',
             'default': os.getenv('OS_ENDPOINT_TYPE', 'publicURL'),
             'required': False
         },
@@ -347,9 +361,20 @@ ARGUMENTS = {
             'commands': [
                 '--cdn-endpoint-type'
             ],
-            'help': 'Set the service endpoint type for a CDN network.',
+            'help': 'Set the service endpoint type for a CDN network.'
+                    ' defaults to env[OS_CDN_ENDPOINT_TYPE]',
             'default': os.getenv('OS_CDN_ENDPOINT_TYPE', 'publicURL'),
             'required': False
+        },
+        'force_internal_url': {
+            'commands': [
+                '-I',
+                '--internal'
+            ],
+            'help': 'Forces the use of the "internalURL". Defaults to'
+                    ' env[TURBO_INTERNAL]',
+            'default': bool(os.getenv('TURBO_INTERNAL', False)),
+            'action': 'store_true'
         },
         'concurrency': {
             'commands': [
@@ -359,7 +384,8 @@ ARGUMENTS = {
             'metavar': '[INT]',
             'type': int,
             'default': os.getenv('TURBO_CONCURRENCY', 50),
-            'help': 'This sets the operational concurrency.'
+            'help': 'This sets the operational concurrency. Defaults to'
+                    ' env[TURBO_CONCURRENCY]'
         }
     },
     'subparsed_args': {
@@ -449,16 +475,41 @@ ARGUMENTS = {
             'shared_args': [
                 'timeout',
                 'time_offset',
-                'time_factor'
+                'time_factor',
+                'download_chunk_size',
+                'container'
             ],
             'optional_args': {
+                'mutually_exclusive': {
+                    'source': {
+                        'text': 'Source Options',
+                        'group': [
+                            'source_container',
+                            'container'
+                        ]
+                    }
+                },
+                'groups': {
+                    'target': {
+                        'text': 'Target Options',
+                        'group': [
+                            'target_container',
+                            'target_region',
+                            'target_endpoint_type',
+                            'target_auth_url',
+                            'target_user',
+                            'target_password',
+                            'target_apikey'
+                        ]
+                    }
+                },
                 'source_container': {
                     'commands': [
                         '-sc',
                         '--source-container'
                     ],
-                    'metavar': '[CONTAINER]',
-                    'help': 'Source Container.',
+                    'help': 'Source Container. DEPRECATED please use'
+                            ' `--container` instead',
                     'required': True,
                     'default': None
                 },
@@ -467,7 +518,6 @@ ARGUMENTS = {
                         '-tc',
                         '--target-container'
                     ],
-                    'metavar': '[CONTAINER]',
                     'help': 'Target Container.',
                     'required': True,
                     'default': None
@@ -477,38 +527,58 @@ ARGUMENTS = {
                         '-tr',
                         '--target-region'
                     ],
-                    'metavar': '[CONTAINER]',
                     'help': 'Target Region.',
                     'required': True,
                     'default': None
                 },
-                'target_snet': {
+                'target_endpoint_type': {
                     'commands': [
-                        '--target-snet'
+                        '-te',
+                        '--target-endpoint-type'
                     ],
-                    'action': 'store_true',
-                    'help': 'Use Service Net to Stream the Objects. Default:'
-                            ' %(default)s',
-                    'default': False
+                    'help': 'Set the service endpoint type for the target.',
+                    'default': 'publicURL',
+                    'required': False
                 },
-                'clone_headers': {
+                'target_auth_url': {
                     'commands': [
-                        '--clone-headers'
+                        '-ta',
+                        '--target-auth-url'
                     ],
-                    'action': 'store_true',
-                    'help': 'Query the source object for headers and restore'
-                            ' them on the target. Default: %(default)s',
-                    'default': False
+                    'help': 'Set the auth url for the target. If left blank'
+                            ' this will default to the primary auth url',
+                    'default': None,
+                    'required': False
                 },
-                'save_newer': {
+                'target_user': {
                     'commands': [
-                        '--save-newer'
+                        '-tu',
+                        '--target-user'
                     ],
-                    'action': 'store_true',
-                    'help': 'Check to see if the target "last_modified" time'
-                            ' is newer than the source. If "True" upload is'
-                            ' skipped.',
-                    'default': False
+                    'help': 'Set the user for the target. If left blank'
+                            ' this will default to the primary user',
+                    'default': None,
+                    'required': False
+                },
+                'target_password': {
+                    'commands': [
+                        '-tp',
+                        '--target-password'
+                    ],
+                    'help': 'Set the password for the target. If left blank'
+                            ' this will default to the primary password',
+                    'default': None,
+                    'required': False
+                },
+                'target_apikey': {
+                    'commands': [
+                        '-tk',
+                        '--target-apikey'
+                    ],
+                    'help': 'Set the apikey for the target. If left blank'
+                            ' this will default to the primary apikey',
+                    'default': None,
+                    'required': False
                 },
                 'add_only': {
                     'commands': [
@@ -518,7 +588,17 @@ ARGUMENTS = {
                     'help': 'Clone the object only if it doesn\'t already'
                             ' exist in the target container.',
                     'default': False
-                }
+                },
+                'workspace': {
+                    'commands': [
+                        '--workspace'
+                    ],
+                    'help': 'Set the local path that will be used for'
+                            ' workspace as the clone operation is happening.'
+                            ' If unset a secure temp directory will be used.',
+                    'default': None,
+                    'required': False
+                },
             }
         },
         'show': {
@@ -731,7 +811,8 @@ ARGUMENTS = {
                 'object',
                 'directory',
                 'sync',
-                'max_jobs'
+                'max_jobs',
+                'download_chunk_size'
             ],
             'optional_args': {
                 'groups': {
@@ -752,16 +833,6 @@ ARGUMENTS = {
                             ' restore those permissions on the local object',
                     'default': False,
                     'action': 'store_true'
-                },
-                'download_chunk_size': {
-                    'commands': [
-                        '--download-chunk-size'
-                    ],
-                    'help': 'The size of the write chunks when downloading'
-                            ' files.',
-                    'default': 2048,
-                    'type': int,
-                    'metavar': '[INT]'
                 }
             }
         },
@@ -859,109 +930,134 @@ ARGUMENTS = {
     }
 }
 
-# Authentication plugins.
-# Usage, Add any plugin here that will serve as a rapid means to authenticate.
-# Syntax is as follows:
-# <plugin_name>: {
-#     'os_auth_url': <authentication_url>,
-#     'args': {
-#         'commands': [
-#             '--<plugin_name>'
-#         ],
-#         'choices': [
-#             <list_of_choices>
-#         ],
-#         'help': <help_information>,
-#         'default': None,
-#         'metavar': '[REGION]'
-#     }
-# }
 
-# If the subdomain is in the auth url, as is the case with hp, add "%(region)s"
-# to the "os_auth_url" value. The region value from the list of choices will be
-# used as the string replacement.
+def auth_plugins(auth_plugins=None):
+    """Authentication plugins.
 
-__auth_plugins__ = {
-    'os_rax_auth': {
-        'os_auth_url': 'https://identity.api.rackspacecloud.com/v2.0/tokens',
-        'os_prefix': {
-            'os_apikey': 'RAX-KSKEY:apiKeyCredentials',
-            'os_password': 'passwordCredentials'
+    Usage, Add any plugin here that will serve as a rapid means to
+    authenticate to an OpenStack environment.
+
+    Syntax is as follows:
+    >>> __auth_plugins__ = {
+    ...     'new_plugin_name': {
+    ...         'os_auth_url': 'https://localhost:5000/v2.0/tokens',
+    ...         'os_prefix': {
+    ...             'os_apikey': 'apiKeyCredentials',
+    ...             'os_password': 'passwordCredentials'
+    ...         },
+    ...         'args': {
+    ...             'commands': [
+    ...                 '--new-plugin-name-auth'
+    ...             ],
+    ...             'choices': [
+    ...                 'RegionOne'
+    ...             ],
+    ...             'help': 'Authentication plugin for New Plugin Name',
+    ...             'default': os.environ.get('OS_NEW_PLUGIN_AUTH', None),
+    ...             'metavar': '[REGION]'
+    ...         }
+    ...     }
+    ... }
+
+    If the subdomain is in the auth url, as is the case with hp, add
+    "%(region)s" to the "os_auth_url" value. The region value from the list of
+    choices will be used as the string replacement. Note that if the
+    `os_prefix` key is added the system will override the authentication body
+    prefix with the string provided. At this time the choices are os_apikey,
+    os_password, os_token. All key entries are optional and should one not be
+    specified with a credential type a `NotImplementedError` will be raised.
+
+    :param auth_plugins: Additional plugins to add in
+    :type auth_plugins: ``dict``
+    :returns: ``dict``
+    """
+
+    __auth_plugins__ = {
+        'os_rax_auth': {
+            'os_auth_url': 'https://identity.api.rackspacecloud.com/v2.0/'
+                           'tokens',
+            'os_prefix': {
+                'os_apikey': 'RAX-KSKEY:apiKeyCredentials',
+                'os_password': 'passwordCredentials'
+            },
+            'args': {
+                'commands': [
+                    '--os-rax-auth'
+                ],
+                'choices': [
+                    'dfw',
+                    'ord',
+                    'iad',
+                    'syd',
+                    'hkg',
+                    'lon'
+                ],
+                'help': 'Authentication Plugin for Rackspace Cloud'
+                        ' env[OS_RAX_AUTH]',
+                'default': os.environ.get('OS_RAX_AUTH', None),
+                'metavar': '[REGION]'
+            }
         },
-        'args': {
-            'commands': [
-                '--os-rax-auth'
-            ],
-            'choices': [
-                'dfw',
-                'ord',
-                'iad',
-                'syd',
-                'hkg',
-                'lon'
-            ],
-            'help': 'Authentication Plugin for Rackspace Cloud'
-                    ' env[OS_RAX_AUTH]',
-            'default': os.environ.get('OS_RAX_AUTH', None),
-            'metavar': '[REGION]'
-        }
-    },
-    'rax_auth_v1': {
-        'os_auth_version': 'v1.0',
-        'os_auth_url': 'https://identity.api.rackspacecloud.com/v1.0',
-        'args': {
-            'commands': [
-                '--rax-auth-v1'
-            ],
-            'action': 'store_true',
-            'help': 'Authentication Plugin for Rackspace Cloud V1'
-        }
-    },
-    'os_rax_auth_lon': {
-        'os_auth_url': 'https://lon.identity.api.rackspacecloud.com/'
-                       'v2.0/tokens',
-        'os_prefix': {
-            'os_apikey': 'RAX-KSKEY:apiKeyCredentials',
-            'os_password': 'passwordCredentials'
+        'rax_auth_v1': {
+            'os_auth_version': 'v1.0',
+            'os_auth_url': 'https://identity.api.rackspacecloud.com/v1.0',
+            'args': {
+                'commands': [
+                    '--rax-auth-v1'
+                ],
+                'action': 'store_true',
+                'help': 'Authentication Plugin for Rackspace Cloud V1'
+            }
         },
-        'args': {
-            'commands': [
-                '--os-rax-auth-lon'
-            ],
-            'choices': [
-                'lon'
-            ],
-            'help': 'Authentication Plugin for Rackspace Cloud'
-                    ' env[OS_RAX_AUTH_LON]',
-            'default': os.environ.get('OS_RAX_AUTH_LON', None),
-            'metavar': '[REGION]'
-        }
-    },
-    'os_hp_auth': {
-        'os_auth_url': 'https://%(region)s.identity.hpcloudsvc.com:35357/'
-                       'v2.0/tokens',
-        'os_prefix': {
-            'os_password': 'passwordCredentials'
+        'os_rax_auth_lon': {
+            'os_auth_url': 'https://lon.identity.api.rackspacecloud.com/'
+                           'v2.0/tokens',
+            'os_prefix': {
+                'os_apikey': 'RAX-KSKEY:apiKeyCredentials',
+                'os_password': 'passwordCredentials'
+            },
+            'args': {
+                'commands': [
+                    '--os-rax-auth-lon'
+                ],
+                'choices': [
+                    'lon'
+                ],
+                'help': 'Authentication Plugin for Rackspace Cloud'
+                        ' env[OS_RAX_AUTH_LON]',
+                'default': os.environ.get('OS_RAX_AUTH_LON', None),
+                'metavar': '[REGION]'
+            }
         },
-        'args': {
-            'commands': [
-                '--os-hp-auth'
-            ],
-            'choices': [
-                'region-b.geo-1',
-                'region-a.geo-1'
-            ],
-            'help': 'Authentication Plugin for HP Cloud'
-                    ' env[OS_HP_AUTH]',
-            'default': os.environ.get('OS_HP_AUTH', None),
-            'metavar': '[REGION]'
+        'os_hp_auth': {
+            'os_auth_url': 'https://%(region)s.identity.hpcloudsvc.com:35357/'
+                           'v2.0/tokens',
+            'os_prefix': {
+                'os_password': 'passwordCredentials'
+            },
+            'args': {
+                'commands': [
+                    '--os-hp-auth'
+                ],
+                'choices': [
+                    'region-b.geo-1',
+                    'region-a.geo-1'
+                ],
+                'help': 'Authentication Plugin for HP Cloud'
+                        ' env[OS_HP_AUTH]',
+                'default': os.environ.get('OS_HP_AUTH', None),
+                'metavar': '[REGION]'
+            }
         }
     }
-}
+    if auth_plugins:
+        __auth_plugins__.update(auth_plugins)
+
+    return __auth_plugins__
 
 # Add all plugins to the optional arguments.
 _optionals = ARGUMENTS['optional_args']
-for name, value in __auth_plugins__.items():
+for name, value in auth_plugins().items():
     _optionals.update({name: value['args']})
     # All Authentication plugins are appended to the auth_url exclusive group
     _optionals['mutually_exclusive']['auth_url']['group'].append(name)

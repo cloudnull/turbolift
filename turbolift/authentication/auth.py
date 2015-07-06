@@ -33,7 +33,6 @@ def authenticate(job_args):
     }
 
     auth_headers.update(job_args['base_headers'])
-    # Load any auth plugin needed and set the job_args if needed.
 
     if auth_version == 'v1.0':
         auth = utils.V1Authentication(job_args=job_args)
