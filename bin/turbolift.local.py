@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # =============================================================================
-# Copyright [2013] [Kevin Carter]
+# Copyright [2015] [Kevin Carter]
 # License Information :
 # This software has no warranty, it is provided 'as is'. It is your
 # responsibility to validate the behavior of the routines and its accuracy
@@ -12,11 +12,17 @@
 import os
 import sys
 
-possible_topdir = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
-                                                os.pardir, os.pardir))
-if os.path.exists(os.path.join(possible_topdir, 'turbolift',
-                  '__init__.py')):
+possible_topdir = os.path.normpath(
+    os.path.join(
+        os.path.abspath(sys.argv[0]),
+        os.pardir,
+        os.pardir
+    )
+)
+
+base_path = os.path.join(possible_topdir, 'turbolift', '__init__.py')
+if os.path.exists(base_path):
     sys.path.insert(0, possible_topdir)
 
 from turbolift import executable
-executable.run_turbolift()
+executable.execute()

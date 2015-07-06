@@ -17,16 +17,19 @@ from turbolift import methods
 LOG = logger.getLogger('turbolift')
 
 
-class CdnRunMethod(methods.BaseMethod):
-    """Setup and run the cdn Method."""
+class ShowRunMethod(methods.BaseMethod):
+    """Setup and run the list Method."""
 
     def __init__(self, job_args):
-        super(CdnRunMethod, self).__init__(job_args)
+        super(ShowRunMethod, self).__init__(job_args)
 
     def start(self):
-        """Return a list of objects from the API for a container."""
-        LOG.info('Interacting with the CDN...')
-        with indicator.Spinner(run=self.run_indicator):
-            cdn_item = self._cdn()
+        LOG.info('Grabbing details...')
+        with indicator.Spinner(**self.indicator_options):
+            items = self._show(
+                container=self.job_args['container'],
+                container_objects=self.job_args.get('object')
+            )
 
-        self.print_virt_table(cdn_item.headers)
+        for item in items:
+            self.print_virt_table(item.headers)
