@@ -20,3 +20,10 @@ def check_basestring(item):
         return isinstance(item, (basestring, unicode))
     except NameError:
         return isinstance(item, str)
+
+
+def byte_encode(string):
+    try:
+        return string.encode('utf-8')
+    except AttributeError:
+        return string

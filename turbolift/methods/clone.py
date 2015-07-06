@@ -16,6 +16,7 @@ from cloudlib import indicator
 
 from turbolift.authentication import auth
 from turbolift import methods
+from turbolift import utils
 import turbolift
 
 LOG = logger.getLogger('turbolift')
@@ -170,19 +171,25 @@ class CloneRunMethod(methods.BaseMethod):
         # Create the target args
         self._target_auth()
 
-        last_obj = None
+        last_list_obj = None
         while True:
             self.indicator_options['msg'] = 'Gathering object list'
             with indicator.Spinner(**self.indicator_options):
                 objects_list = self._list_contents(
                     single_page_return=True,
-                    last_obj=last_obj
+                    last_obj=last_list_obj
                 )
                 if not objects_list:
                     return
 
-            if objects_list[-1].get('name') == last_obj:
+            last_obj = utils.byte_encode(objects_list[-1].get('name'))
+            LOG.info(
+                'Last object [ %s ] Last object in the list [ %s ]',
+                last_obj,
+                last_list_obj
+            )
+            if last_list_obj == last_obj:
                 return
             else:
-                last_obj = objects_list[-1].get('name')
+                last_list_obj = last_obj
                 self._clone_worker(objects_list=objects_list)

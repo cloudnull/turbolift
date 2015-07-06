@@ -33,6 +33,10 @@ class DeleteRunMethod(methods.BaseMethod):
             )
             if not user_defined:
                 user_defined, _objects = self._return_container_objects()
+                LOG.warn(
+                    'Rerunning the delete to Verify the objects have been'
+                    ' deleted.'
+                )
 
         # Delete the container unless instructed to save it
         if not self.job_args.get('save_container') or not user_defined:

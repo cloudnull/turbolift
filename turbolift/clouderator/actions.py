@@ -97,7 +97,6 @@ class CloudActions(object):
         else:
             return False
 
-
     @cloud_utils.retry(Exception)
     def _chunk_putter(self, uri, open_file, headers=None):
         """Make many PUT request for a single chunked object.
@@ -313,6 +312,8 @@ class CloudActions(object):
             resp = self.http.get(url=marked_uri, headers=headers)
             self._resp_exception(resp=resp)
             return_list = resp.json()
+            if spr:
+                return return_list
 
             time_offset = self.job_args.get('time_offset')
             for obj in return_list:
@@ -333,8 +334,6 @@ class CloudActions(object):
                 last_obj_in_list = None
 
             if l_obj == last_obj_in_list:
-                return object_list
-            elif spr:
                 return object_list
             else:
                 l_obj = last_obj_in_list
@@ -370,17 +369,18 @@ class CloudActions(object):
             spr=spr
         )
 
-        final_list = cloud_utils.unique_list_dicts(
-            dlist=file_list, key='name'
-        )
-
         LOG.debug(
             'Found [ %d ] entries(s) at [ %s ]',
-            len(final_list),
+            len(file_list),
             uri.geturl()
         )
 
-        return final_list
+        if spr:
+            return file_list
+        else:
+            return cloud_utils.unique_list_dicts(
+                dlist=file_list, key='name'
+            )
 
     def _resp_exception(self, resp):
         """If we encounter an exception in our upload.
@@ -604,7 +604,6 @@ class CloudActions(object):
             local_object=local_object
         )
 
-
     @cloud_utils.retry(exceptions.SystemProblem)
     def get_items(self, url, container, container_object, local_object):
         """Get an objects from a container.
@@ -637,7 +636,6 @@ class CloudActions(object):
             uri=container_uri,
             headers=headers
         )
-
 
     @cloud_utils.retry(exceptions.SystemProblem)
     def delete_items(self, url, container, container_object=None):
