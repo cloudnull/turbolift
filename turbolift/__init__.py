@@ -735,6 +735,14 @@ ARGUMENTS = {
                             'cdn_logs_enabled',
                             'cdn_logs_disabled'
                         ]
+                    },
+                    'cdn_web_enabled': {
+                        'text': 'Enable or Disable the CDN logging',
+                        'required': False,
+                        'group': [
+                            'cdn_web_enabled',
+                            'cdn_web_disabled'
+                        ]
                     }
                 },
                 'groups': {
@@ -796,6 +804,59 @@ ARGUMENTS = {
                     'help': 'Disabled CDN logging.',
                     'default': False,
                     'action': 'store_true'
+                },
+                'cdn_web_enabled': {
+                    'commands': [
+                        '--cdn-web-enabled'
+                    ],
+                    'help': 'Enable CDN web listing.',
+                    'default': False,
+                    'action': 'store_true'
+                },
+                'cdn_web_disabled': {
+                    'commands': [
+                        '--cdn-web-disabled'
+                    ],
+                    'help': 'Disabled CDN web listing.',
+                    'default': False,
+                    'action': 'store_true'
+                },
+                'cdn_web_error_content': {
+                    'commands': [
+                        '--cdn-web-error-content'
+                    ],
+                    'help': 'Create HTML error content for the CDN to serve',
+                    'default': None,
+                    'type': str,
+                    'metavar': '[STR]'
+                },
+                'cdn_web_dir_type': {
+                    'commands': [
+                        '--cdn-web-dir-type'
+                    ],
+                    'help': 'Set the default content type used within a'
+                            ' container.',
+                    'default': None,
+                    'type': str,
+                    'metavar': '[STR]'
+                },
+                'cdn_web_css_object': {
+                    'commands': [
+                        '--cdn-web-css-object'
+                    ],
+                    'help': 'Object within a container to be used for css',
+                    'default': None,
+                    'type': str,
+                    'metavar': '[STR]'
+                },
+                'cdn_web_index_object': {
+                    'commands': [
+                        '--cdn-web-index-object'
+                    ],
+                    'help': 'Object within a container to be used for index',
+                    'default': None,
+                    'type': str,
+                    'metavar': '[STR]'
                 }
             }
         },

@@ -83,6 +83,30 @@ class BaseMethod(object):
         if cdn_logs_disabled:
             headers['x-log-retention'] = False
 
+        cnd_web_listing_enabled = self.job_args.get('cdn_web_enabled')
+        if cnd_web_listing_enabled:
+            headers['x-container-meta-web-listings'] = True
+
+        cnd_web_listing_disabled = self.job_args.get('cdn_web_disabled')
+        if cnd_web_listing_disabled:
+            headers['x-container-meta-web-listings'] = False
+
+        cdn_web_error_content = self.job_args.get('cdn_web_error_content')
+        if cdn_web_error_content:
+            headers['x-container-meta-web-error'] = cdn_web_error_content
+
+        cdn_web_dir_type = self.job_args.get('cdn_web_dir_type')
+        if cdn_web_error_content:
+            headers['x-container-meta-web-directory-type'] = cdn_web_dir_type
+
+        cdn_web_css_object = self.job_args.get('cdn_web_css_object')
+        if cdn_web_css_object:
+            headers['x-container-meta-web-listings-css'] = cdn_web_css_object
+
+        cdn_web_index_object = self.job_args.get('cdn_web_index_object')
+        if cdn_web_css_object:
+            headers['X-Container-Meta-Web-Index'] = cdn_web_index_object
+
         headers['x-ttl'] = self.job_args.get('cdn_ttl')
 
         return self.job.container_cdn_command(

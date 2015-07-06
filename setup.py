@@ -49,13 +49,15 @@ setuptools.setup(
         'Intended Audience :: System Administrators',
         'Intended Audience :: Developers',
         'Operating System :: OS Independent',
-        ('License :: OSI Approved :: GNU General Public License v3 or later'
-         ' (GPLv3+)'),
+        'License :: OSI Approved :: GNU General Public License v3 or later'
+        ' (GPLv3+)',
         'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
         'Topic :: Utilities',
         'Topic :: Software Development :: Libraries :: Python Modules'],
     entry_points={
-        "console_scripts": ["turbolift = turbolift.executable:execute"]
+        "console_scripts": [
+            "turbolift = turbolift.executable:execute"
+        ]
     }
 )
