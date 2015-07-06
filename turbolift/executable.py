@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # =============================================================================
-# Copyright [2013] [Kevin Carter]
+# Copyright [2015] [Kevin Carter]
 # License Information :
 # This software has no warranty, it is provided 'as is'. It is your
 # responsibility to validate the behavior of the routines and its accuracy
@@ -8,45 +8,56 @@
 # details (see GNU General Public License).
 # http://www.gnu.org/licenses/gpl.html
 # =============================================================================
-import json
+
 import sys
 
-import turbolift as turbo
-from turbolift import arguments
-from turbolift import load_constants
-from turbolift.logger import logger
+from cloudlib import arguments
+from cloudlib import logger
+
+import turbolift
+from turbolift import worker
 
 
-def run_turbolift():
+def execute():
     """This is the run section of the application Turbolift."""
 
     if len(sys.argv) <= 1:
-        arguments.get_help()
-        raise SystemExit('Give me something to do and I will do it')
-    else:
-        args = arguments.get_args()
-        log = logger.LogSetup(
-            debug_logging=args.get('debug', False),
-            log_dir=args.get('log_location', '/var/log'),
-            log_name=args.get('log_file')
-        ).default_logger(enable_stream=args.get('log_streaming'))
+        raise SystemExit(
+            'No Arguments provided. use [--help] for more information.'
+        )
 
-        log.debug('set arguments [ %s ]', json.dumps(args, indent=2))
+    # Capture user arguments
+    _args = arguments.ArgumentParserator(
+        arguments_dict=turbolift.ARGUMENTS,
+        env_name='TURBO',
+        epilog=turbolift.VINFO,
+        title='Turbolift',
+        detail='Multiprocessing Swift CLI tool.',
+        description='Manage Swift easily and fast.'
+    )
+    user_args = _args.arg_parser()
+    user_args['run_indicator'] = True
+    debug_log = False
+    stream_logs = True
 
-        import turbolift.utils.basic_utils as basic
-        args = basic.dict_pop_none(dictionary=args)
-        load_constants(args=args)
+    # Load system logging
+    if user_args.get('debug'):
+        debug_log = True
+        user_args['run_indicator'] = False
 
-        try:
-            from turbolift import worker
-            worker.start_work()
-        except KeyboardInterrupt:
-            turbo.emergency_kill(reclaim=True)
-        finally:
-            if args.get('quiet') is not True:
-                print('All Done!')
-            log.info('Job Finished.')
+    # Load system logging
+    if user_args.get('quiet'):
+        stream_logs = False
+        user_args['run_indicator'] = False
+
+    _logging = logger.LogSetup(
+        debug_logging=debug_log,
+        colorized_messages=user_args.get('colorized', False)
+    )
+    _logging.default_logger(name='turbolift', enable_stream=stream_logs)
+    job = worker.Worker(job_args=user_args)
+    job.run_manager()
 
 
 if __name__ == "__main__":
-    run_turbolift()
+    execute()

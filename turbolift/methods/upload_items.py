@@ -11,22 +11,31 @@
 from cloudlib import logger
 from cloudlib import indicator
 
+from turbolift import exceptions
 from turbolift import methods
 
 
 LOG = logger.getLogger('turbolift')
 
 
-class CdnRunMethod(methods.BaseMethod):
-    """Setup and run the cdn Method."""
+class UploadRunMethod(methods.BaseMethod):
+    """Setup and run the list Method."""
 
     def __init__(self, job_args):
-        super(CdnRunMethod, self).__init__(job_args)
+        super(UploadRunMethod, self).__init__(job_args)
 
     def start(self):
-        """Return a list of objects from the API for a container."""
-        LOG.info('Interacting with the CDN...')
-        with indicator.Spinner(run=self.run_indicator):
-            cdn_item = self._cdn()
+        LOG.info('Indexing File System...')
+        with indicator.Spinner(**self.indicator_options):
+            upload_objects = self._index_fs()
 
-        self.print_virt_table(cdn_item.headers)
+            if not upload_objects:
+                raise exceptions.DirectoryFailure(
+                    'No objects found to process. Check your command.'
+                )
+
+        LOG.info('Ensuring Container...')
+        with indicator.Spinner(**self.indicator_options):
+            self._put_container()
+
+        self._multi_processor(self._upload, items=upload_objects)

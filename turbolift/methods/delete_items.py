@@ -13,20 +13,27 @@ from cloudlib import indicator
 
 from turbolift import methods
 
-
 LOG = logger.getLogger('turbolift')
 
 
-class CdnRunMethod(methods.BaseMethod):
-    """Setup and run the cdn Method."""
+class DeleteRunMethod(methods.BaseMethod):
+    """Setup and run the list Method."""
 
     def __init__(self, job_args):
-        super(CdnRunMethod, self).__init__(job_args)
+        super(DeleteRunMethod, self).__init__(job_args)
 
     def start(self):
-        """Return a list of objects from the API for a container."""
-        LOG.info('Interacting with the CDN...')
-        with indicator.Spinner(run=self.run_indicator):
-            cdn_item = self._cdn()
+        LOG.warn('Deleting...')
+        # Perform the delete twice
+        user_defined, _objects = self._return_container_objects()
+        while _objects:
+            self._multi_processor(
+                self._delete,
+                items=_objects
+            )
+            if not user_defined:
+                user_defined, _objects = self._return_container_objects()
 
-        self.print_virt_table(cdn_item.headers)
+        # Delete the container unless instructed to save it
+        if not self.job_args.get('save_container') or not user_defined:
+            self._delete()
