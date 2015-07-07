@@ -14,7 +14,7 @@ import io
 import os
 import pwd
 try:
-    import urlparsre
+    import urlparse
 except ImportError:
     import urllib.parse as urlparse
 
