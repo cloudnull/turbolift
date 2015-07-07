@@ -10,7 +10,7 @@
 
 import traceback
 try:
-    import urlparsre
+    import urlparse
 except ImportError:
     import urllib.parse as urlparse
 
