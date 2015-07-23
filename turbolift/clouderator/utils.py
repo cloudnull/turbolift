@@ -136,11 +136,20 @@ class TimeDelta(object):
 def quoter(obj):
     """Return a Quoted URL.
 
+    The quote function will return a URL encoded string. If there is an 
+    exception in the job which results in a "KeyError" the original
+    string will be returned as it will be assumed to already be URL
+    encoded.
+
     :param obj: ``basestring``
     :return: ``str``
     """
 
     try:
-        return urllib.quote(obj)
-    except AttributeError:
-        return urllib.parse.quote(obj)
+        try:
+            return urllib.quote(obj)
+        except AttributeError:
+            return urllib.parse.quote(obj)
+    except KeyError:
+        return obj
+
