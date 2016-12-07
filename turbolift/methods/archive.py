@@ -35,8 +35,14 @@ class ArchiveRunMethod(methods.BaseMethod):
             self._put_container()
 
         LOG.info('Uploading Archive...')
-        with indicator.Spinner(**self.indicator_options):
-            self._upload(**archive)
+        upload_objects = self._return_deque()
+        archive_item = self._encapsulate_object(
+            full_path=archive['local_object'],
+            split_path=os.path.dirname(archive['local_object'])
+        )
+        upload_objects.append(archive_item)
+
+        self._multi_processor(self._upload, items=upload_objects)
 
         if not self.job_args.get('no_cleanup'):
             os.remove(archive['local_object'])
